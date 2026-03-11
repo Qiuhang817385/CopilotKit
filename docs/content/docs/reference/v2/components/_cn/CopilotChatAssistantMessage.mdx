@@ -1,0 +1,230 @@
+---
+title: "CopilotChatAssistantMessage"
+description: "用于显示带有 Markdown、工具调用和操作工具栏的助手消息的组件"
+---
+
+## 概述
+
+`CopilotChatAssistantMessage` 显示带有 Markdown 支持、工具调用渲染和操作工具栏的助手消息。Markdown 渲染器使用 `remark-gfm`、`remark-math`、通过 `rehype-pretty-code` 的语法高亮，以及对数学表达式的 KaTeX 支持。工具栏提供复制、评分（点赞/点踩）、朗读和重新生成按钮，工具提示标签从 `CopilotChatConfigurationProvider` 获取本地化文本。
+
+## 导入
+
+```tsx
+import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## Props
+
+<PropertyReference name="message" type="AssistantMessage" required>
+  要渲染的助手消息对象。包含消息的 `content`、`id`、`role` 和任何关联的工具调用。
+</PropertyReference>
+
+<PropertyReference name="messages" type="Message[]">
+  完整的对话消息数组。传递给 `toolCallsView` 插槽以进行上下文感知的工具调用渲染。
+</PropertyReference>
+
+<PropertyReference name="isRunning" type="boolean" default="false">
+  代理当前是否正在执行。插槽组件可以使用它在流式传输期间调整行为。
+</PropertyReference>
+
+<PropertyReference name="onThumbsUp" type="(message: AssistantMessage) => void">
+  当用户点击点赞按钮时调用的回调。未提供时，点赞按钮从工具栏隐藏。
+</PropertyReference>
+
+<PropertyReference name="onThumbsDown" type="(message: AssistantMessage) => void">
+  当用户点击点踩按钮时调用的回调。未提供时，点踩按钮从工具栏隐藏。
+</PropertyReference>
+
+<PropertyReference name="onReadAloud" type="(message: AssistantMessage) => void">
+  当用户点击朗读按钮时调用的回调。未提供时，朗读按钮从工具栏隐藏。
+</PropertyReference>
+
+<PropertyReference name="onRegenerate" type="(message: AssistantMessage) => void">
+  当用户点击重新生成按钮时调用的回调。未提供时，重新生成按钮从工具栏隐藏。
+</PropertyReference>
+
+<PropertyReference name="additionalToolbarItems" type="React.ReactNode">
+  附加到工具栏中默认操作按钮旁边的额外 React 元素。
+</PropertyReference>
+
+<PropertyReference name="toolbarVisible" type="boolean">
+  控制操作工具栏是否可见。当设置为 `false` 时，无论提供了哪些回调 props，工具栏都会完全隐藏。
+</PropertyReference>
+
+## 插槽
+
+所有插槽 prop 遵循 CopilotKit 插槽系统：每个都接受替换的 React 组件、合并到默认组件类中的 `className` 字符串，或扩展默认组件的部分 props 对象。
+
+<PropertyReference name="markdownRenderer" type="SlotProp<typeof CopilotChatAssistantMessage.MarkdownRenderer>">
+  Markdown 渲染引擎的插槽。默认为 `CopilotChatAssistantMessage.MarkdownRenderer`，它支持 GFM 表格、通过 KaTeX 的数学表达式，以及通过 `rehype-pretty-code` 的语法高亮代码块。
+
+  **作为替换组件：**
+  ```tsx
+  <CopilotChatAssistantMessage
+    message={msg}
+    markdownRenderer={({ content }) => (
+      <div dangerouslySetInnerHTML={{ __html: content }} />
+    )}
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="toolbar" type="SlotProp<typeof CopilotChatAssistantMessage.Toolbar>">
+  操作工具栏容器的插槽。默认为 `CopilotChatAssistantMessage.Toolbar`，它在消息内容下方渲染一行水平操作按钮。
+
+  **作为 className：**
+  ```tsx
+  <CopilotChatAssistantMessage
+    message={msg}
+    toolbar="border-t pt-2 mt-2"
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="copyButton" type="SlotProp<typeof CopilotChatAssistantMessage.CopyButton>">
+  工具栏中复制到剪贴板按钮的插槽。默认为 `CopilotChatAssistantMessage.CopyButton`。工具提示标签来自 `CopilotChatLabels.assistantMessageToolbarCopyMessageLabel`。
+</PropertyReference>
+
+<PropertyReference name="thumbsUpButton" type="SlotProp<typeof CopilotChatAssistantMessage.ThumbsUpButton>">
+  点赞评分按钮的插槽。默认为 `CopilotChatAssistantMessage.ThumbsUpButton`。仅在提供 `onThumbsUp` 时渲染。工具提示标签来自 `CopilotChatLabels.assistantMessageToolbarThumbsUpLabel`。
+</PropertyReference>
+
+<PropertyReference name="thumbsDownButton" type="SlotProp<typeof CopilotChatAssistantMessage.ThumbsDownButton>">
+  点踩评分按钮的插槽。默认为 `CopilotChatAssistantMessage.ThumbsDownButton`。仅在提供 `onThumbsDown` 时渲染。工具提示标签来自 `CopilotChatLabels.assistantMessageToolbarThumbsDownLabel`。
+</PropertyReference>
+
+<PropertyReference name="readAloudButton" type="SlotProp<typeof CopilotChatAssistantMessage.ReadAloudButton>">
+  朗读按钮的插槽。默认为 `CopilotChatAssistantMessage.ReadAloudButton`。仅在提供 `onReadAloud` 时渲染。工具提示标签来自 `CopilotChatLabels.assistantMessageToolbarReadAloudLabel`。
+</PropertyReference>
+
+<PropertyReference name="regenerateButton" type="SlotProp<typeof CopilotChatAssistantMessage.RegenerateButton>">
+  重新生成按钮的插槽。默认为 `CopilotChatAssistantMessage.RegenerateButton`。仅在提供 `onRegenerate` 时渲染。工具提示标签来自 `CopilotChatLabels.assistantMessageToolbarRegenerateLabel`。
+</PropertyReference>
+
+<PropertyReference name="toolCallsView" type="SlotProp<typeof CopilotChatToolCallsView>">
+  渲染嵌入在助手消息中的工具调用的插槽。默认为 [`CopilotChatToolCallsView`](#copilotchattoolcallsview)，它遍历消息的工具调用并使用最近注册的工具渲染器渲染每个工具调用。
+</PropertyReference>
+
+## CopilotChatToolCallsView
+
+一个配套组件，渲染助手消息中包含的工具调用。给定一个助手消息，它遍历每个工具调用并使用最近注册的工具渲染器渲染它（通过 `useFrontendTool`、`useHumanInTheLoop` 或 provider 上的 `renderToolCalls` 注册）。
+
+### 导入
+
+```tsx
+import { CopilotChatToolCallsView } from "@copilotkit/react-core/v2";
+```
+
+### Props
+
+<PropertyReference name="message" type="AssistantMessage" required>
+  应该渲染其工具调用的助手消息。
+</PropertyReference>
+
+<PropertyReference name="messages" type="Message[]">
+  完整的对话消息数组。为需要引用其他消息的工具调用渲染器提供上下文（例如，查找相应的工具结果消息）。
+</PropertyReference>
+
+## 用法
+
+### 基本助手消息
+
+```tsx
+import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+
+function AssistantBubble({ message }) {
+  return (
+    <CopilotChatAssistantMessage
+      message={message}
+      onThumbsUp={(msg) => console.log("点赞:", msg.id)}
+      onThumbsDown={(msg) => console.log("点踩:", msg.id)}
+    />
+  );
+}
+```
+
+### 自定义工具栏
+
+```tsx
+import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+
+function CustomToolbarMessage({ message }) {
+  return (
+    <CopilotChatAssistantMessage
+      message={message}
+      onRegenerate={(msg) => handleRegenerate(msg)}
+      onReadAloud={(msg) => speak(msg.content)}
+      additionalToolbarItems={
+        <button onClick={() => shareMessage(message)}>分享</button>
+      }
+      toolbar="border-t border-gray-200 pt-2"
+    />
+  );
+}
+```
+
+### 隐藏工具栏
+
+```tsx
+import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+
+function MinimalMessage({ message }) {
+  return (
+    <CopilotChatAssistantMessage
+      message={message}
+      toolbarVisible={false}
+    />
+  );
+}
+```
+
+### 自定义 Markdown 渲染器
+
+```tsx
+import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+import ReactMarkdown from "react-markdown";
+
+function CustomRendererMessage({ message }) {
+  return (
+    <CopilotChatAssistantMessage
+      message={message}
+      markdownRenderer={({ content }) => (
+        <ReactMarkdown>{content}</ReactMarkdown>
+      )}
+    />
+  );
+}
+```
+
+### 独立工具调用视图
+
+```tsx
+import { CopilotChatToolCallsView } from "@copilotkit/react-core/v2";
+
+function ToolCallsList({ message, allMessages }) {
+  return (
+    <div className="tool-calls">
+      <CopilotChatToolCallsView
+        message={message}
+        messages={allMessages}
+      />
+    </div>
+  );
+}
+```
+
+## 行为
+
+- **Markdown 支持**：默认 Markdown 渲染器支持 GitHub 风格 Markdown（表格、删除线、任务列表）、使用 KaTeX 渲染的数学表达式，以及通过 `rehype-pretty-code` 的语法高亮代码块。
+- **工具栏可见性**：工具栏默认在悬停或聚焦时显示。仅在提供相应的回调 prop（`onThumbsUp`、`onThumbsDown`、`onReadAloud`、`onRegenerate`）时才渲染各个按钮。显示工具栏时，复制按钮始终可见。
+- **本地化标签**：所有工具栏按钮工具提示都从最近的 `CopilotChatConfigurationProvider` 获取。有关标签键的完整列表，请参阅 [`useCopilotChatConfiguration`](/reference/v2/hooks/useCopilotChatConfiguration)。
+- **工具调用渲染**：嵌入在助手消息中的工具调用由 `toolCallsView` 插槽渲染。每个工具调用都使用 `useRenderToolCall` hook 解析，该 hook 按工具名称查找注册的渲染器。
+- **插槽系统**：每个插槽 prop 接受三种形式——替换组件、合并到默认组件的 className 字符串，或扩展默认组件 props 的部分 props 对象。
+
+## 相关
+
+- [`CopilotChatMessageView`](/reference/v2/components/CopilotChatMessageView) -- 将此组件用作默认助手消息插槽的父组件
+- [`CopilotChatUserMessage`](/reference/v2/components/CopilotChatUserMessage) -- 用于用户消息的配套组件
+- [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall) -- 内部用于解析工具调用渲染器的 hook
+- [`useCopilotChatConfiguration`](/reference/v2/hooks/useCopilotChatConfiguration) -- 用于本地化工具栏标签的 Provider

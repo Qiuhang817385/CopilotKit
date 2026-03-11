@@ -1,0 +1,155 @@
+---
+title: 快速入门
+description: 在 5 分钟内将您的 AG2 智能体转变为智能体原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import { CoAgentsDiagram } from "@/components/react/coagents/coagents-diagram.tsx";
+import { FaPython, FaJs, FaCloud } from "react-icons/fa";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotKitCloudCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+import CloudCopilotKitProvider from "@/snippets/coagents/cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/coagents/self-host-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeStarter from "@/snippets/self-hosting-copilot-runtime-starter.mdx";
+import SelfHostingRemoteEndpoints from "@/snippets/self-hosting-remote-endpoints.mdx";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+  ServerIcon,
+} from "lucide-react";
+import CopilotUI from "@/snippets/copilot-ui.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 介绍
+
+本快速入门指南展示如何使用 AG2 和 CopilotKit 构建一个**天气智能体**。只需几分钟，您将拥有一个可工作的应用程序，用户可以询问全球任何城市的实时天气状况 —— 由 AG2 的 `AGUIStream` 通过 AG-UI 协议提供支持，并使用 CopilotKit 的聊天 UI 渲染。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## AG2 引导模板
+
+如果您更喜欢生成的入门项目而不是克隆仓库，请使用 CopilotKit 引导模板并在设置期间选择 **AG2**。这将连接一个通过 AG-UI 的 AG2 后端和一个可立即运行的前端。
+
+```bash
+npx copilotkit@latest init
+```
+
+按照提示选择 AG2 和您想要的功能，然后运行它打印的安装/启动命令。
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- **Python 3.10–3.13** 用于运行 AG2 后端
+- <a href="https://docs.astral.sh/uv/getting-started/installation/" target="_blank">uv</a>（用于 Python 依赖管理）
+- <a href="https://nodejs.org/en/download" target="_blank">Node.js</a> 18.18.0 或更新版本（具体为：^18.18.0 || ^19.8.0 || >= 20.0.0）
+- <a href="https://pnpm.io/installation" target="_blank">pnpm</a>（用于前端包管理）
+- <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API key</a>
+
+## 开始使用
+
+<Steps>
+    <Step>
+        ### 克隆 AG2 示例仓库
+
+        ```bash
+        git clone https://github.com/ag2ai/ag2-samples.git
+        cd ag2-samples
+        ```
+    </Step>
+    <Step>
+        ### 设置 AG2 后端
+
+        #### 安装依赖：
+
+        ```bash
+        uv sync
+        ```
+
+        #### 设置您的 `OPENAI_API_KEY`：
+
+        ```sh
+        export OPENAI_API_KEY="your_openai_api_key"
+        ```
+
+        #### 启动 AG2 天气智能体：
+
+        ```bash
+        uv run python weather.py
+        ```
+        后端服务器将在 http://localhost:8000 启动，并在 `/weather` 为智能体提供服务。
+    </Step>
+    <Step>
+        ### 设置 CopilotKit UI
+        
+        最后一步是使用 CopilotKit 的 UI 组件来渲染与智能体的聊天交互。
+
+        在新终端中：
+
+        ```bash
+        cd ui
+        pnpm install
+        pnpm dev
+        ```
+
+        前端应用程序将在 http://localhost:3000 启动。
+    </Step>
+    <Step>
+        ### 🎉 与您的智能体对话！
+
+        恭喜！您已成功将 AG2 智能体聊天机器人集成到您的应用程序中。尝试问几个问题：
+
+        ```
+        What's the weather in London?
+        ```
+
+        ```
+        Weather in Tokyo
+        ```
+
+        ```
+        What's the weather here?
+        ```
+
+        <Callout type="info">
+            询问 "What's the weather here?" 将使用您的浏览器位置（如果您允许）。如果位置访问被拒绝，智能体会要求您提供城市名称。
+        </Callout>
+    </Step>
+
+</Steps>
+
+---
+
+## 下一步是什么？
+
+您现在已经运行了一个使用 CopilotKit 的天气智能体！这展示了通过结合 AG2 的 `AGUIStream` 和 CopilotKit 的用户界面组件，您可以多快地构建实用的 AI 应用程序。
+
+<Cards>
+  <Card
+    title="实现人机协同"
+    description="允许您的用户和智能体协作完成任务。"
+    href="/ag2/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+</Cards>

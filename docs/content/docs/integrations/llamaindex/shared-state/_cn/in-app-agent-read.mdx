@@ -1,0 +1,168 @@
+---
+title: 读取 Agent 状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时 Agent 状态。
+---
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state) 中从共享状态读取。
+</Callout>
+
+## 这是什么？
+
+您可以不仅在聊天 UI 中，而且在原生应用程序 UX 中轻松使用实时 Agent 状态。
+
+## 什么时候应该使用它？
+
+当您想要向用户提供有关 Agent 状态的反馈时，可以使用此功能。随着 Agent 状态更新，您可以在应用程序中原生地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+
+    使用 `initial_state` 创建具有状态结构的 LlamaIndex Agent。以下是一个跟踪语言的完整示例：
+
+    ```python title="agent.py"
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+    # Initialize the LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # Create the AG-UI workflow router
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        You are a helpful assistant for tracking the language.
+
+        IMPORTANT:
+        - ALWAYS use the lower case for the language
+        - ALWAYS respond in the current language from the state
+        """,
+        initial_state={
+            "language": "english"
+        },
+    )
+
+    # Create FastAPI app
+    app = FastAPI(
+        title="LlamaIndex Agent",
+        description="A LlamaIndex agent integrated with CopilotKit",
+        version="1.0.0"
+    )
+
+    # Include the router
+    app.include_router(agentic_chat_router)
+
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    在您的 Agent 连接并运行后，剩下要做的就是调用 `useAgent` Hook，传递 Agent 的名称，并可选择提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // Define the agent state type, should match the actual state of your agent
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+        initialState: { language: "english" }  // optionally provide an initial state
+      });
+
+      // ...
+
+      return (
+        // style excluded for brevity
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:1] */}
+          <p>Language: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是反应式的，当 Agent 的状态变化时会自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+    随着 Agent 状态更新，您的 `state` 变量将自动随之更新！在这种情况下，您会看到语言设置为"english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染 Agent 状态
+
+您还可以在聊天 UI 中渲染 Agent 的状态。这对于以更情境化的方式告知用户 Agent 的状态非常有用。为此，您可以使用带有 `render` 函数的 `useAgent` Hook。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// Define the agent state type, should match the actual state of your agent
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "my_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>Language: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="warn" title="重要">
+  `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+</Callout>
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是反应式的，当 Agent 的状态变化时会自动更新。
+</Callout>

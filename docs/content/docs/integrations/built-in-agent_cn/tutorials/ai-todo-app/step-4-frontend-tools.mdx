@@ -1,0 +1,88 @@
+---
+title: "第 4 步：前端工具"
+---
+
+现在是时候通过启用工具执行来让我们的 copilot 更加实用了。
+
+## 可用工具
+
+让我们再次查看我们应用在 [`lib/hooks/use-tasks.tsx`](https://github.com/CopilotKit/example-todos-app/blob/base-start-here/lib/hooks/use-tasks.tsx#L19-L33) 文件中的状态。
+
+本质上，我们希望我们的 copilot 能够调用 `addTask`、`setTaskStatus` 和 `deleteTask` 函数。
+
+## `useFrontendTool` 钩子
+
+[`useFrontendTool`](/reference/v1/hooks/useFrontendTool) 钩子使工具可供我们的 copilot 使用。让我们在 [`lib/hooks/use-tasks.tsx`](https://github.com/CopilotKit/example-todos-app/blob/base-start-here/lib/hooks/use-tasks.tsx) 文件中实现它。
+
+```tsx filename="lib/hooks/use-tasks.tsx" showLineNumbers {3-3,8-22,24-38,40-61}
+// ... 文件的其余部分
+
+import { useCopilotReadable, useFrontendTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { z } from "zod"; // [!code highlight]
+
+export const TasksProvider = ({ children }: { children: ReactNode }) => {
+  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
+
+  // [!code highlight:10]
+  useFrontendTool({
+    name: "addTask",
+    description: "向待办清单添加任务",
+    parameters: z.object({
+      title: z.string().describe("任务的标题"),
+    }),
+    handler: ({ title }) => {
+      addTask(title);
+      return `已添加任务：${title}`;
+    },
+  });
+
+  // [!code highlight:10]
+  useFrontendTool({
+    name: "deleteTask",
+    description: "从待办清单删除任务",
+    parameters: z.object({
+      id: z.number().describe("任务的 ID"),
+    }),
+    handler: ({ id }) => {
+      deleteTask(id);
+      return `已删除任务 ${id}`;
+    },
+  });
+
+  // [!code highlight:11]
+  useFrontendTool({
+    name: "setTaskStatus",
+    description: "设置任务的状态",
+    parameters: z.object({
+      id: z.number().describe("任务的 ID"),
+      status: z.enum(Object.values(TaskStatus) as [string, ...string[]]).describe("任务的状态"),
+    }),
+    handler: ({ id, status }) => {
+      setTaskStatus(id, status);
+      return `已将任务 ${id} 的状态设置为 ${status}`;
+    },
+  });
+
+  // ... 文件的其余部分
+};
+```
+
+`useFrontendTool` 钩子是一个强大的钩子，允许我们向 copilot 注册工具。它接受一个具有以下属性的对象：
+
+- `name` 是工具的名称。
+- `description` 是工具的描述。选择一个好的描述很重要，这样我们的 copilot 才能选择正确的工具。
+- `parameters` 是一个 Zod 模式，定义了工具接受的参数。这提供了运行时验证和 TypeScript 类型推断。
+- `handler` 是一个函数，当工具被触发时将被调用。得益于 Zod，它是类型安全的！
+
+您可以在[此处](https://docs.copilotkit.ai/reference/v1/hooks/useFrontendTool)查看 `useFrontendTool` 钩子的完整参考。
+
+## 试试看！
+
+现在，回到应用并请求您的 pilot 执行以下任一操作：
+
+- "创建一个关于邀请 Daniel 参加我生日的任务"
+- "删除所有未完成的任务"
+- "将 ID 为 2 的任务标记为已完成"
+- 等等。
+
+您的 copilot 现在比以往任何时候都更有用了 💪

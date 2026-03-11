@@ -1,0 +1,112 @@
+---
+title: "手动发送消息"
+icon: "lucide/Radio"
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+
+虽然大多数代理交互通过代理运行时的共享状态更新自动发生，但您也可以**从代理代码中手动发送消息**以向用户提供即时反馈。
+
+<video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/emit-messages.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+<Callout>
+    此视频显示了将 [实现](#实现) 部分应用于 `npx copilotkit@latest init` 的结果！
+</Callout>
+
+## 这是什么？
+
+在 LangGraph 中，消息仅在节点完成时发出。CopilotKit 允许您在节点执行过程中手动发出消息，以向用户提供即时反馈。
+
+## 什么时候应该使用这个功能？
+
+手动发出的消息非常适合**当您不想等待节点**完成**并且您**：
+- 有一个长时间运行的任务，您想提供反馈
+- 想向用户提供状态更新
+- 想提供警告或错误消息
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的代理
+       <RunAndConnect components={props.components} />
+    </Step>
+    <Step>
+        ### 安装 CopilotKit SDK
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 手动发送消息
+        `copilotkit_emit_message` 方法允许您在节点执行早期发送消息，以向用户传达状态更新。这对于长时间运行的任务特别有用。
+
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python
+                from langchain_core.messages import SystemMessage, AIMessage
+                from langchain_openai import ChatOpenAI
+                from langchain_core.runnables import RunnableConfig
+                from copilotkit.langgraph import copilotkit_emit_message # [!code highlight]
+                # ...
+
+                async def chat_node(state: AgentState, config: RunnableConfig):
+                    model = ChatOpenAI(model="gpt-5.2")
+
+                    # [!code highlight:2]
+                    intermediate_message = "正在努力思考..."
+                    await copilotkit_emit_message(config, intermediate_message)
+
+                    # 模拟一个长时间运行的任务
+                    await asyncio.sleep(2)
+
+                    response = await model.ainvoke([
+                        SystemMessage(content="你是一个有帮助的助手。"),
+                        *state["messages"]
+                    ], config)
+
+                    return Command(
+                        goto=END,
+                        update={
+                            # 确保将发出的消息包含在消息历史中 # [!code highlight:2]
+                            "messages": [AIMessage(content=intermediate_message), response]
+                        }
+                    )
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript
+                import { AIMessage, SystemMessage } from "@langchain/core/messages";
+                import { ChatOpenAI } from "@langchain/openai";
+                import { RunnableConfig } from "@langchain/core/runnables";
+                import { copilotkitEmitMessage } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+                // ...
+
+                async function chat_node(state: AgentState, config: RunnableConfig) {
+                    const model = new ChatOpenAI({ model: "gpt-5.2" });
+
+                    // [!code highlight:2]
+                    const intermediateMessage = "正在努力思考...";
+                    await copilotkitEmitMessage(config, intermediateMessage);
+
+                    // 模拟一个长时间运行的任务
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    const response = await model.invoke([
+                        new SystemMessage({content: "你是一个有帮助的助手。"}),
+                        ...state.messages
+                    ], config);
+
+                    return {
+                        // [!code highlight:2]
+                        // 确保将发出的消息包含在消息历史中
+                        messages: [new AIMessage(intermediateMessage), response],
+                    };
+                }
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+    <Step>
+        ### 试试看！
+        现在当您与代理交谈时，您会注意到它立即响应消息"正在努力思考..."
+        然后在 2 秒后给您回复。
+    </Step>
+</Steps>

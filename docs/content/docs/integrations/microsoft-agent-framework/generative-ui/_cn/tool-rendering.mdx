@@ -1,0 +1,153 @@
+---
+title: "工具渲染"
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染代理的工具调用。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+
+{/* TODO: 将以下链接替换为 Microsoft Agent Framework 链接，一旦 Microsoft Agent Framework 正式添加到功能查看器中 */}
+<IframeSwitcher
+  id="backend-tools-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout>
+  此示例演示了在 <a href="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/agentic_chat" target="_blank">CopilotKit 功能查看器</a>中应用的[实现](#实现)部分。
+</Callout>
+
+## 这是什么？
+
+工具是 LLM 调用预定义的、通常是确定性函数的一种方式。CopilotKit 允许您在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI (Generative UI)**。
+
+## 什么时候应该使用这个？
+
+当代理调用工具时，在 UI 中渲染工具在您想向用户提供有关代理正在做什么的反馈时很有用。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+<Step>
+### 给您的代理一个可调用的工具
+
+定义一个代理可以调用的工具函数。Microsoft Agent Framework 会自动将其转换为 LLM 可调用的工具。
+
+<Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+  <Tab value=".NET">
+    ```csharp title="Program.cs"
+    using System.ComponentModel;
+    using Azure.AI.OpenAI;
+    using Azure.Identity;
+    using Microsoft.Agents.AI;
+    using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+
+    var builder = WebApplication.CreateBuilder(args);
+    builder.Services.AddAGUI();
+    var app = builder.Build();
+
+    string endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]!;
+    string deployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT_NAME"]!;
+
+    // [!code highlight:4]
+    // 定义天气工具函数
+    [Description("获取指定位置的天气。")]
+    static string GetWeather([Description("要获取天气的位置")] string location)
+        => $"The weather for {location} is 70 degrees.";
+
+    // 使用工具创建代理
+    var agent = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+        .GetChatClient(deployment)
+        .CreateAIAgent(
+            name: "AGUIAssistant",
+            tools: [AIFunctionFactory.Create(GetWeather)]);
+
+    // 映射 AG-UI 端点
+    app.MapAGUI("/", agent);
+
+    await app.RunAsync();
+    ```
+  </Tab>
+  <Tab value="Python">
+    ```python title="agent/src/agent.py"
+    from __future__ import annotations
+    from typing import Annotated
+    from agent_framework import ChatAgent, ChatClientProtocol, ai_function
+    from agent_framework.ag_ui import AgentFrameworkAgent
+    from pydantic import Field
+
+    # [!code highlight:9]
+    @ai_function(
+        name="get_weather",
+        description="获取指定位置的天气。",
+    )
+    def get_weather(
+        location: Annotated[str, Field(description="要获取天气的位置")],
+    ) -> str:
+        normalized = location.strip() or "the requested location"
+        return f"The weather for {normalized} is 70 degrees."
+
+    def create_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAgent:
+        base_agent = ChatAgent(
+            name="sample_agent",
+            instructions="你是一个乐于助人的助手。",
+            chat_client=chat_client,
+            tools=[get_weather],
+        )
+
+        return AgentFrameworkAgent(
+            agent=base_agent,
+            name="CopilotKitMicrosoftAgentFrameworkAgent",
+            description="带有 get_weather 后端工具的助手。",
+            require_confirmation=False,
+        )
+    ```
+  </Tab>
+</Tabs>
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，您的代理将能够调用 `get_weather` 工具。现在我们只需要添加一个 `useRenderTool` 钩子来在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  要在 UI 中渲染工具调用，操作的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:11]
+  useRenderTool({
+    name: "get_weather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "正在调用天气 API..."}
+          {status === "complete" && `已为 ${args.location} 调用天气 API。`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让代理获取某个位置的天气。您应该会看到我们添加的自定义 UI 组件渲染工具调用并显示传递给工具的参数。
+
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

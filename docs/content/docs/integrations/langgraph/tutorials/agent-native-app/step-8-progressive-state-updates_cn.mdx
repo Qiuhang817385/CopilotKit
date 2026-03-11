@@ -1,0 +1,82 @@
+---
+title: "步骤 8：渐进式状态更新"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+至此，我们已经有了一个功能相当完善的应用程序。我们可以运行 Agent，在聊天中看到进度，并在右侧面板中看到最终的研究结果。
+
+但是，我们还缺少一样东西。我们看不到 LLM 实际生成研究内容的过程，只能看到最终结果。
+
+在这一步中，我们将学习如何利用预测性状态渲染在聊天中渲染 Agent 的进度。具体来说，我们将在
+研究的部分内容生成时渲染它们。
+
+为此，我们将使用 `copilotkit_customize_config`。
+
+<Callout>
+`copilotkit_customize_config` 函数将在下一步中用于在聊天中渲染 Agent 的进度。
+</Callout>
+
+## 创建 copilotkit_customize_config 并发出中间状态
+CopilotKit 允许您自定义前端和 Agent 交互方式的配置。在本例中，我们想要
+设置 `emit_intermediate_state` 属性。我们定义一个对象列表，用于根据工具调用将状态发送到前端。
+
+```python title="agent/section_writer.py"
+from copilotkit.langchain import copilotkit_customize_config, copilotkit_emit_state // [!code ++]
+
+# ...
+@tool("section_writer", args_schema=SectionWriterInput, return_direct=True)
+async def section_writer(research_query, section_title, idx, state):
+    """根据查询、章节标题和提供的来源撰写研究报告的特定章节。"""
+
+    # ...
+
+    # 定义我们要发出的状态键，为本教程预先创建
+    content_state = {
+        "state_key": f"section_stream.content.{idx}.{section_id}.{section_title}",
+        "tool": "WriteSection",
+        "tool_argument": "content"
+    }
+    footer_state = {
+        "state_key": f"section_stream.footer.{idx}.{section_id}.{section_title}",
+        "tool": "WriteSection",
+        "tool_argument": "footer"
+    }
+
+    # [!code ++:5]
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[content_state, footer_state]
+    )
+
+    # ...
+
+    # [!code highlight:3]
+    # LLM 将采用这个新配置，我们定义的工具调用
+    # 将被预测性地发送到前端。
+    response = await model.bind_tools([WriteSection]).ainvoke(lc_messages, config)
+
+    # ...
+
+```
+
+预测性发出状态有三个主要部分：
+1. `state_key` 是我们想要发出的 Agent 状态的键。
+2. `tool` 是用于生成状态的工具。
+3. `tool_argument` 是作为参数传递给工具的参数，将是预测状态。
+
+## 回顾
+就是这样！现在当 LLM 调用我们定义的工具时，状态将被预测性地发送到前端。
+
+要尝试一下，请完成进行研究的完整流程。您现在将能够看到部分内容在生成时实时显示。
+
+```
+请研究一下狗！
+```
+
+<video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-8-finish.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+
+回顾一下，我们完成了以下工作：
+- 学习了 `copilotkit_customize_config` 函数。
+- 使用配置来预测性地发出 Agent 的状态
+
+您已成功使用 CopilotKit 的核心概念创建了 CoAgent。在下一步中，我们将通过回顾整个过程并展示一些后续步骤来结束本教程。

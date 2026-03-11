@@ -1,0 +1,103 @@
+---
+title: "useCopilotReadable"
+description: "useCopilotReadable Hook 允许你向 copilot 提供知识（例如应用状态）。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-core/src/hooks/use-copilot-readable.ts
+  */
+}
+
+<Callout type="warning">
+  `useCopilotReadable` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useAgentContext`](/reference/v2/hooks/useAgentContext)。
+</Callout>
+
+`useCopilotReadable` 是一个 React Hook，可向 Copilot 提供应用状态和其他信息。
+可选地，该 Hook 还可以处理应用中的分层状态，将这些父子关系传递给 Copilot。
+ 
+## 用法
+ 
+### 简单用法
+ 
+在最基本的用法中，useCopilotReadable 接受一个字符串参数，
+表示任何应用状态片段，使其可供 Copilot 在响应用户输入时用作上下文。
+ 
+```tsx
+import { useCopilotReadable } from "@copilotkit/react-core";
+ 
+export function MyComponent() {
+  const [employees, setEmployees] = useState([]);
+ 
+  useCopilotReadable({
+    description: "员工列表",
+    value: employees,
+  });
+}
+```
+ 
+### 嵌套组件
+ 
+可选地，你可以通过传递 `parentId` 来维护信息的层次结构。这允许你在嵌套组件中使用 `useCopilotReadable`：
+ 
+```tsx /employeeContextId/1 {17,23}
+import { useCopilotReadable } from "@copilotkit/react-core";
+ 
+function Employee(props: EmployeeProps) {
+  const { employeeName, workProfile, metadata } = props;
+ 
+  // 向 copilot 传播任何信息
+  const employeeContextId = useCopilotReadable({
+    description: "员工姓名",
+    value: employeeName
+  });
+ 
+  // 传递 parentID 以维护层次结构。
+  // 对于子 React 组件、列表元素等特别有用。
+  useCopilotReadable({
+    description: "工作档案",
+    value: workProfile.description(),
+    parentId: employeeContextId
+  });
+ 
+  useCopilotReadable({
+    description: "员工元数据",
+    value: metadata.description(),
+    parentId: employeeContextId
+  });
+ 
+  return (
+    // 照常渲染...
+  );
+}
+```
+
+## 参数
+
+<PropertyReference name="description" type="string" required > 
+要添加到 Copilot 上下文的信息描述。
+</PropertyReference>
+
+<PropertyReference name="value" type="any" required > 
+要添加到 Copilot 上下文的值。对象值会自动字符串化。
+</PropertyReference>
+
+<PropertyReference name="parentId" type="string"  > 
+父上下文的 ID（如果有）。
+</PropertyReference>
+
+<PropertyReference name="categories" type="string[]"  > 
+用于控制哪些上下文在何处可见的类别数组。特别有用
+  与 CopilotTextarea 一起使用（参见 `useMakeAutosuggestionFunction`）
+</PropertyReference>
+
+<PropertyReference name="available" type="'enabled' | 'disabled'"  > 
+上下文是否对 Copilot 可用。
+</PropertyReference>
+
+<PropertyReference name="convert" type="(description: string, value: any) => string"  > 
+用于将值序列化为字符串的自定义转换函数。如果未提供，值
+  将使用 `JSON.stringify` 进行序列化。
+</PropertyReference>

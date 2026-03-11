@@ -1,0 +1,32 @@
+---
+title: 共享状态
+description: 在 UI 和 Agent 状态之间创建双向连接。
+icon: "lucide/Repeat"
+hideTOC: true
+---
+import { IntegrationGrid } from "@/components/content/integration-grid";
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+
+## 什么是共享状态？
+
+Agentic Copilots 维护一个共享状态，将您的 UI 与 Agent 的执行无缝连接。这个共享状态系统允许您：
+
+- 显示 Agent 的当前进度和中间结果
+- 通过 UI 交互更新 Agent 的状态
+- 实时响应整个应用程序的状态变化
+
+<ImageZoom
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+  alt="共享状态演示"
+  width={1000}
+  height={1000}
+  className="rounded-lg shadow-lg border mt-0"
+/>
+
+## 什么时候应该使用？
+
+当您希望促进 Agent 和用户之间的协作时使用共享状态。更新双向流动 —— Agent 的输出自动反映在 UI 中，用户在 UI 中更新的任何输入都会自动反映在 Agent 的执行中。
+
+## 选择您的 AI 后端开始
+
+<IntegrationGrid path="shared-state" exclude={["agno", "agent-spec"]} />

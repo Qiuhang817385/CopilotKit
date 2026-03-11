@@ -1,0 +1,285 @@
+---
+title: "useHumanInTheLoop"
+description: "用于交互式工具的 React Hook，暂停 Agent 执行并等待用户输入"
+---
+
+## 概述
+
+`useHumanInTheLoop` 注册一个交互式工具，暂停 Agent 执行直到用户通过你的自定义 UI 响应。与 `useFrontendTool` 不同，它没有 `handler` 函数。相反，Hook 提供一个内部状态机（`InProgress` -> `Executing` -> `Complete`），并在工具处于 `Executing` 状态时向渲染组件提供一个 `respond` 回调。Agent 保持暂停状态直到使用用户的输入调用 `respond`。
+
+此 Hook 构建在 `useFrontendTool` 之上，带有一个内部管理的处理程序，当调用 `respond` 时解析工具调用 Promise。将其用于确认对话框、审批工作流、表单收集或任何需要人工提供输入 Agent 才能继续的场景。
+
+## 签名
+
+```tsx
+import { useHumanInTheLoop } from "@copilotkit/react-core/v2";
+
+function useHumanInTheLoop<T extends Record<string, unknown>>(
+  tool: ReactHumanInTheLoop<T>,
+  deps?: ReadonlyArray<unknown>,
+): void;
+```
+
+## 参数
+
+<PropertyReference name="tool" type="ReactHumanInTheLoop<T>" required>
+  交互式工具定义。
+
+  <PropertyReference name="name" type="string" required>
+    工具的唯一名称。Agent 在需要人工输入时引用此名称。
+  </PropertyReference>
+
+  <PropertyReference name="description" type="string" required>
+    自然语言描述，告诉 Agent 该工具的作用以及何时调用它（例如，"Ask the user to confirm before deleting records"）。
+  </PropertyReference>
+
+  <PropertyReference name="parameters" type="z.ZodSchema" required>
+    定义 Agent 传递给工具的参数的 Zod 模式。这些参数被转发到渲染组件，以便你可以构建上下文感知的 UI。
+  </PropertyReference>
+
+  <PropertyReference name="render" type="React.ComponentType<RenderProps>" required>
+    驱动人工交互的 React 组件。组件根据当前状态接收不同的 props：
+
+    **当 `status` 为 `ToolCallStatus.InProgress` 时：**
+    - `args: Partial<T>` -- 部分流式传输的参数
+    - `respond: undefined` -- 尚不可用
+    - `result: undefined`
+
+    **当 `status` 为 `ToolCallStatus.Executing` 时：**
+    - `args: T` -- 完全解析的参数
+    - `respond: (result: unknown) => Promise<void>` -- 调用此函数将用户的响应发送回 Agent 并恢复执行
+    - `result: undefined`
+
+    **当 `status` 为 `ToolCallStatus.Complete` 时：**
+    - `args: T` -- 原始参数
+    - `respond: undefined` -- 不再可用
+    - `result: string` -- 序列化的结果
+  </PropertyReference>
+
+  <PropertyReference name="available" type='"enabled" | "disabled" | "remote"' default='"enabled"'>
+    控制工具可用性。设置为 `"disabled"` 以暂时阻止 Agent 通过此工具请求人工输入。
+  </PropertyReference>
+</PropertyReference>
+
+<PropertyReference name="deps" type="ReadonlyArray<unknown>">
+  可选的依赖数组。提供时，每当数组中的任何值更改时，工具注册都会刷新。
+</PropertyReference>
+
+## 用法
+
+### 确认对话框
+
+Agent 要求用户确认破坏性操作的常见模式。
+
+```tsx
+import { z } from "zod";
+import { useHumanInTheLoop, ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function DeleteConfirmation() {
+  useHumanInTheLoop({
+    name: "confirmDeletion",
+    description: "Ask the user to confirm before deleting items",
+    parameters: z.object({
+      itemName: z.string().describe("Name of the item to delete"),
+      itemCount: z.number().describe("Number of items to delete"),
+    }),
+    render: ({ args, status, respond, result }) => {
+      if (status === ToolCallStatus.InProgress) {
+        return <div className="p-4 text-gray-500">Preparing confirmation...</div>;
+      }
+
+      if (status === ToolCallStatus.Executing && respond) {
+        return (
+          <div className="p-4 border rounded">
+            <p>
+              Are you sure you want to delete {args.itemCount} {args.itemName}(s)?
+            </p>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => respond({ confirmed: true })}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => respond({ confirmed: false })}
+                className="bg-gray-300 px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (status === ToolCallStatus.Complete && result) {
+        const parsed = JSON.parse(result);
+        return (
+          <div className="p-2 text-sm text-gray-600">
+            {parsed.confirmed ? "Items deleted." : "Deletion cancelled."}
+          </div>
+        );
+      }
+
+      return null;
+    },
+  }, []);
+
+  return null;
+}
+```
+
+### 表单输入收集
+
+在 Agent 继续之前从用户收集结构化输入。
+
+```tsx
+import { useState } from "react";
+import { z } from "zod";
+import { useHumanInTheLoop, ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function ShippingAddressForm() {
+  useHumanInTheLoop({
+    name: "collectShippingAddress",
+    description: "Collect shipping address from the user before placing an order",
+    parameters: z.object({
+      orderSummary: z.string().describe("A summary of the order being placed"),
+    }),
+    render: ({ args, status, respond }) => {
+      const [address, setAddress] = useState({
+        street: "",
+        city: "",
+        zip: "",
+      });
+
+      if (status === ToolCallStatus.Executing && respond) {
+        return (
+          <div className="p-4 border rounded space-y-3">
+            <p className="font-medium">Order: {args.orderSummary}</p>
+            <p>Please enter your shipping address:</p>
+            <input
+              placeholder="Street address"
+              value={address.street}
+              onChange={(e) => setAddress({ ...address, street: e.target.value })}
+              className="w-full border p-2 rounded"
+            />
+            <input
+              placeholder="City"
+              value={address.city}
+              onChange={(e) => setAddress({ ...address, city: e.target.value })}
+              className="w-full border p-2 rounded"
+            />
+            <input
+              placeholder="ZIP code"
+              value={address.zip}
+              onChange={(e) => setAddress({ ...address, zip: e.target.value })}
+              className="w-full border p-2 rounded"
+            />
+            <button
+              onClick={() => respond(address)}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Submit Address
+            </button>
+          </div>
+        );
+      }
+
+      if (status === ToolCallStatus.Complete) {
+        return <div className="p-2 text-green-600">Shipping address submitted.</div>;
+      }
+
+      return null;
+    },
+  }, []);
+
+  return null;
+}
+```
+
+### 带上下文的审批工作流
+
+```tsx
+import { z } from "zod";
+import { useHumanInTheLoop, ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function ExpenseApproval() {
+  useHumanInTheLoop({
+    name: "approveExpense",
+    description: "Request manager approval for an expense report",
+    parameters: z.object({
+      employeeName: z.string().describe("Name of the employee"),
+      amount: z.number().describe("Expense amount in dollars"),
+      category: z.string().describe("Expense category"),
+      description: z.string().describe("Description of the expense"),
+    }),
+    render: ({ args, status, respond, result }) => {
+      if (status === ToolCallStatus.Executing && respond) {
+        return (
+          <div className="p-4 border rounded">
+            <h3 className="font-bold">Expense Approval Required</h3>
+            <div className="mt-2 space-y-1 text-sm">
+              <p>Employee: {args.employeeName}</p>
+              <p>Amount: ${args.amount.toFixed(2)}</p>
+              <p>Category: {args.category}</p>
+              <p>Description: {args.description}</p>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => respond({ approved: true })}
+                className="bg-green-500 text-white px-4 py-2 rounded"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => respond({ approved: false, reason: "Needs more detail" })}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (status === ToolCallStatus.Complete && result) {
+        const parsed = JSON.parse(result);
+        return (
+          <div className={`p-2 text-sm ${parsed.approved ? "text-green-600" : "text-red-600"}`}>
+            {parsed.approved ? "Expense approved." : `Expense rejected: ${parsed.reason}`}
+          </div>
+        );
+      }
+
+      return null;
+    },
+  }, []);
+
+  return null;
+}
+```
+
+## 行为
+
+- **阻止 Agent 执行**：Agent 在调用此工具时暂停，并等待 `respond` 回调被调用后才继续。
+- **内部状态机**：Hook 管理三种状态 -- `InProgress`（参数流式传入中）、`Executing`（等待用户响应）和 `Complete`（用户已响应）。你的渲染组件接收每个状态对应的适当 props。
+- **单次响应**：`respond` 回调每个工具调用只应调用一次。调用它会用提供的值解析工具调用 Promise。
+- **构建在 `useFrontendTool` 之上**：在底层，此 Hook 包装 `useFrontendTool` 并带有内部生成的处理程序，因此所有相同的生命周期行为（挂载/卸载注册、重复警告）都适用。
+- **挂载/卸载生命周期**：工具和渲染组件在挂载时注册，在卸载时移除。
+- **无返回值**：Hook 返回 `void`。
+
+## 相关
+
+- [`useFrontendTool`](/reference/v2/hooks/useFrontendTool) -- 用于不需要用户交互的自动化处理程序工具
+- [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall) -- 用于渲染后端工具调用
+- [`ToolCallStatus`](#toolcallstatus) -- 跨工具 Hook 使用的状态枚举
+
+## ToolCallStatus
+
+`ToolCallStatus` 枚举从 `@copilotkit/react-core/v2` 导出，定义工具执行的三个阶段：
+
+| 值 | 描述 |
+|-------|-------------|
+| `ToolCallStatus.InProgress` | 参数正从 Agent 流式传输。工具尚未开始执行。 |
+| `ToolCallStatus.Executing` | 参数已完全解析。对于 `useHumanInTheLoop`，`respond` 回调可用。 |
+| `ToolCallStatus.Complete` | 执行完成。`result` 字符串可用。 |

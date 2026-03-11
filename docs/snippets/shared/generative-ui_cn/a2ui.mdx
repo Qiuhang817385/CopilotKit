@@ -1,0 +1,56 @@
+import Image from "next/image"
+
+# A2UI - Google 的生成式 UI 规范
+
+**A2UI** 是 Google 的声明式、LLM 友好的生成式 UI 规范，使智能体能够生成动态用户界面。
+
+<Image
+  src="/images/gen-ui-specs-light.png"
+  alt="生成式 UI 规范"
+  width={4096}
+  height={2304}
+  className="block dark:hidden mb-8"
+/>
+<Image
+  src="/images/gen-ui-specs-dark.png"
+  alt="生成式 UI 规范"
+  width={4096}
+  height={2304}
+  className="hidden dark:block mb-8"
+/>
+
+## 什么是 A2UI？
+
+A2UI 是 Google 推出的声明式生成式 UI 规范。它设计为：
+
+- **基于 JSONL** - 使用 JSON Lines 格式进行流式传输
+- **LLM 友好** - 易于语言模型生成
+- **跨平台** - 可在任何平台上渲染
+- **流式优先** - 为实时、渐进式渲染而构建
+
+## 为什么选择 A2UI？
+
+### 声明式方法
+A2UI 允许智能体以声明方式描述 UI 组件，使 LLM 更容易生成动态界面，而无需了解实现细节。
+
+### 流式支持
+A2UI 在构建时考虑了流式传输，使智能体在生成响应时能够实现渐进式渲染，提供更好的用户体验。
+
+### 跨平台
+A2UI 规范可以在 Web、移动设备或任何其他平台上渲染，使您的智能体 UI 真正实现通用。
+
+
+## 在 CopilotKit 中使用 A2UI
+
+[开始使用 A2UI](/a2a/generative-ui/declarative-a2ui) 和 A2A 与 CopilotKit
+
+查看 [A2UI Composer](https://a2ui-editor.ag-ui.com/gallery) 来创建和查找小部件
+
+## 了解更多
+
+- [生成式 UI 规范概述](/generative-ui/specs) - 比较所有支持的规范
+- [生成式 UI 指南](/generative-ui) - 在 CopilotKit 中使用生成式 UI 进行构建
+- [A2UI 网站](https://a2ui.org/) - 访问 A2UI 网站
+- [AG-UI 协议](/ag-ui-protocol) - 了解支持 A2UI 的协议
+- [Open-JSON-UI](/generative-ui/specs/open-json-ui) - OpenAI 的替代方案
+- [MCP Apps](/generative-ui/specs/mcp-apps) - 基于 Iframe 的生成式 UI，扩展 MCP

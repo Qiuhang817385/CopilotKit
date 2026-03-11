@@ -1,0 +1,475 @@
+---
+title: "可观测性"
+description: "使用全面的可观测性钩子监控您的 CopilotKit 应用程序。了解用户交互、聊天事件和系统错误。"
+icon: "lucide/Activity"
+---
+
+使用一流的可观测性钩子监控 CopilotKit，这些钩子为聊天事件、用户交互和运行时错误发出结构化信号。将这些信号直接发送到您现有的技术栈，包括 Sentry、Datadog、New Relic 和 OpenTelemetry，或将其路由到您的分析管道。这些钩子暴露稳定的模式和 ID，因此您可以将智能体事件与应用遥测连接，端到端跟踪会话，并实时对故障发出警报。通过 `publicApiKey` 与 Copilot Cloud 一起使用，或通过 `publicLicenseKey` 自托管使用。
+## 快速开始
+
+<Callout type="info">
+  所有可观测性钩子都需要 `publicLicenseKey` 或 `publicAPIkey` - 在
+  [https://cloud.copilotkit.ai](https://cloud.copilotkit.ai) 免费获取
+</Callout>
+
+<Steps>
+
+<Step>
+### 聊天可观测性钩子
+
+使用全面的可观测性钩子跟踪用户交互和聊天事件：
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+      // 或
+      publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+    >
+      <CopilotChat
+        observabilityHooks={{
+          // [!code highlight]
+          onMessageSent: (message) => {
+            // [!code highlight]
+            console.log("消息已发送:", message);
+            analytics.track("chat_message_sent", { message });
+          }, // [!code highlight]
+          onChatExpanded: () => {
+            // [!code highlight]
+            console.log("聊天已打开");
+            analytics.track("chat_expanded");
+          }, // [!code highlight]
+          onChatMinimized: () => {
+            // [!code highlight]
+            console.log("聊天已关闭");
+            analytics.track("chat_minimized");
+          }, // [!code highlight]
+          onFeedbackGiven: (messageId, type) => {
+            // [!code highlight]
+            console.log("反馈:", type, messageId);
+            analytics.track("chat_feedback", { messageId, type });
+          }, // [!code highlight]
+        }} // [!code highlight]
+      />
+    </CopilotKit>
+  );
+}
+```
+
+</Step>
+
+<Step>
+### 错误可观测性
+
+使用错误可观测性钩子监控系统错误和性能：
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+      // 或
+      publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+      onError={(errorEvent) => {
+        // [!code highlight]
+        // 发送到监控服务
+        console.error("CopilotKit 错误:", errorEvent);
+
+        // 示例：发送到分析
+        analytics.track("copilotkit_error", {
+          type: errorEvent.type,
+          source: errorEvent.context.source,
+          timestamp: errorEvent.timestamp,
+        });
+      }} // [!code highlight]
+      showDevConsole={false} // 在生产环境中隐藏开发控制台
+    >
+      {/* 您的应用 */}
+    </CopilotKit>
+  );
+}
+```
+</Step>
+</Steps>
+
+## 可观测性功能
+
+### CopilotChat 可观测性钩子
+
+使用全面的可观测性钩子跟踪用户交互、聊天行为和错误（如果自托管需要 `publicLicenseKey`，如果使用 CopilotCloud 则需要 `publicAPIkey`）：
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat
+  observabilityHooks={{
+    onMessageSent: (message) => {
+      console.log("消息已发送:", message);
+      // 跟踪消息分析
+      analytics.track("chat_message_sent", { message });
+    },
+    onChatExpanded: () => {
+      console.log("聊天已打开");
+      // 跟踪参与度
+      analytics.track("chat_expanded");
+    },
+    onChatMinimized: () => {
+      console.log("聊天已关闭");
+      // 跟踪用户行为
+      analytics.track("chat_minimized");
+    },
+    onMessageRegenerated: (messageId) => {
+      console.log("消息已重新生成:", messageId);
+      // 跟踪重新生成请求
+      analytics.track("chat_message_regenerated", { messageId });
+    },
+    onMessageCopied: (content) => {
+      console.log("消息已复制:", content);
+      // 跟踪内容分享
+      analytics.track("chat_message_copied", { contentLength: content.length });
+    },
+    onFeedbackGiven: (messageId, type) => {
+      console.log("已给出反馈:", messageId, type);
+      // 跟踪用户反馈
+      analytics.track("chat_feedback_given", { messageId, type });
+    },
+    onChatStarted: () => {
+      console.log("聊天生成开始");
+      // 跟踪 AI 开始响应时
+      analytics.track("chat_generation_started");
+    },
+    onChatStopped: () => {
+      console.log("聊天生成停止");
+      // 跟踪 AI 停止响应时
+      analytics.track("chat_generation_stopped");
+    },
+    onError: (errorEvent) => {
+      console.log("发生错误", errorEvent);
+      // 记录错误
+      analytics.track("error_event", errorEvent);
+    },
+  }}
+/>;
+```
+
+**可用可观测性钩子：**
+
+- `onMessageSent(message)` - 用户发送消息
+- `onChatExpanded()` - 聊天打开/展开
+- `onChatMinimized()` - 聊天关闭/最小化
+- `onMessageRegenerated(messageId)` - 消息重新生成
+- `onMessageCopied(content)` - 消息被复制
+- `onFeedbackGiven(messageId, type)` - 给出点赞/点踩反馈
+- `onChatStarted()` - 聊天生成开始
+- `onChatStopped()` - 聊天生成停止
+- `onError(errorEvent)` - 错误事件和系统监控
+
+**要求：**
+
+- ✅ 需要 `publicLicenseKey`（自托管时）或来自 [Copilot Cloud](https://cloud.copilotkit.ai) 的 `publicApiKey`
+- ✅ 适用于 `CopilotChat`、`CopilotPopup`、`CopilotSidebar` 和所有预构建组件
+
+<Callout type="warn">
+  **重要：** 没有有效的
+  密钥，可观测性钩子将**不会触发**。这是一项安全功能，确保可观测性钩子仅在授权应用中工作。
+</Callout>
+
+## 错误事件结构
+
+`onError` 处理程序接收具有丰富上下文的详细错误事件：
+
+```typescript
+interface CopilotErrorEvent {
+  type:
+    | "error"
+    | "request"
+    | "response"
+    | "agent_state"
+    | "action"
+    | "message"
+    | "performance";
+  timestamp: number;
+  context: {
+    source: "ui" | "runtime" | "agent";
+    request?: {
+      operation: string;
+      method?: string;
+      url?: string;
+      startTime: number;
+    };
+    response?: {
+      endTime: number;
+      latency: number;
+    };
+    agent?: {
+      name: string;
+      nodeName?: string;
+    };
+    messages?: {
+      input: any[];
+      messageCount: number;
+    };
+    technical?: {
+      environment: string;
+      stackTrace?: string;
+    };
+  };
+  error?: any; // 错误事件时存在
+}
+```
+
+## 常见可观测性模式
+
+### 聊天事件跟踪
+
+```tsx
+<CopilotChat
+  observabilityHooks={{
+    onMessageSent: (message) => {
+      // 跟踪消息分析
+      analytics.track("chat_message_sent", {
+        messageLength: message.length,
+        timestamp: Date.now(),
+        userId: getCurrentUserId(),
+      });
+    },
+    onChatExpanded: () => {
+      // 跟踪用户参与度
+      analytics.track("chat_expanded", {
+        timestamp: Date.now(),
+        userId: getCurrentUserId(),
+      });
+    },
+    onFeedbackGiven: (messageId, type) => {
+      // 跟踪 AI 改进的反馈
+      analytics.track("chat_feedback", {
+        messageId,
+        feedbackType: type,
+        timestamp: Date.now(),
+      });
+    },
+  }}
+/>
+```
+
+### 组合事件和错误跟踪
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+  // 或
+  publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+  onError={(errorEvent) => {
+    // 错误可观测性
+    if (errorEvent.type === "error") {
+      console.error("CopilotKit 错误:", errorEvent);
+      analytics.track("copilotkit_error", {
+        error: errorEvent.error?.message,
+        context: errorEvent.context,
+      });
+    }
+  }}
+>
+  <CopilotChat
+    observabilityHooks={{
+      onMessageSent: (message) => {
+        // 事件跟踪
+        analytics.track("chat_message_sent", { message });
+      },
+      onChatExpanded: () => {
+        analytics.track("chat_expanded");
+      },
+    }}
+  />
+</CopilotKit>
+```
+
+## 错误可观测性模式
+
+### 基本错误日志
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+  // 或
+  publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+  onError={(errorEvent) => {
+    console.error("[CopilotKit 错误]", {
+      type: errorEvent.type,
+      timestamp: new Date(errorEvent.timestamp).toISOString(),
+      context: errorEvent.context,
+      error: errorEvent.error,
+    });
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+### 与监控服务集成
+
+```tsx
+// Sentry 示例
+import * as Sentry from "@sentry/react";
+
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+  // 或
+  publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+  onError={(errorEvent) => {
+    if (errorEvent.type === "error") {
+      Sentry.captureException(errorEvent.error, {
+        tags: {
+          source: errorEvent.context.source,
+          operation: errorEvent.context.request?.operation,
+        },
+        extra: {
+          context: errorEvent.context,
+          timestamp: errorEvent.timestamp,
+        },
+      });
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>;
+```
+
+### 自定义错误分析
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+  // 或
+  publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+  onError={(errorEvent) => {
+    // 跟踪不同类型的错误
+    analytics.track("copilotkit_event", {
+      event_type: errorEvent.type,
+      source: errorEvent.context.source,
+      agent_name: errorEvent.context.agent?.name,
+      latency: errorEvent.context.response?.latency,
+      error_message: errorEvent.error?.message,
+      timestamp: errorEvent.timestamp,
+    });
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+## 开发与生产环境设置
+
+### 开发环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="http://localhost:3000/api/copilotkit"
+  publicLicenseKey={process.env.NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY} // 自托管
+  // 或
+  publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY} // 使用 Copilot Cloud
+  showDevConsole={true} // 显示视觉错误
+  onError={(errorEvent) => {
+    // 开发环境中简单的控制台日志
+    console.log("CopilotKit 事件:", errorEvent);
+  }}
+>
+  <CopilotChat
+    observabilityHooks={{
+      onMessageSent: (message) => {
+        console.log("消息已发送:", message);
+      },
+      onChatExpanded: () => {
+        console.log("聊天已展开");
+      },
+    }}
+  />
+</CopilotKit>
+```
+
+### 生产环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="https://your-app.com/api/copilotkit"
+  publicLicenseKey={process.env.NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY} // [!code highlight]
+  // 或
+  publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY} // [!code highlight]
+  showDevConsole={false} // 对用户隐藏
+  onError={(errorEvent) => {
+    // 生产环境错误可观测性
+    if (errorEvent.type === "error") {
+      // 记录关键错误
+      logger.error("CopilotKit 错误", {
+        error: errorEvent.error,
+        context: errorEvent.context,
+        timestamp: errorEvent.timestamp,
+      });
+
+      // 转发到监控
+      monitoring.captureError(errorEvent.error, {
+        extra: errorEvent.context,
+      });
+    }
+  }}
+>
+  <CopilotChat
+    observabilityHooks={{
+      onMessageSent: (message) => {
+        // 跟踪生产分析
+        analytics.track("chat_message_sent", {
+          messageLength: message.length,
+          userId: getCurrentUserId(),
+        });
+      },
+      onChatExpanded: () => {
+        analytics.track("chat_expanded");
+      },
+      onFeedbackGiven: (messageId, type) => {
+        // 跟踪 AI 改进的反馈
+        analytics.track("chat_feedback", { messageId, type });
+      },
+    }}
+  />
+</CopilotKit>
+```
+
+## 开始使用 CopilotKit Premium
+
+要使用可观测性钩子（事件钩子和错误可观测性），您需要一个 CopilotKit Premium 账户：
+
+1. 在 [https://cloud.copilotkit.ai](https://cloud.copilotkit.ai) **免费注册**
+2. 从仪表板获取您的公共许可证密钥（用于自托管）或公共 API 密钥
+3. **将其添加到您的环境变量**：
+   ```bash
+   NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY=ck_pub_your_key_here
+   # 或
+   NEXT_PUBLIC_COPILOTKIT_API_KEY=ck_pub_your_key_here
+   ```
+4. **在您的 CopilotKit 提供程序中使用它**：
+   ```tsx
+   <CopilotKit 
+      publicLicenseKey={process.env.NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY}
+      // 或
+      publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY}
+      >
+     <CopilotChat
+       observabilityHooks={{
+         onMessageSent: (message) => console.log("消息:", message),
+         onChatExpanded: () => console.log("聊天已打开"),
+       }}
+     />
+   </CopilotKit>
+   ```
+
+<Callout type="info">
+  CopilotKit Premium 免费开始使用，为您的 AI 协驾驶舱提供生产就绪的
+  基础设施，包括用于跟踪用户行为和监控系统健康的全面可观测性
+  功能。
+</Callout>

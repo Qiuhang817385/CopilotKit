@@ -1,0 +1,32 @@
+---
+title: 共享状态
+description: 在您的 UI 和 Agent 状态之间创建双向连接。
+icon: "lucide/Repeat"
+---
+
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+
+<ImageZoom
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+  alt="共享状态演示"
+  width={1000}
+  height={1000}
+  className="rounded-lg shadow-lg border mt-0"
+/>
+
+
+## 什么是共享状态？
+
+CoAgents 维护一个共享状态，将您的 UI 与 Agent 的执行无缝连接。这个共享状态系统允许您：
+
+- 显示 Agent 的当前进度和中间结果
+- 通过 UI 交互更新 Agent 的状态
+- 在整个应用程序中实时响应状态变化
+
+该系统的基础建立在 LlamaIndex 的 AG-UI 协议集成之上，它在工作流路由器中提供 `initial_state` 支持。
+
+## 什么时候应该使用它？
+
+当您想要促进 Agent 和用户之间的协作时，状态流是完美的。您的 LlamaIndex Agent 持久化的任何状态都将自动被 UI 共享。同样，用户在 UI 中更新的任何状态都将自动反映。
+
+这使得 Agent 和用户保持一致的体验。

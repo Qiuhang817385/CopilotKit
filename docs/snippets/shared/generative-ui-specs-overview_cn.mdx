@@ -1,0 +1,48 @@
+import Image from "next/image"
+
+<Image 
+  src="/images/gen-ui-specs-light.png" 
+  alt="生成式 UI 规范" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden mb-8"
+/>
+<Image 
+  src="/images/gen-ui-specs-dark.png" 
+  alt="生成式 UI 规范" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block mb-8"
+/>
+
+## **生成式 UI 规范**
+
+最近发布的几个规范使智能体能够返回生成式 UI，增强了智能体与用户对话的能力和灵活性。
+
+**A2UI**、**MCP Apps** 和 **Open-JSON-UI** 都是生成式 UI 规范，允许智能体不仅以文本回复用户，还可以使用动态 UI 组件。
+CopilotKit 现在为所有主要生成式 UI 规范提供通用支持。
+
+| **规范** | **来源/维护者** | **用途** |
+| --- | --- | --- |
+| **A2UI** | Google | 声明式、LLM 友好的生成式 UI 规范。基于 JSONL 和流式传输，设计用于跨平台渲染。 |
+| **Open-JSON-UI** | OpenAI | OpenAI 内部声明式生成式 UI 模式的标准化开放版本。 |
+| **MCP Apps** | MCP 生态系统 | 基于 Iframe 的生成式 UI，扩展 MCP，使服务器能够返回交互式 UI 组件。 |
+
+## **AG-UI vs 生成式 UI 规范**
+
+尽管命名相似，**AG-UI 不是生成式 UI 规范** —— 它是一个**用户交互协议**，提供智能体与应用程序之间的**双向运行时连接**。
+
+AG-UI 原生支持上述所有生成式 UI 规范，并允许开发人员定义**自己的自定义生成式 UI 标准**。
+
+## **了解更多**
+
+详细了解每个规范：
+
+- [A2UI](/generative-ui/specs/a2ui) - Google 的声明式生成式 UI 规范
+- [Open-JSON-UI](/generative-ui/specs/open-json-ui) - OpenAI 的开放生成式 UI 标准
+- [MCP Apps](/generative-ui/specs/mcp-apps) - 基于 Iframe 的生成式 UI，扩展 MCP
+
+或了解相关协议：
+
+- [AG-UI 协议](/ag-ui-protocol) - 支持所有这些规范的用户交互协议
+- [生成式 UI 指南](/generative-ui) - 在 CopilotKit 中使用生成式 UI 进行构建

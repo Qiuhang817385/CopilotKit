@@ -1,0 +1,205 @@
+---
+title: "第 5 步：流式进度"
+---
+
+现在我们已经将 LangGraph 智能体集成到应用程序中，我们可以开始利用进一步增强了用户智能体体验的功能。例如，如果我们可以向用户流式传输搜索进度会怎样？
+
+在这一步中，我们将做到这一点。为此，我们将在 LangGraph 智能体的 `search_node` 中使用 `copilotkit_emit_state` CopilotKit SDK 函数。
+
+## 安装 CopilotKit SDK
+
+CopilotKit 自带用于构建 Python 和 TypeScript 智能体的 SDK。在这种情况下，智能体是用 Python 编写的（使用 `poetry` 管理），因此我们将安装 Python SDK。
+
+<Callout>
+还没有安装 poetry？[在这里安装](https://python-poetry.org/docs/#installation)。
+</Callout>
+
+```shell title="agent/"
+poetry add copilotkit
+# 或者同时添加 crewai 支持
+poetry add copilotkit[crewai]
+```
+
+现在我们可以在智能体中使用 CopilotKit SDK 了！由于我们要编辑智能体中的 `search_node`，我们将编辑 `search.py` 文件。
+
+## 手动发出智能体的状态
+
+使用 CoAgents，LangGraph 智能体的状态仅在节点更改发生时发出（即，遍历边时）。这意味着进行中的工作默认不会向用户发出。但是，我们可以使用前面提到的 `copilotkit_emit_state` 函数手动发出状态。
+
+<Steps>
+<Step>
+### 向 `search_node` 添加自定义 CopilotKit 配置
+首先，我们要向 `search_node` 添加一个自定义 copilotkit 配置，以描述我们将要发出的中间状态。
+
+```python title="agent/travel/search.py" {3-5}
+# ...
+from copilotkit.langgraph import copilotkit_emit_state, copilotkit_customize_config # [!code ++]
+
+async def search_node(state: AgentState, config: RunnableConfig):
+    """
+    搜索节点负责搜索地点。
+    """
+    ai_message = cast(AIMessage, state["messages"][-1])
+
+    # [!code ++:9]
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[{
+            "state_key": "search_progress",
+            "tool": "search_for_places",
+            "tool_argument": "search_progress",
+        }],
+    )
+
+    # ...
+```
+</Step>
+<Step>
+### 发出中间状态
+现在我们可以调用 `copilotkit_emit_state` 在我们想要的任何地方发出中间状态。在这种情况下，我们将在搜索开始时以及收到结果时发出进度。
+
+<Callout>
+其中一部分已经为你设置好了，那就是 `search_progress` 状态键。为了发出进度，我们向状态添加一个对象，我们将手动用搜索结果和进度更新它。然后我们将调用 `copilotkit_emit_state` 来手动发出该状态。
+</Callout>
+
+```python title="agent/travel/search.py"
+# ...
+async def search_node(state: AgentState, config: RunnableConfig):
+    """
+    搜索节点负责搜索地点。
+    """
+    ai_message = cast(AIMessage, state["messages"][-1])
+
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[{
+            "state_key": "search_progress",
+            "tool": "search_for_places",
+            "tool_argument": "search_progress",
+        }],
+    )
+
+    # ^ 之前的代码
+
+    state["search_progress"] = state.get("search_progress", [])
+    queries = ai_message.tool_calls[0]["args"]["queries"]
+
+    for query in queries:
+        state["search_progress"].append({
+            "query": query,
+            "results": [],
+            "done": False
+        })
+
+    await copilotkit_emit_state(config, state) # [!code ++]
+
+    # ...
+```
+
+现在我们的搜索状态将通过 `search_progress` 状态键发出到 CopilotKit！但是，当我们收到搜索结果时，我们仍然需要更新此状态。
+
+```python title="agent/travel/search.py"
+# ...
+async def search_node(state: AgentState, config: RunnableConfig):
+    """
+    搜索节点负责搜索地点。
+    """
+    ai_message = cast(AIMessage, state["messages"][-1])
+
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[{
+            "state_key": "search_progress",
+            "tool": "search_for_places",
+            "tool_argument": "search_progress",
+        }],
+    )
+
+    state["search_progress"] = state.get("search_progress", [])
+    queries = ai_message.tool_calls[0]["args"]["queries"]
+
+    for query in queries:
+        state["search_progress"].append({
+            "query": query,
+            "results": [],
+            "done": False
+        })
+
+    await copilotkit_emit_state(config, state)
+
+    # ^ 之前的代码
+
+    places = []
+    for i, query in enumerate(queries):
+        response = gmaps.places(query)
+        for result in response.get("results", []):
+            place = {
+                "id": result.get("place_id", f"{result.get('name', '')}-{i}"),
+                "name": result.get("name", ""),
+                "address": result.get("formatted_address", ""),
+                "latitude": result.get("geometry", {}).get("location", {}).get("lat", 0),
+                "longitude": result.get("geometry", {}).get("location", {}).get("lng", 0),
+                "rating": result.get("rating", 0),
+            }
+            places.append(place)
+        state["search_progress"][i]["done"] = True
+        await copilotkit_emit_state(config, state) # [!code ++]
+
+    state["search_progress"] = []
+    await copilotkit_emit_state(config, state) # [!code ++]
+
+    # ...
+
+```
+</Step>
+</Steps>
+
+## 接收和渲染手动发出的状态
+
+现在我们正在手动发出搜索状态，我们可以在 UI 中接收和渲染该状态。为此，我们将在 `use-trips.tsx` 钩子中使用 [useCoAgentStateRender](/reference/v1/hooks/useCoAgentStateRender) 函数。
+
+
+我们所要做的就是通过 `useCoAgentStateRender` 钩子告诉 CopilotKit 有条件地渲染 `search_progress` 状态键。
+
+```tsx title="ui/lib/hooks/use-trips.tsx"
+// ...
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code --]
+import { useAgent, useCoAgentStateRender } from "@copilotkit/react-core/v2"; // [!code ++]
+import { SearchProgress } from "@/components/SearchProgress"; // [!code ++]
+
+export const TripsProvider = ({ children }: { children: ReactNode }) => {
+  // ...
+
+  const { state, setState } = useAgent<AgentState>({
+    name: "travel",
+    initialState: {
+      trips: defaultTrips,
+      selected_trip_id: defaultTrips[0].id,
+    },
+  });
+
+  // [!code ++:10]
+  useCoAgentStateRender<AgentState>({
+    name: "travel",
+    render: ({ state }) => {
+      if (state.search_progress) {
+        return <SearchProgress progress={state.search_progress} />
+      }
+      return null;
+    },
+  });
+
+  // ...
+}
+
+```
+
+`<SearchProgress />` 组件是提前为你创建的自定义组件。如果你想了解更多关于它的信息，请随时在 `ui/components/SearchProgress.tsx` 中查看！
+
+<Callout>
+另一件提前为你完成的事情是 `search_progress` 键已经存在于 `AgentState` 类型中。你可以在 `ui/lib/types.ts` 中查看该类型。
+</Callout>
+
+试一试！让智能体搜索地点，我们会看到每次搜索的进度。
+
+最后一步是向应用程序添加人机协同功能，以允许用户批准或拒绝智能体想要执行的变更操作。

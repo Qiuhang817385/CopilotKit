@@ -1,0 +1,135 @@
+---
+title: 预构建组件
+icon: "lucide/SendHorizontal"
+description: 直接用于 LangGraph Agent 的聊天组件。
+---
+
+import { MessageSquare, PanelRight, MessageCircle } from "lucide-react";
+import { IframeSwitcher } from "@/components/content"
+
+CopilotKit 提供三个预构建的聊天组件，可直接连接到 LangGraph Agent。每个组件都是围绕 `CopilotChat` 的不同布局包装器 —— 选择适合您应用的一个即可。
+
+<Callout type="info">
+  如果您已完成[快速开始](/langgraph/quickstart)，您已经设置了其中一个。
+</Callout>
+
+<IframeSwitcher
+  id="agentic-chat-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 设置
+
+在根布局中导入默认样式：
+
+```tsx title="layout.tsx"
+import "@copilotkit/react-ui/v2/styles.css";
+```
+
+### CopilotChat
+
+一个灵活的聊天组件，可以放置在应用中的任何位置并按需调整大小。
+
+```tsx title="page.tsx"
+// [!code word:CopilotChat]
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+export function YourComponent() {
+  return (
+    <CopilotChat
+      labels={{
+        modalHeaderTitle: "您的助手",
+        welcomeMessageText: "嗨！今天我能帮您什么？",
+      }}
+    />
+  );
+}
+```
+
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/copilotchat-example.gif" alt="CopilotChat 示例" className="w-full rounded-lg my-4" />
+
+### CopilotSidebar
+
+包装您的主内容并提供可折叠的侧边栏聊天。
+
+```tsx title="page.tsx"
+// [!code word:CopilotSidebar]
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+export function YourApp() {
+  return (
+    <CopilotSidebar
+      defaultOpen={true}
+      labels={{
+        modalHeaderTitle: "侧边栏助手",
+        welcomeMessageText: "今天我能帮您什么？",
+      }}
+    >
+      <YourMainContent />
+    </CopilotSidebar>
+  );
+}
+```
+
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/sidebar-example.gif" alt="CopilotSidebar 示例" className="w-full rounded-lg my-4" />
+
+
+### CopilotPopup
+
+一个浮动聊天气泡，位于内容旁边并可切换打开/关闭。
+
+```tsx title="page.tsx"
+// [!code word:CopilotPopup]
+import { CopilotPopup } from "@copilotkit/react-core/v2";
+
+export function YourApp() {
+  return (
+    <>
+      <YourMainContent />
+      <CopilotPopup
+        labels={{
+          modalHeaderTitle: "弹出助手",
+          welcomeMessageText: "需要帮助吗？",
+        }}
+      />
+    </>
+  );
+}
+```
+
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/popup-example.gif" alt="CopilotPopup 示例" className="w-full rounded-lg my-4" />
+
+## 自定义
+
+所有三个组件都支持[插槽系统](/langgraph/custom-look-and-feel/slots)进行深度自定义 —— 从 Tailwind 类到完整组件替换：
+
+```tsx title="page.tsx"
+<CopilotChat
+  // 使用 Tailwind 类设置插槽样式
+  input={{
+    textArea: "text-lg",
+    sendButton: "bg-blue-600 hover:bg-blue-700",
+  }}
+  // 自定义嵌套消息插槽
+  messageView={{
+    assistantMessage: {
+      className: "bg-gray-50 rounded-xl p-4",
+      toolbar: "border-t mt-2",
+    },
+    userMessage: "bg-blue-100 rounded-xl",
+  }}
+  // 通过返回 null 隐藏元素
+  scrollView={{
+    feather: () => null,
+  }}
+/>
+```
+
+## 下一步
+
+- [自定义外观](/langgraph/custom-look-and-feel) — 使用插槽系统进行主题、重样式或完全无头
+- [程序化控制](/langgraph/programmatic-control) — 使用 `useAgent` 和 `copilotkit.runAgent()` 从代码驱动 Agent

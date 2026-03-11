@@ -1,0 +1,410 @@
+## 完整的 Crew 设置
+
+本指南展示如何在一个**单一文件**中设置您的 CrewAI 代理与 CopilotKit，包括：
+
+1. **启动**您的 crew
+2. **渲染** Crew 状态和进度
+3. **处理**人工反馈
+4. **（可选）**扩展以获取最终结果
+
+下面是一个**复制粘贴**示例，名为 `crew-quickstart.tsx`。一旦您将其放入代码中，只需在您的应用程序中渲染 `<QuickstartCrew />` 即可看到它生效！
+
+```tsx title="use-crew-quickstart.tsx"
+"use client";
+
+import {
+  CrewsAgentState,
+  CrewsResponseStatus,
+  CrewsStateItem,
+  CrewsTaskStateItem,
+  CrewsToolStateItem,
+  useAgent,
+  useCoAgentStateRender,
+  useFrontendTool,
+  useCopilotChat,
+  useCopilotAdditionalInstructions,
+} from "@copilotkit/react-core/v2";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { MessageRole, TextMessage } from "@copilotkit/runtime-client-gql";
+
+interface CrewsFeedback extends CrewsStateItem {
+  /**
+   * 任务执行的输出
+   */
+  task_output?: string;
+}
+
+/**
+ * 实时渲染您的 Crew 的步骤和任务。
+ */
+function CrewStateRenderer({
+  state,
+  status,
+}: {
+  state: CrewsAgentState;
+  status: CrewsResponseStatus;
+}) {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevItemsLengthRef = useRef<number>(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // 合并步骤 + 任务
+  const items = useMemo(() => {
+    if (!state) return [];
+    return [...(state.steps || []), ...(state.tasks || [])].sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, [state]);
+
+  // 高亮新添加的项目并自动滚动
+  useEffect(() => {
+    if (!state) return;
+    if (items.length > prevItemsLengthRef.current) {
+      const newestItem = items[items.length - 1];
+      setHighlightId(newestItem.id);
+      setTimeout(() => setHighlightId(null), 1500);
+
+      if (contentRef.current && !isCollapsed) {
+        contentRef.current.scrollTop = contentRef.current.scrollHeight;
+      }
+    }
+    prevItemsLengthRef.current = items.length;
+  }, [items, isCollapsed, state]);
+
+  if (!state) {
+    return <div>正在加载 crew 状态...</div>;
+  }
+
+  // 如果已折叠、为空且不在进行中则完全隐藏
+  if (isCollapsed && items.length === 0 && status !== "inProgress") return null;
+
+  return (
+    <div style={{ marginTop: "8px", fontSize: "0.9rem" }}>
+      <div
+        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        <span style={{ marginRight: 4 }}>{isCollapsed ? "▶" : "▼"}</span>
+        {status === "inProgress" ? "Crew 正在分析..." : "Crew 分析"}
+      </div>
+
+      {!isCollapsed && (
+        <div
+          ref={contentRef}
+          style={{
+            maxHeight: "200px",
+            overflow: "auto",
+            borderLeft: "1px solid #ccc",
+            paddingLeft: "8px",
+            marginLeft: "4px",
+            marginTop: "4px",
+          }}
+        >
+          {items.length > 0 ? (
+            items.map((item) => {
+              const isTool = (item as CrewsToolStateItem).tool !== undefined;
+              const isHighlighted = item.id === highlightId;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    marginBottom: "8px",
+                    animation: isHighlighted ? "fadeIn 0.5s" : undefined,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold" }}>
+                    {isTool
+                      ? (item as CrewsToolStateItem).tool
+                      : (item as CrewsTaskStateItem).name}
+                  </div>
+                  {"thought" in item && item.thought && (
+                    <div style={{ opacity: 0.8, marginTop: "4px" }}>
+                      思考: {item.thought}
+                    </div>
+                  )}
+                  {"result" in item && item.result !== undefined && (
+                    <pre style={{ fontSize: "0.85rem", marginTop: "4px" }}>
+                      {JSON.stringify(item.result, null, 2)}
+                    </pre>
+                  )}
+                  {"description" in item && item.description && (
+                    <div style={{ marginTop: "4px" }}>{item.description}</div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ opacity: 0.7 }}>暂无活动...</div>
+          )}
+        </div>
+      )}
+
+      {/* 简单的淡入动画 */}
+      <style>{`
+        @keyframes fadeIn {
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * 为代理请求的用户反馈渲染一个简单的 UI（批准 / 拒绝）。
+ */
+function CrewHumanFeedbackRenderer({
+  feedback,
+  respond,
+  status,
+}: {
+  feedback: CrewsFeedback;
+  respond?: (input: string) => void;
+  status: CrewsResponseStatus;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [userResponse, setUserResponse] = useState<string | null>(null);
+
+  if (status === "complete") {
+    return (
+      <div style={{ marginTop: 8, textAlign: "right" }}>
+        {userResponse || "反馈已提交。"}
+      </div>
+    );
+  }
+
+  if (status === "inProgress" || status === "executing") {
+    return (
+      <div style={{ marginTop: 8 }}>
+        {isExpanded && (
+          <div
+            style={{
+              border: "1px solid #ddd",
+              padding: "8px",
+              marginBottom: "8px",
+            }}
+          >
+            {feedback.task_output}
+          </div>
+        )}
+        <div style={{ textAlign: "right" }}>
+          <button
+            style={{ marginRight: 8 }}
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? "隐藏" : "显示"} 反馈
+          </button>
+          <button
+            style={{
+              marginRight: 8,
+              backgroundColor: "#222222",
+              border: "none",
+              padding: "8px 16px",
+              color: "white",
+              cursor: "pointer",
+              borderRadius: "4px",
+            }}
+            onClick={() => {
+              setUserResponse("已批准");
+              /**
+               * 此字符串是任意的。它可以是任何可序列化的输入，将被转发给您的 Crew 作为反馈。
+               */
+              respond?.("Approve");
+            }}
+          >
+            批准
+          </button>
+          <button
+            style={{
+              backgroundColor: "#222222",
+              border: "none",
+              padding: "8px 16px",
+              color: "white",
+              cursor: "pointer",
+              borderRadius: "4px",
+            }}
+            onClick={() => {
+              setUserResponse("已拒绝");
+              /**
+               * 此字符串是任意的。它可以是任何可序列化的输入，将被转发给您的 Crew 作为反馈。
+               */
+              respond?.("Reject");
+            }}
+          >
+            拒绝
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/**
+ * useCrewQuickstart
+ * 最小示例：
+ * 1) 设置一个 crew/代理
+ * 2) 处理基于文本的用户输入 (get_input)
+ * 3) 渲染实时 crew 状态
+ * 4) 处理 "crew_requesting_feedback"
+ */
+export const useCrewQuickstart = ({
+  crewName,
+  inputs,
+}: {
+  crewName: string;
+  inputs: Array<string>;
+}): {
+  output: string;
+} => {
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
+
+  const { state, setState, run } = useAgent({
+    name: crewName,
+    initialState: {
+      inputs: {},
+      result: "Crew 结果将显示在此处...",
+    },
+  });
+
+  const { appendMessage, isLoading } = useCopilotChat();
+
+  const instructions =
+    "输入是绝对必需的。请在继续其他操作之前调用 getInputs。";
+
+  // 首次加载聊天时渲染初始消息
+  useEffect(() => {
+    if (initialMessageSent || isLoading) return;
+
+    setTimeout(async () => {
+      await appendMessage(
+        new TextMessage({
+          content: "嗨，请在我们开始之前提供您的输入。",
+          role: MessageRole.Developer,
+        })
+      );
+      setInitialMessageSent(true);
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!initialMessageSent && Object.values(state?.inputs || {}).length > 0) {
+      appendMessage(
+        new TextMessage({
+          role: MessageRole.Developer,
+          content: "我的输入是: " + JSON.stringify(state?.inputs),
+        })
+      ).then(() => {
+        setInitialMessageSent(true);
+      });
+    }
+  }, [initialMessageSent, state?.inputs]);
+
+  useCopilotAdditionalInstructions({
+    instructions,
+    available:
+      Object.values(state?.inputs || {}).length > 0 ? "enabled" : "disabled",
+  });
+
+  useFrontendTool({
+    name: "getInputs",
+    followUp: false,
+    description:
+      "此操作允许 Crew 在启动 Crew 之前从用户获取所需的输入。",
+    renderAndWaitForResponse({ status }) {
+      if (status === "inProgress" || status === "executing") {
+        return (
+          <form
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const input = form.elements.namedItem(
+                "input"
+              ) as HTMLTextAreaElement;
+              const inputValue = input.value;
+              const inputKey = input.id;
+
+              setState({
+                ...state,
+                inputs: {
+                  ...state.inputs,
+                  [inputKey]: inputValue,
+                },
+              });
+              setTimeout(async () => {
+                console.log("正在运行 crew");
+                await run();
+                console.log("crew 运行完成");
+              }, 0);
+            }}
+          >
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              {inputs.map((input) => (
+                <div
+                  key={input}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <label htmlFor={input}>{input}</label>
+                  <textarea
+                    id={input}
+                    autoFocus
+                    name="input"
+                    placeholder={`在此输入 ${input}`}
+                    required
+                  />
+                </div>
+              ))}
+              <button
+                type="submit"
+                style={{
+                  cursor: "pointer",
+                }}
+              >
+                提交
+              </button>
+            </div>
+          </form>
+        );
+      }
+      return <>输入已提交</>;
+    },
+  });
+
+  useCoAgentStateRender({
+    name: crewName,
+    render: ({ state, status }) => (
+      <CrewStateRenderer state={state} status={status} />
+    ),
+  });
+
+  useFrontendTool({
+    name: "crew_requesting_feedback",
+    description: "向用户请求反馈",
+    renderAndWaitForResponse(props) {
+      const { status, args, respond } = props;
+      return (
+        <CrewHumanFeedbackRenderer
+          feedback={args as unknown as CrewsFeedback}
+          respond={respond}
+          status={status as CrewsResponseStatus}
+        />
+      );
+    },
+  });
+
+  return {
+    output: state?.result || "",
+  };
+};
+```

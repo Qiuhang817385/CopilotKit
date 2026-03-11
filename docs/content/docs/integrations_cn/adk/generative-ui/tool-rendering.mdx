@@ -1,0 +1,135 @@
+---
+title: "工具渲染"
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染 Agent 的工具调用。
+---
+
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="backend-tools-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+工具是 LLM 调用预定义、通常是确定性函数的一种方式。CopilotKit 允许你在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 何时使用？
+
+当你在 UI 中渲染工具时，可以为用户提供关于 Agent 正在执行操作的反馈，特别是在 Agent 调用工具时。CopilotKit 允许你完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+<Step>
+### 运行并连接你的 Agent
+<RunAndConnect components={props.components} />
+</Step>
+<Step>
+### 给 Agent 一个可调用的工具
+
+<Tabs groupId="language_adk_agent" items={['Python']} default="Python" persist>
+    <Tab value="Python">
+        ```python title="agent.py"
+        from fastapi import FastAPI
+        from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+        from google.adk.agents import LlmAgent
+
+
+        def get_weather(location: str = "the entire world") -> str:
+            """Retrieves the current weather report for a specified location.
+
+            Args:
+                location (str): The name of the location to get the weather for.
+
+            Returns:
+                str: The weather report for the specified location.
+            """
+            return f"The weather in {location} is sunny."
+
+
+        agent = LlmAgent(
+            model="gemini-2.5-flash",
+            name="my_agent",
+            instruction="You are a helpful weather assistant.",
+            tools=[get_weather],
+        )
+
+        adk_agent = ADKAgent(
+            adk_agent=agent,
+            app_name="weather_demo",
+            user_id="demo_user"
+        )
+
+        app = FastAPI()
+        add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+        if __name__ == "__main__":
+            import uvicorn
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+        ```
+    </Tab>
+
+</Tabs>
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，你的 Agent 将能够调用 `get_weather` 工具。现在
+我们只需要添加一个 `useRenderTool` Hook 即可在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  要在 UI 中渲染工具调用，action 的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:12]
+  useRenderTool({
+    name: "get_weather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "调用天气 API..."}
+          {status === "complete" && `已为 ${args.location} 调用天气 API。`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让 Agent 获取某个位置的天气。你应该能看到我们添加的自定义 UI 组件渲染工具调用并显示传递给工具的参数。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tool-based-gen-ui.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

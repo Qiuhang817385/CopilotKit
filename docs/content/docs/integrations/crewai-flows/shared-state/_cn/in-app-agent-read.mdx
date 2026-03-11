@@ -1,0 +1,144 @@
+---
+title: 读取智能体状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时智能体状态。
+---
+
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+
+<Frame>
+  <ImageZoom
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/read-agent-state.png"
+    alt="read agent state"
+    width={1000}
+    height={1000}
+    className="my-0"
+  />
+</Frame>
+
+<Callout type="info">
+  上图展示的是 [coagent
+  starter](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-starter-crewai-flows)
+  应用了[实现](#实现)部分！
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 中使用实时智能体状态，也可以在原生应用程序 UX 中使用。
+
+## 什么时候应该使用它？
+
+您可以在想向用户提供关于智能体状态的反馈时使用它。随着智能体状态的更新，您可以原生地在应用程序中反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并将您的智能体连接到 CopilotKit
+
+    在继续之前，您需要运行您的智能体并将其连接到 CopilotKit。如果您还没有这样做，
+    可以按照 [快速入门](/crewai-flows/quickstart) 指南中的说明进行操作。
+
+    如果您还没有智能体，可以使用 [coagent starter](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-starter-crewai-flows) 作为起点，
+    因为本指南使用它作为起点。
+
+  </Step>
+  <Step>
+    ### 定义智能体状态
+    CrewAI Flows 是有状态的。当您通过流程时，该状态会被更新并可用于下一个函数。对于这个示例，
+    让我们假设我们的智能体状态看起来像这样。
+
+    <Tabs groupId="language_crewai-flows_agent" items=["Python"] persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit.crewai import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            language: Literal["english", "spanish"] = "english"
+        ```
+      </Tab>
+    </Tabs>
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    在您的智能体连接并运行后，剩下的就是调用 `useAgent` hook，传递智能体的名称，并
+    可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当智能体的状态变化时会自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+    随着智能体状态的更新，您的 `state` 变量将自动随之更新！在这种情况下，您会看到语言设置为"english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染智能体状态
+
+您还可以在聊天 UI 中渲染智能体的状态。这对于以更具上下文感的方式告知用户智能体的状态很有用。为此，您可以使用带有 `render` 函数的 `useAgent` hook。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义智能体状态类型，应与智能体的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "sample_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当智能体的状态变化时会自动更新。
+</Callout>
+
+## 中间流式传输和渲染智能体状态
+
+默认情况下，CrewAI Flow 智能体状态只会在 CrewAI Flow 节点转换之间更新——
+这意味着状态更新将是不连续和延迟的。
+
+您可能希望将智能体状态渲染为**连续**更新。
+
+请参阅 **[发送中间状态](/crewai-flows/shared-state/predictive-state-updates)。**

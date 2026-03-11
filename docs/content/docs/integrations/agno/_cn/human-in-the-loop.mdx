@@ -1,0 +1,136 @@
+---
+title: 人机协同
+icon: "lucide/Users"
+description: 创建前端工具并在您的 Agno 智能体中使用它们进行人机协同交互。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/agno/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/agno/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/agno/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义 Agno 智能体可以调用的客户端函数，执行完全在用户的浏览器中进行。当您的智能体调用前端工具时，逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于让[您的智能体控制 UI](/agno/frontend-tools)、[生成式 UI](/agno/frontend-tools)，或用于人机协同交互。
+
+在本指南中，我们介绍前端工具在人机协同中的使用。
+
+## 什么时候使用这个？
+
+当您需要智能体与客户端原语交互时，使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 在您的 Agno 智能体中定义前端工具
+
+        在您的 Agno 智能体中，使用 `@tool(external_execution=True)` 装饰器定义一个工具：
+
+        ```python title="tools/frontend.py"
+        from agno.tools import tool
+
+        @tool(external_execution=True)
+        def offerOptions(option_1: str, option_2: str):
+            """
+            给用户两个选项之间的选择，并让他们选择一个。
+
+            Args:
+                option_1: str: 第一个选项
+                option_2: str: 第二个选项
+            """
+        ```
+
+        向您的智能体注册该工具：
+
+        ```python title="agent.py"
+        from agno.agent import Agent
+        from agno.models.openai import OpenAIChat
+        from agno.os import AgentOS
+        from agno.os.interfaces.agui import AGUI
+        from tools.frontend import offerOptions
+
+        agent = Agent(
+            model=OpenAIChat(id="gpt-5.2"),
+            tools=[offerOptions],
+            description="一个可以回答问题并提供信息的有用助手。",
+            instructions="乐于助人且友好。适当使用 markdown 格式化您的回复。",
+        )
+
+        agent_os = AgentOS(agents=[agent], interfaces=[AGUI(agent=agent)])
+        app = agent_os.get_app()
+
+        if __name__ == "__main__":
+            agent_os.serve(app="main:app", port=8000, reload=True)
+        ```
+    </Step>
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式被利用。其中一种方式是具有人机协同流程，工具的响应由用户的决策控制。
+
+        在这个示例中，我们将模拟执行命令的"批准"流程。使用 `useHumanInTheLoop` 钩子创建一个提示用户批准的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "offerOptions",
+            description: "给用户两个选项之间的选择，并让他们选择一个。",
+            parameters: [
+              {
+                name: "option_1",
+                type: "string",
+                description: "第一个选项",
+                required: true,
+              },
+              {
+                name: "option_2",
+                type: "string",
+                description: "第二个选项",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`${args.option_1} was selected`)}>{args.option_1}</button>
+                  <button onClick={() => respond(`${args.option_2} was selected`)}>{args.option_2}</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ### 试试看！
+
+        您现在已经让您的智能体能够向用户显示两个选项并让他们选择一个。然后智能体将知道用户的选择，并可以在后续步骤中使用它。
+
+        ```
+        你能给我看两个好的餐厅名称选项吗？
+        ```
+    </Step>
+</Steps>

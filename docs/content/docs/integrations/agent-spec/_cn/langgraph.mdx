@@ -1,0 +1,116 @@
+---
+title: 通过 AG-UI 集成 Agent Spec LangGraph
+description: 使用 LangGraph 适配器安装 pyagentspec 并暴露一个 FastAPI 端点，为 CopilotKit 流式传输 AG-UI 事件。
+icon: "lucide/Workflow"
+---
+
+import RunAndConnect from "@/snippets/integrations/agent-spec/run-and-connect.mdx";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+## 这是什么？
+
+通过 AG-UI 事件协议将基于 LangGraph 的 Agent Spec Agent 连接到 CopilotKit 的 UI。你将运行一个发送 AG-UI 事件的 FastAPI 端点，并将 Next.js 应用指向它。
+
+关键组件：
+- 后端端点：`ag-ui/integrations/agent-spec/python/ag_ui_agentspec/endpoint.py`
+- 示例服务器：`ag-ui/integrations/agent-spec/python/examples/server.py`
+- 模板 UI：`npx copilotkit@latest create`
+
+## 何时使用？
+
+当你已有一个由 Agent Spec 描述的基于 LangGraph 的 Agent，并希望获得一个开箱即用的 UI，能够以最小的连接工作量流式传输助手文本、工具调用/结果和运行生命周期时，使用此集成。
+
+## 前置要求
+
+- Python 3.10–3.14
+- Node.js 20+
+- Agent Spec 配置文件 JSON/YAML（或通过 `pyagentspec` 的 Python 代码）
+
+## 安装 Agent Spec AG-UI 集成
+
+从 AG-UI 仓库的 Agent Spec 集成包：
+
+```bash
+git clone https://github.com/ag-ui-protocol/ag-ui.git
+cd ag-ui/integrations/agent-spec/python
+uv pip install -e .[langgraph]
+```
+
+注意，这会从源代码安装 `pyagentspec`。或者，你可以使用 pip 安装：
+
+```bash
+pip install pyagentspec[langgraph]
+```
+
+## 步骤
+
+<Steps>
+
+<Step>
+### 1. 启动 FastAPI 端点（最小示例）
+
+使用 LangGraph 运行时执行你的 Agent Spec 并流式传输 AG-UI 事件。
+
+```python
+from fastapi import FastAPI
+from ag_ui_agentspec.agent import AgentSpecAgent
+from ag_ui_agentspec.endpoint import add_agentspec_fastapi_endpoint
+
+agentspec_json = <加载你的 Agent Spec 配置的 json/yaml 字符串>
+
+app = FastAPI()
+agent = AgentSpecAgent(agentspec_json, runtime="langgraph")
+add_agentspec_fastapi_endpoint(app, agentspec_agent=agent, path="/")
+```
+
+本地运行：
+
+```bash
+uvicorn backend.app:app --reload --port 8000
+```
+
+</Step>
+
+<Step>
+### 2. 搭建并连接 UI
+
+<RunAndConnect />
+
+如果你已经有启动模板，请确保你的 Agent 在 8000 端口运行。
+
+然后运行应用（例如使用 `pnpm dev`）并打开 `http://localhost:3000`。
+
+</Step>
+
+</Steps>
+
+## 工作原理
+
+- `AgentSpecAgent(runtime="langgraph")` 使用 LangGraph 框架执行你的 Agent Spec Agent。
+- 在 `AgentSpecAgent` 包装器中，`AgUiSpanProcessor` 将 Agent Spec 跟踪 span 映射到每个请求的队列（`EVENT_QUEUE`）上的 AG-UI 事件。
+- FastAPI 端点将这些事件作为 SSE 流式传输供 CopilotKit 渲染：
+  - 助手文本：`TEXT_MESSAGE_START/CONTENT/END`
+  - 工具调用：`TOOL_CALL_START/ARGS/END` 和 `TOOL_CALL_RESULT`
+  - 生命周期：`RUN_STARTED/RUN_FINISHED`
+
+## 故障排除
+
+- 端点路径必须与你的 UI 预期的 Agent 端点匹配（在我们的启动模板中是 8000 端口）。
+- 端点断言队列已绑定。如果你遇到队列错误，请检查请求是否通过提供的 FastAPI 路由。
+- 如果你没有收到任何事件，请确保 Agent 正在运行且没有崩溃。
+
+## 下一步
+
+- 使用 Agent 聊天和生成式 UI 构建更丰富的 UI。
+- 在回合之间传递完整的聊天历史。适配器和处理器为你处理消息和工具调用生命周期。
+- 查看 [WayFlow 运行时](/agent-spec/wayflow)
+
+启动模板：https://github.com/CopilotKit/with-agent-spec（查看 README 了解安装选项）
+
+## 了解更多
+
+- AG-UI 文档：https://docs.ag-ui.com/introduction
+- Agent Spec 文档主页：https://oracle.github.io/agent-spec/development/docs_home.html
+- 规范概述：https://oracle.github.io/agent-spec/development/agentspec/index.html
+- Agent Spec 跟踪文档：https://oracle.github.io/agent-spec/26.1.0/agentspec/tracing.html
+- Agent Spec LangGraph 适配器文档：https://oracle.github.io/agent-spec/26.1.0/adapters/langgraph/index.html

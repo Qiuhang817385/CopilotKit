@@ -1,0 +1,58 @@
+---
+title: 多智能体流程
+description: 使用多个智能体编排复杂流程。
+icon: "lucide/Users"
+---
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/multi-agent-flows.png" alt="多智能体流程" />
+</Frame>
+
+## 什么是多智能体流程？
+
+在构建智能体应用程序时，您通常希望编排需要多个智能体协调的复杂流程。这传统上被称为多智能体编排。
+
+## 何时应该使用？
+
+当您想要编排需要多个智能体协调的复杂流程时，多智能体流程非常有用。随着智能体应用程序的增长，将子任务委托给其他智能体可以帮助您扩展应用程序的关键部分。
+- 将上下文划分为更小的块
+- 将子任务委托给其他智能体
+- 使用单个智能体编排流程
+
+## CopilotKit 如何支持？
+
+CopilotKit 可以在两种不同模式中使用：**路由模式**，或 **智能体锁定**。默认情况下，CopilotKit
+将使用路由模式，利用您定义的 LLM 在智能体之间路由请求。
+
+### 路由模式（默认）
+使用 CoAgents 时默认启用路由模式。要使用它，请在 `CopilotKit` provider 组件中指定 runtime URL 属性并省略 `agent` 属性，如下所示：
+```tsx
+<CopilotKit runtimeUrl="<copilot-runtime-url>">
+  {/* 您的应用程序组件 */}
+</CopilotKit>
+```
+
+在路由模式下，CopilotKit 充当中央枢纽，根据用户输入动态选择和_路由_不同智能体或操作之间的请求。这种模式适用于以聊天为先的体验，其中 LLM 聊天机器人是各种交互的入口点，这些交互可以保留在聊天 UI 中或扩展为包括原生 React UI 小部件。
+
+在这种模式下，CopilotKit 将根据上下文和用户输入智能地将请求路由到最合适的智能体或操作。
+
+建议在此模式下时，您必须在智能体代码中显式"退出工作流程"。
+您可以在文档的 ["退出智能体循环"部分](https://docs.copilotkit.ai/langgraph/advanced/exit-agent) 中找到更多信息。
+
+<Callout type="warn">
+    路由模式要求您设置 LLM 适配器。请参阅 ["设置 copilot runtime"](https://docs.copilotkit.ai/direct-to-llm/guides/quickstart?copilot-hosting=self-hosted#set-up-a-copilot-runtime-endpoint) 文档部分了解如何设置。
+</Callout>
+
+### 智能体锁定模式
+要使用智能体锁定模式，请在 `CopilotKit` 组件中使用 `agent` 属性指定智能体名称：
+```tsx
+// [!code word:agent]
+<CopilotKit runtimeUrl="<copilot-runtime-url>" agent="<the-name-of-the-agent>">
+  {/* 您的应用程序组件 */}
+</CopilotKit>
+```
+
+在这种模式下，CopilotKit 配置为与特定智能体独占工作。当您想专注于特定任务或领域时，此模式很有用。而在路由模式下，LLM 和 CopilotKit 的路由器可以自由切换智能体来处理用户请求，在智能体锁定模式下，所有请求将保留在单个工作流图中，确保对工作流的精确控制。
+
+使用最适合您应用体验的模式！另外，请注意虽然您不能嵌套 `CopilotKit` provider，但您可以在应用程序的不同区域使用不同的智能体或模式 — 例如，您可能希望在路由模式下使用聊天机器人，它可以调用任何智能体或工具，但也可能希望在别处集成一个特定的智能体以获得更专注的工作流。

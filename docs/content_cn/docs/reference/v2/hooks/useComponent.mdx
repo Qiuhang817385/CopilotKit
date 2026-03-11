@@ -1,0 +1,94 @@
+---
+title: "useComponent"
+description: "将 React 组件注册为聊天中的前端工具渲染器"
+---
+
+## 概述
+
+`useComponent` 是一个基于 `useFrontendTool` 构建的便捷 Hook。
+它注册一个工具并使用工具调用参数在聊天中渲染 React 组件。
+
+这是 v2 工具渲染 Hook 集的一部分，包括 [`useRenderTool`](/reference/v2/hooks/useRenderTool)、[`useDefaultRenderTool`](/reference/v2/hooks/useDefaultRenderTool) 和 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+
+当您想要一个可视化组件渲染器而无需手动编写完整的前端工具配置时，请使用此 Hook。
+
+## 签名
+
+```tsx
+import { z } from "zod";
+import type { ComponentType } from "react";
+import { useComponent } from "@copilotkit/react-core/v2";
+
+function useComponent<
+  TSchema extends z.ZodTypeAny | undefined = undefined,
+>(
+  config: {
+    name: string;
+    description?: string;
+    parameters?: TSchema;
+    // 当提供 parameters 时，props 通过 z.infer 推断。
+    // 当省略时，render 接受任何 props。
+    render: ComponentType<InferRenderProps<TSchema>>;
+    agentId?: string;
+  },
+  deps?: ReadonlyArray<unknown>,
+): void;
+```
+
+## 参数
+
+- `config.name`：Agent 用来调用此组件工具的工具名称。
+- `config.description`：可选的额外描述，用于模型指导。
+- `config.parameters`：可选的 Zod 模式，用于类型化/验证参数。提供时，`render` props 从模式推断。
+- `config.render`：使用解析的工具参数渲染的 React 组件。省略 `parameters` 时接受任何 props。
+- `config.agentId`：注册的可选 Agent 范围。
+- `deps`：可选的依赖数组，用于刷新注册。
+
+## 行为
+
+- 在描述前添加默认指令：_"使用此工具在聊天中显示 \"&lt;name&gt;\" 组件..."_。
+- 内部使用 `useFrontendTool` 调用，其渲染函数将工具参数展开为组件 props。
+- 继承 `useFrontendTool` 生命周期行为：重复名称覆盖警告、卸载时工具移除以及聊天历史记录渲染器保留。
+- 通过 `config.name` 加上 `deps` 跟踪更新（在 `deps` 中包含任何变化的捕获值）。
+
+## 用法
+
+```tsx
+import { z } from "zod";
+import { useComponent } from "@copilotkit/react-core/v2";
+
+const weatherCardSchema = z.object({
+  city: z.string().describe("城市名称"),
+  unit: z.enum(["c", "f"]).default("c"),
+});
+
+type WeatherCardProps = z.infer<typeof weatherCardSchema>;
+
+function WeatherCard({ city, unit }: WeatherCardProps) {
+  return (
+    <div className="rounded border p-3">
+      <div className="text-sm text-zinc-500">天气请求</div>
+      <div className="font-medium">{city} ({unit.toUpperCase()})</div>
+    </div>
+  );
+}
+
+function App() {
+  useComponent(
+    {
+      name: "showWeatherCard",
+      description: "为请求的城市在聊天中渲染天气卡片。",
+      parameters: weatherCardSchema,
+      render: WeatherCard,
+    },
+    [],
+  );
+
+  return null;
+}
+```
+
+## 相关
+
+- [`useFrontendTool`](/reference/v2/hooks/useFrontendTool)
+- [`useRenderTool`](/reference/v2/hooks/useRenderTool)

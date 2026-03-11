@@ -1,0 +1,272 @@
+---
+title: 可读对象
+icon: "lucide/BookA"
+description: 与您的代理共享应用特定的上下文。
+hideTOC: true
+---
+
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import {
+    TailoredContent,
+    TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+
+CopilotKit 最常见的用例之一是使用 `useAgentContext` 注册应用状态和上下文。
+这样，您可以实时通知 CopilotKit 应用中正在发生的事情。
+一些示例可能是：当前用户、当前页面等。
+
+然后可以与您的 LangGraph 代理共享此上下文。
+
+## 实现
+<Callout>
+    查看 [前端数据文档](https://docs.copilotkit.ai/direct-to-llm/guides/connect-your-data/frontend) 以了解这是什么以及如何使用它。
+</Callout>
+
+<TailoredContent
+    className="step"
+    id="impl"
+>
+    <TailoredContentOption
+        id="graph"
+        title="自定义图"
+        description="我正在使用自定义图，自己定义节点和边。"
+    >
+        <Steps>
+            <Step>
+                ### 将数据添加到 Copilot
+
+                `useAgentContext` 钩子用于将数据作为上下文添加到代理。
+
+                ```tsx title="YourComponent.tsx"
+                "use client" // 仅在您使用 Next.js 的 App Router 时才需要。 // [!code highlight]
+                import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import { useState } from 'react';
+
+                export function YourComponent() {
+                  // 创建包含一些示例数据的同事状态
+                  const [colleagues, setColleagues] = useState([
+                    { id: 1, name: "John Doe", role: "Developer" },
+                    { id: 2, name: "Jane Smith", role: "Designer" },
+                    { id: 3, name: "Bob Wilson", role: "Product Manager" }
+                  ]);
+
+                  // 与代理共享上下文
+                  // [!code highlight:4]
+                  useAgentContext({
+                    description: "当前用户的同事",
+                    value: colleagues,
+                  });
+                  return (
+                    // 您的自定义 UI 组件
+                    <>...</>
+                  );
+                }
+                ```
+            </Step>
+
+            <Step>
+                ### 设置您的代理状态
+                确保您的代理状态继承自 CopilotKit 状态定义
+
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        # ...
+                        from copilotkit import CopilotKitState # 扩展 MessagesState
+                        # ...
+
+                        # 这是代理的状态。
+                        # 它继承了 CopilotKit 的 CopilotKitState 属性。
+                        class AgentState(CopilotKitState):
+                            # ... 您定义的状态属性
+                        ```
+                    </Tab>
+                    <Tab value="TypeScript">
+                        ```typescript title="agent-js/src/agent.ts"
+                        // ...
+                        import { Annotation } from "@langchain/langgraph";
+                        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+                        // ...
+
+                        // 这是代理的状态。
+                        // 它继承了 CopilotKit 的 CopilotKitState 属性。
+                        export const AgentStateAnnotation = Annotation.Root({
+                          // ... 您定义的状态属性
+                          ...CopilotKitStateAnnotation.spec,
+                        });
+                        export type AgentState = typeof AgentStateAnnotation.State;
+                        ```
+                    </Tab>
+                </Tabs>
+
+            </Step>
+
+            <Step>
+                ### 在您的 LangGraph 代理中使用数据
+                LangGraph 代理的状态是代理使用的应用信息的"中心"。
+                自然地，来自 CopilotKit 的上下文将被注入到那里。
+
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from langchain_core.messages import SystemMessage
+                        from langchain_openai import ChatOpenAI
+                        from copilotkit import CopilotKitState
+
+                        # 从上一步添加代理状态定义
+                        class AgentState(CopilotKitState):
+                            # ... 您定义的状态属性
+
+                        def chat_node(state: AgentState, config: RunnableConfig):
+                            # 从 CopilotKit 上下文中提取同事
+                            colleagues_context_item = next(
+                                (item for item in state["copilotkit"]["context"] if item.get("description") == "当前用户的同事"),
+                                None
+                            )
+                            colleagues = colleagues_context_item.get("value") if colleagues_context_item else []
+
+                            # 向 LLM 提供同事列表
+                            system_message = SystemMessage(
+                                content=f"""你是一个可以帮助发送邮件给同事的有用助手。
+                                用户的同事有：{colleagues}"""
+                            )
+
+                            response = ChatOpenAI(model="gpt-5.2").invoke(
+                                [system_message, *state["messages"]],
+                                config
+                            )
+
+                            return {
+                                **state,
+                                "messages": response,
+                            }
+                        ```
+                    </Tab>
+                    <Tab value="TypeScript">
+                        ```typescript title="agent-js/src/agent.ts"
+                        import { SystemMessage } from "@langchain/core/messages";
+                        import { ChatOpenAI } from "@langchain/openai";
+
+                        // 从上一步添加代理状态定义
+                        export const AgentStateAnnotation = Annotation.Root({
+                          // ... 您定义的状态属性
+                          ...CopilotKitStateAnnotation.spec,
+                        });
+                        export type AgentState = typeof AgentStateAnnotation.State;
+
+                        async function chat_node(state: AgentState, config: RunnableConfig) {
+                          // 从 CopilotKit 上下文中提取同事
+                          const copilotKitContext = state.copilotKit.context
+                          const colleaguesContextItem = copilotKitContext.find(contextItem => contextItem.description === '当前用户的同事"')
+
+                          // 向 LLM 提供同事列表
+                          const systemMessage = new SystemMessage({
+                            content: `
+                              你是一个可以帮助发送邮件给同事的有用助手。
+                              用户的同事有：${colleaguesContextItem.value}
+                            `,
+                          });
+
+                          const response = await new ChatOpenAI({ model: "gpt-5.2" }).invoke(
+                            [systemMessage, ...state.messages],
+                            config
+                          );
+
+                          return {
+                            ...state,
+                            messages: response,
+                          };
+                        }
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+
+            <Step>
+                ### 试试看！
+                向您的代理询问有关上下文的问题。它应该能够回答！
+            </Step>
+        </Steps>
+    </TailoredContentOption>
+    <TailoredContentOption
+        id="prebuilt"
+        title="预构建代理"
+        description={`我正在使用预构建的代理，如 LangGraph 的 "create_agent"`}
+    >
+        <Steps>
+            <Step>
+                ### 将数据添加到 Copilot
+
+                `useAgentContext` 钩子用于将数据作为上下文添加到代理。
+
+                ```tsx title="YourComponent.tsx"
+                "use client" // 仅在您使用 Next.js 的 App Router 时才需要。 // [!code highlight]
+                import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import { useState } from 'react';
+
+                export function YourComponent() {
+                  // 创建包含一些示例数据的同事状态
+                  const [colleagues, setColleagues] = useState([
+                    { id: 1, name: "John Doe", role: "Developer" },
+                    { id: 2, name: "Jane Smith", role: "Designer" },
+                    { id: 3, name: "Bob Wilson", role: "Product Manager" }
+                  ]);
+
+                  // 与代理共享上下文
+                  // [!code highlight:4]
+                  useAgentContext({
+                    description: "当前用户的同事",
+                    value: colleagues,
+                  });
+                  return (
+                    // 您的自定义 UI 组件
+                    <>...</>
+                  );
+                }
+                ```
+            </Step>
+
+            <Step>
+                ### 在您的 LangGraph 代理中使用数据
+                LangGraph 代理的状态是代理使用的应用信息的"中心"。
+                自然地，来自 CopilotKit 的上下文将被注入到那里。
+                此外，CopilotKitMiddleware 负责将上下文传递给您的代理
+
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from langchain.agents import create_agent
+                        from copilotkit import CopilotKitMiddleware, CopilotKitState # [!code highlight]
+
+                        graph = create_agent( # 同样适用于 "create_react_agent" 或类似选项
+                            model="openai:gpt-5.2",
+                            tools=[],  # 后端工具放在这里
+                            middleware=[CopilotKitMiddleware()], # [!code highlight]
+                            system_prompt="你是一个有帮助的助手。",
+                            state_schema=CopilotKitState # [!code highlight]
+                        )
+                        ```
+                    </Tab>
+                    <Tab value="TypeScript">
+                        ```typescript title="agent-js/src/agent.ts"
+                        import { createAgent } from "langchain";
+                        import { copilotkitMiddleware } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+                        export const agenticChatGraph = createAgent({ // 同样适用于 "create_react_agent" 或类似选项
+                          model: "openai:gpt-5.2",
+                          tools: [],  // 后端工具放在这里
+                          middleware: [copilotkitMiddleware], // [!code highlight]
+                          systemPrompt: "你是一个有帮助的助手。",
+                        });
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+
+            <Step>
+                ### 试试看！
+                向您的代理询问有关上下文的问题。它应该能够回答！
+            </Step>
+        </Steps>
+    </TailoredContentOption>
+</TailoredContent>

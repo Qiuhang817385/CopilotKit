@@ -1,0 +1,101 @@
+---
+title: "LangGraphAgent"
+description: "LangGraphAgent 让您定义用于 CopilotKit 的 Agent。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * sdk-python/copilotkit/langgraph_agent.py
+  */
+}
+## LangGraphAgent
+
+LangGraphAgent 让您定义用于 CopilotKit 的 Agent。
+
+    要安装，请运行：
+
+    ```bash
+    pip install copilotkit
+    ```
+
+    ### 示例
+
+    每个 Agent 必须定义 `name` 和 `graph` 属性。还可以提供一个可选的 `description`
+    。这用于 CopilotKit 动态路由请求到
+    Agent 时。
+
+    ```python
+    from copilotkit import LangGraphAgent
+
+    LangGraphAgent(
+        name="email_agent",
+        description="This agent sends emails",
+        graph=graph,
+    )
+    ```
+
+    如果您有想要与 Agent 一起使用的自定义 LangGraph/LangChain 配置，您可以
+    将其作为 `langgraph_config` 参数传入。
+
+    ```python
+    LangGraphAgent(
+        ...
+        langgraph_config=config,
+    )
+    ```
+
+### 参数
+
+<PropertyReference name="name" type="str" required> 
+Agent 的名称。
+</PropertyReference>
+
+<PropertyReference name="graph" type="CompiledStateGraph" required> 
+与 Agent 一起使用的 LangGraph 图。
+</PropertyReference>
+
+<PropertyReference name="description" type="Optional[str]" > 
+Agent 的描述。
+</PropertyReference>
+
+<PropertyReference name="langgraph_config" type="Optional[RunnableConfig]" > 
+与 Agent 一起使用的 LangGraph/LangChain 配置。
+</PropertyReference>
+
+<PropertyReference name="copilotkit_config" type="Optional[CopilotKitConfig]" > 
+与 Agent 一起使用的 CopilotKit 配置。
+</PropertyReference>
+
+## CopilotKitConfig
+
+LangGraphAgent 的 CopilotKit 配置
+
+    这用于您想要自定义 CopilotKit 如何与
+    LangGraph 交互的高级场景。
+
+    ```python
+    # 函数签名：
+    def merge_state(
+        *,
+        state: dict,
+        messages: List[BaseMessage],
+        actions: List[Any],
+        agent_name: str
+    ):
+        # ...实现...
+
+    def convert_messages(messages: List[Message]):
+        # ...实现...
+    ```
+
+### 参数
+
+<PropertyReference name="merge_state" type="Callable" required> 
+此函数让您自定义 CopilotKit 如何合并 Agent 状态。
+</PropertyReference>
+
+<PropertyReference name="convert_messages" type="Callable" required> 
+使用此函数自定义 CopilotKit 如何将其消息转换为 LangChain 消息。`
+</PropertyReference>

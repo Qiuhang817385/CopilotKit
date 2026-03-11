@@ -1,0 +1,76 @@
+---
+title: "第 4 步：智能体聊天 UI"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+此时，我们在 LangGraph Studio 中运行着一个 LangGraph 智能体，并且有一个简单的助手。现在，让我们将两者结合起来，创建一个助手智能体 (CoAgent)！
+
+<Steps>
+<Step>
+## 将智能体连接到 CopilotKit
+我们需要让 CopilotKit 知道我们运行的 LangGraph 智能体。为此，我们将设置一个远程端点来连接到我们本地运行的智能体。
+
+由于我们使用的是 Copilot Cloud，对于本地开发来说，只需运行以下命令即可。
+
+```bash
+npx copilotkit@latest dev --port 8000
+```
+```sh
+✔ 选择项目 本地 (ID: <project_id>)
+✅ LangGraph Platform 端点已检测到
+⠹ 正在创建隧道...
+
+隧道信息：
+
+• 隧道 URL:            https://<tunnel_id>.tunnels.devcopilotkit.com
+• 端点类型:         LangGraph Platform
+• 项目:               projects/<project_id>
+
+按 Ctrl+C 停止隧道
+
+✔ 🚀 本地隧道已激活并链接到 Copilot Cloud！
+```
+
+这允许 Copilot Cloud 知道在调用智能体时将请求发送到哪里。
+
+</Step>
+<Step>
+## 指定要使用的智能体
+
+现在我们需要让 CopilotKit 提供程序知道要使用哪个智能体，我们可以通过指定 `agent` 属性来做到这一点。
+<Accordions>
+<Accordion title="多智能体路由">
+默认情况下，CopilotKit 会根据上下文智能地将请求路由到适当的智能体。这允许你拥有多个智能体和操作，而无需担心手动路由请求。
+
+然而，在我们的例子中，我们只有一个智能体，理想情况下是将所有请求锁定到该智能体。我们可以通过更新 `CopilotKit` 提供程序的 props 来做到这一点。
+
+</Accordion>
+</Accordions>
+
+我们的智能体名称是 `agent`，这是在 `langgraph.json` 文件中指定的。
+
+```tsx title="frontend/src/app/layout.tsx"
+// ...
+<CopilotKit
+  // ...
+  agent="agent" // [!code ++]
+>
+  {...}
+</CopilotKit>
+```
+</Step>
+</Steps>
+
+## 回顾
+我们完成了！我们做了什么：
+
+- 我们将智能体连接到 CopilotKit。
+- 我们指定了要使用的智能体。
+
+现在当你返回应用程序时，你会注意到我们正在与我们的 LangGraph 智能体对话！
+
+<Frame>
+  <ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-4-finish.png" alt="step-4-finish" height={1000} width={1000} />
+</Frame>
+
+接下来，让我们处理和同步应用程序与智能体之间的状态。

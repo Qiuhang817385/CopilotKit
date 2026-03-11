@@ -1,0 +1,104 @@
+---
+title: "useCoAgent"
+description: "useCoAgent hook 允许你在应用程序和代理之间双向共享状态。"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行更改：
+  * packages/v1/react-core/src/hooks/use-coagent.ts
+  */
+}
+
+<Callout type="warning">
+  `useCoAgent` 仍然受支持，但我们建议迁移到 v2 API 的 [`useAgent`](/reference/v2/hooks/useAgent)。
+</Callout>
+
+<Callout type="info">
+  使用此 hook 假定你的应用程序中进行了一些额外的设置，有关更多信息，
+  请参阅 CoAgents <span className="text-blue-500">[快速入门指南](/langgraph/quickstart)</span>。
+</Callout>
+<Frame className="my-12">
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+    alt="CoAgents 演示"
+    className="w-auto"
+  />
+</Frame>
+ 
+此 hook 用于将代理集成到你的应用程序中。通过使用它，你可以
+渲染和更新代理的状态，从而实现动态和交互式体验。
+我们将这些共享状态体验称为代理式 copilots，或简称 CoAgents。
+ 
+## 用法
+ 
+### 简单用法
+ 
+```tsx
+import { useCoAgent } from "@copilotkit/react-core";
+ 
+type AgentState = {
+  count: number;
+}
+ 
+const agent = useCoAgent<AgentState>({
+  name: "my-agent",
+  initialState: {
+    count: 0,
+  },
+});
+ 
+```
+ 
+`useCoAgent` 返回一个具有以下属性的对象：
+ 
+```tsx
+const {
+  name,     // 当前使用的代理名称。
+  nodeName, // 当前 LangGraph 节点的名称。
+  state,    // 代理的当前状态。
+  setState, // 更新代理状态的函数。
+  running,  // 指示代理当前是否正在运行的布尔值。
+  start,    // 启动代理的函数。
+  stop,     // 停止代理的函数。
+  run,      // 重新运行代理的函数。接受一个 HintFunction 来告知代理它被重新运行的原因。
+} = agent;
+```
+ 
+最后，我们可以利用这些属性来创建与代理的响应式体验！
+ 
+```tsx
+const { state, setState } = useCoAgent<AgentState>({
+  name: "my-agent",
+  initialState: {
+    count: 0,
+  },
+});
+ 
+return (
+  <div>
+    <p>计数: {state.count}</p>
+    <button onClick={() => setState({ count: state.count + 1 })}>增加</button>
+  </div>
+);
+```
+ 
+这种响应性是双向的，意味着来自代理的状态更改将反映在 UI 中，反之亦然。
+ 
+## 参数
+<PropertyReference name="options" type="UseCoagentOptions<T>" required>
+  创建 coagent 时使用的选项。
+  <PropertyReference name="name" type="string" required>
+    要使用的代理名称。
+  </PropertyReference>
+  <PropertyReference name="initialState" type="T | any">
+    代理的初始状态。
+  </PropertyReference>
+  <PropertyReference name="state" type="T | any">
+    如果你将此 hook 与外部状态管理一起使用，则为外部管理的状态。
+  </PropertyReference>
+  <PropertyReference name="setState" type="(newState: T | ((prevState: T | undefined) => T)) => void">
+    如果你将此 hook 与外部状态管理一起使用，则用于更新代理状态的函数。
+  </PropertyReference>
+</PropertyReference>

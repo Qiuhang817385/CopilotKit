@@ -1,0 +1,27 @@
+<Tabs groupId="python-pm" items={['Poetry', 'pip', 'conda']} default="Poetry">
+    <Tab value="Poetry">
+    ```bash
+    poetry add copilotkit
+    # 包含 crewai 支持
+    poetry add copilotkit[crewai]
+    ```
+    </Tab>
+    
+    <Tab value="pip">
+
+    ```bash
+    pip install copilotkit --extra-index-url https://copilotkit.gateway.scarf.sh/simple/
+    # 包含 crewai 支持
+    pip install copilotkit[crewai] --extra-index-url https://copilotkit.gateway.scarf.sh/simple/
+    ```
+    </Tab>
+
+    <Tab value="conda">
+    ```bash
+    conda install copilotkit -c copilotkit-channel
+    # 包含 crewai 支持
+    conda install copilotkit[crewai] -c copilotkit-channel
+    ```
+    </Tab>
+
+</Tabs>

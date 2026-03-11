@@ -1,0 +1,129 @@
+---
+title: "共享状态"
+icon: "lucide/Repeat"
+description: "你的应用与内置代理之间的双向状态共享。"
+---
+
+在 React 应用和内置代理之间双向共享状态。你的应用可以读取和写入代理状态，代理也可以更新状态，你的 UI 会实时响应。
+
+## 这是什么？
+
+共享状态让你的前端和代理保持同步。代理可以更新状态（如向列表添加项目或更改设置），你的 React 组件会自动重新渲染。你的应用也可以写入代理可以读取的状态。
+
+## 什么时候使用？
+
+- 代理应该能够修改你的应用 UI（添加项目、更新字段、切换设置）
+- 你希望随着代理工作实时更新 UI
+- 你的应用需要读取代理正在执行的操作（进度指示器、中间结果）
+
+## 读取代理状态
+
+使用 `useAgent` Hook 访问代理的当前状态：
+
+```tsx title="app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+function TaskBoard() {
+  // [!code highlight:3]
+  const { agent } = useAgent({
+    agentId: "assistant",
+  });
+
+  // 读取代理设置的状态 // [!code highlight]
+  const tasks = (agent.state.tasks as any[]) ?? [];
+
+  return (
+    <div>
+      <h2>Tasks</h2>
+      <ul>
+        {tasks.map((task, i) => (
+          <li key={i}>
+            {task.title} — {task.status}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+<Callout type="info">
+  `agent.state` 是响应式的 —— 当代理更新状态时，你的组件会自动重新渲染。
+</Callout>
+
+## 从前端写入状态
+
+你也可以从前端向代理推送状态：
+
+```tsx title="app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function SettingsPanel() {
+  const { agent } = useAgent({
+    agentId: "assistant",
+  });
+
+  const handleThemeChange = (theme: string) => {
+    agent.setState({ // [!code highlight]
+      ...agent.state, // [!code highlight]
+      userPreferences: { theme }, // [!code highlight]
+    }); // [!code highlight]
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleThemeChange("dark")}>Dark Mode</button>
+      <button onClick={() => handleThemeChange("light")}>Light Mode</button>
+    </div>
+  );
+}
+```
+
+## 工作原理
+
+内置代理通过 AG-UI 协议自动访问状态工具（`AGUISendStateSnapshot` 和 `AGUISendStateDelta`）。当代理调用这些工具时：
+
+1. 代理发送状态更新（完整快照或增量）
+2. CopilotKit 运行时通过 SSE 将更新传递到前端
+3. 你的 `useAgent` Hook 接收更新并触发重新渲染
+
+无需额外的后端配置 —— 状态工具默认对内置代理可用。
+
+## 示例：协作待办清单
+
+这里有一个完整的示例，代理可以在其中添加和管理任务：
+
+```tsx title="app/page.tsx"
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function TodoApp() {
+  const { agent } = useAgent({
+    agentId: "assistant",
+  });
+
+  const todos = (agent.state.todos as any[]) ?? [];
+
+  return (
+    <div style={{ display: "flex", gap: "1rem" }}>
+      <div>
+        <h2>My Todos</h2>
+        <ul>
+          {todos.map((todo, i) => (
+            <li key={i} style={{ textDecoration: todo.done ? "line-through" : "none" }}>
+              {todo.text}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <CopilotChat
+        labels={{
+          welcomeMessageText: "I can help manage your todos. Try 'Add a task to buy groceries'.",
+        }}
+      />
+    </div>
+  );
+}
+```
+
+当你告诉代理"添加一个购买杂货的任务"时，它会更新共享状态，你的待办清单会立即渲染新项。

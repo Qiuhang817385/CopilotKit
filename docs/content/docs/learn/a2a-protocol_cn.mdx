@@ -1,0 +1,329 @@
+---
+title: A2A (智能体<->智能体)
+icon: "custom/a2a"
+description: 通过 AG-UI 和 CopilotKit 将您的 A2A 智能体带给您的用户。
+---
+import Image from "next/image"
+
+## 什么是 A2A 协议？
+
+A2A，或称 Agent2Agent 协议，是 Google 推出的一个协议，用于 AI 智能体以框架无关的方式安全地交互和协作。
+
+CopilotKit 完全支持 A2A 协议，直接连接到支持 A2A 的智能体或网格，无需修改智能体。
+
+<Image 
+  src="/images/any-agentic-backend-light.png" 
+  alt="CopilotKit 与智能体协议" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden w-full mx-auto"
+/>
+<Image 
+  src="/images/any-agentic-backend-dark.png" 
+  alt="CopilotKit 与智能体协议" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block w-full mx-auto"
+/>
+<div className="text-center text-sm text-muted-foreground mt-2 mb-8 w-3/5 mx-auto">
+  A2A 是 CopilotKit 支持的三大[智能体协议](/agentic-protocols)之一，用于将智能体连接到面向用户的前端
+</div>
+
+## CopilotKit 如何使用 A2A 智能体
+
+CopilotKit 使用中间件将 A2A 智能体暴露给 AG-UI 兼容的协调器。这允许您通过 AG-UI 协议将 A2A 智能体暴露给您的用户。
+
+
+* __灵活性和互操作性__: 通过使 A2A 智能体可通过 AG-UI 标准使用，任何 A2A 智能体都可以与 CopilotKit 组件无缝协作。
+* __统一通信__: 虽然 A2A 智能体可以通过 A2A 协议相互通信，但 AG-UI 添加了将它们干净地暴露给前端所需的缺失工具。
+
+要了解更多，请查看 [A2A](https://a2a-protocol.org/latest/) 网站。
+
+## 如何将 A2A 智能体与 CopilotKit 一起使用
+
+要将 A2A 智能体与 CopilotKit 一起使用，您需要首先安装 CopilotKit 中间件。
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体到 CopilotKit
+
+    您需要先运行您的智能体并将其连接到 CopilotKit，然后才能继续。
+
+    #### 我已经有一个 AG-UI 智能体作为协调器。
+
+    太好了！您可以继续下一步。
+
+    #### 我想从头开始
+
+    运行以下命令创建一个带有预配置 AG-UI 智能体和一些 A2A 智能体的全新项目：
+
+    ```bash
+    npx copilotkit@latest create -f a2a
+    ```
+
+    这将创建一个带有预配置 ADK AG-UI 智能体的新项目，但您可以使用任何您想要的 AG-UI 智能体。
+  </Step>
+
+  <Step>
+    ### 安装 A2A 中间件
+    这已经在项目中为您安装好了，但如果您要将中间件添加到现有智能体，可以使用以下命令安装：
+    ```bash
+    npm install @ag-ui/a2a-middleware
+    ```
+  </Step>
+
+  <Step>
+    ### 配置 A2A 中间件
+    ```tsx title="app/api/copilotkit/route.ts"
+    import { A2AMiddlewareAgent } from "@ag-ui/a2a-middleware"
+
+    ...
+
+    // 前两个是 A2A 智能体的 url
+    const researchAgentUrl = process.env.RESEARCH_AGENT_URL || "http://localhost:9001";
+    const analysisAgentUrl = process.env.ANALYSIS_AGENT_URL || "http://localhost:9002";
+
+    // 这是将被包装在中间件中的协调器智能体的 url
+    const orchestratorUrl = process.env.ORCHESTRATOR_URL || "http://localhost:9000";
+
+    // 我们传递给中间件的协调器智能体需要是 ag-ui `AbstractAgent` 的派生类的实例
+    // 在这种情况下，我们可以通过 url 访问智能体，因此可以使用 `HttpAgent` 类获取实例
+    const orchestrationAgent = new HttpAgent({
+      url: orchestratorUrl,
+    });
+
+    // A2A 中间件：包装协调器并注入 send_message_to_a2a_agent 工具
+    // 这允许协调器透明地与 A2A 智能体通信
+    const a2aMiddlewareAgent = new A2AMiddlewareAgent({
+      description:
+        "具有 2 个专门智能体的研究助手：研究 (LangGraph) 和分析 (ADK)",
+      // 我们传递 A2A 智能体的 url，中间件将处理连接
+      agentUrls: [
+        researchAgentUrl,
+        analysisAgentUrl,
+      ],
+      // 传递智能体实例
+      orchestrationAgent,
+      // 这些是智能体的领域特定指令。它们将被添加到中间件自动生成的关于如何
+      // 连接到 A2A 智能体的通用指令中
+      instructions: `
+        你是一个研究助手，协调 2 个专门的智能体。
+
+        可用智能体：
+
+        - 研究智能体 (LangGraph)：收集和总结关于某个主题的信息
+        - 分析智能体 (ADK)：分析研究结果并提供洞察
+
+        工作流策略（顺序 - 一次一个）：
+
+        当用户要求研究某个主题时：
+
+        1. 研究智能体 - 首先，收集关于该主题的信息
+          - 传递：用户的研究查询或主题
+          - 智能体将返回包含研究结果的 JSON
+
+        2. 分析智能体 - 然后，分析研究结果
+          - 传递：来自第 1 步的研究结果
+          - 智能体将返回包含分析和洞察的 JSON
+
+        3. 向用户展示完整的研究和分析
+
+        关键规则：
+        - 一次调用一个智能体，在进行下一次调用之前等待结果
+        - 将早期智能体的信息传递给后续智能体
+        - 在最终响应中综合所有收集的信息
+      `,
+    });
+
+    // CopilotKit 运行时连接前端到智能体系统
+    const runtime = new CopilotRuntime({
+      agents: {
+        a2a_chat: a2aMiddlewareAgent, // 必须与 <CopilotKit agent="a2a_chat"> 中的 agent 属性匹配
+      },
+    });
+
+
+    ```
+  </Step>
+
+  <Step>
+    ### 在前端添加 `useCopilotAction`
+    在聊天组件内部，我们将使用 `useCopilotAction` hook 显示协调器和 A2A 智能体之间的消息。
+    中间件提供的通信工具名为 `send_message_to_a2a_agent`。
+
+    ```tsx title="components/chat.tsx"
+    import { useFrontendTool } from "@copilotkit/react-core/v2"
+    import { Markdown } from "@copilotkit/react-core/v2"
+
+    function YourMainContent() {
+      // ...
+
+      useFrontendTool({
+        name: "send_message_to_a2a_agent",
+        description: "向 A2A 智能体发送消息",
+        available: "frontend",
+        parameters: [
+          {
+            name: "agentName",
+            type: "string",
+            description: "要发送消息的 A2A 智能体的名称",
+          },
+          {
+            name: "task",
+            type: "string",
+            description: "要发送给 A2A 智能体的消息",
+          },
+        ],
+        render: (actionRenderProps) => {
+          return (
+            <>
+              <MessageToA2A {...actionRenderProps} />
+              <MessageFromA2A {...actionRenderProps} />
+            </>
+          );
+        },
+      });
+
+
+      // ...
+    }
+    ```
+
+    现在我们从协调器向 A2A 智能体发送的消息定义渲染。
+    注意状态可以是 `executing` 或 `complete`。当它是 executing 时，协调器已向 A2A 智能体发送消息，
+    但尚未收到响应。当它是 complete 时，协调器已从 A2A 智能体收到响应。在这两种情况下，我们都会渲染消息。
+    如果状态是 "inProgress"，我们已被告知将发送消息，但尚未完成发送，所以我们不渲染任何内容。
+
+    ```tsx title="components/a2a/MessageToA2A.tsx"
+    import React from "react";
+    import { getAgentStyle, truncateTask } from "./agent-styles";
+
+    type MessageActionRenderProps = {
+      status: string;
+      args: {
+        agentName?: string;
+        task?: string;
+      };
+    };
+
+    export const MessageToA2A: React.FC<MessageActionRenderProps> = ({ status, args }) => {
+      switch (status) {
+        case "executing":
+        case "complete":
+          break;
+        default:
+          return null;
+      }
+
+      if (!args.agentName || !args.task) {
+        return null;
+      }
+
+      const agentStyle = getAgentStyle(args.agentName);
+
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 my-2 a2a-message-enter">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-col items-center">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-700 text-white">
+                  Orchestrator
+                </span>
+                <span className="text-[9px] text-gray-500 mt-0.5">ADK</span>
+              </div>
+
+              <span className="text-gray-400 text-sm">→</span>
+
+              <div className="flex flex-col items-center">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border-2 ${agentStyle.bgColor} ${agentStyle.textColor} ${agentStyle.borderColor} flex items-center gap-1`}
+                >
+                  <span>{agentStyle.icon}</span>
+                  <span>{args.agentName}</span>
+                </span>
+                {agentStyle.framework && (
+                  <span className="text-[9px] text-gray-500 mt-0.5">{agentStyle.framework}</span>
+                )}
+              </div>
+            </div>
+
+            <span className="text-gray-700 text-sm flex-1 min-w-0 break-words" title={args.task}>
+              {truncateTask(args.task)}
+            </span>
+          </div>
+        </div>
+      );
+    };
+    ```
+
+    最后我们定义从 A2A 智能体到协调器的响应的渲染。
+    这次，我们只在状态为 complete 时渲染，因为这意味着我们有了响应。在任何其他状态下，我们还没有响应。
+    如果您愿意，可以在状态为 `executing` 时渲染加载状态，但很可能不会在状态为 `inProgress` 时渲染，因为
+    我们甚至还没有发送消息。
+
+    ```tsx title="components/a2a/MessageToA2A.tsx"
+    import React from "react";
+    import { getAgentStyle } from "./agent-styles";
+
+    type MessageActionRenderProps = {
+      status: string;
+      args: {
+        agentName?: string;
+      };
+    };
+
+    export const MessageFromA2A: React.FC<MessageActionRenderProps> = ({ status, args }) => {
+      switch (status) {
+        case "complete":
+          break;
+        default:
+          return null;
+      }
+
+      if (!args.agentName) {
+        return null;
+      }
+
+      const agentStyle = getAgentStyle(args.agentName);
+
+      return (
+        <div className="my-2">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 min-w-[200px] flex-shrink-0">
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border-2 ${agentStyle.bgColor} ${agentStyle.textColor} ${agentStyle.borderColor} flex items-center gap-1`}
+                  >
+                    <span>{agentStyle.icon}</span>
+                    <span>{args.agentName}</span>
+                  </span>
+                  {agentStyle.framework && (
+                    <span className="text-[9px] text-gray-500 mt-0.5">{agentStyle.framework}</span>
+                  )}
+                </div>
+
+                <span className="text-gray-400 text-sm">→</span>
+
+                <div className="flex flex-col items-center">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-700 text-white">
+                    Orchestrator
+                  </span>
+                  <span className="text-[9px] text-gray-500 mt-0.5">ADK</span>
+                </div>
+              </div>
+
+              <span className="text-xs text-gray-600">✓ 已收到响应</span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    ```
+  </Step>
+
+  <Step>
+    ### 试试看！
+    尝试让您的智能体研究一个主题，比如"请研究量子计算"。您会看到它会向研究智能体和分析智能体发送消息。
+    然后，它会向用户展示完整的研究和分析结果。
+  </Step>
+</Steps>

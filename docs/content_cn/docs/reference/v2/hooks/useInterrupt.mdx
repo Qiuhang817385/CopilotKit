@@ -1,0 +1,135 @@
+---
+title: "useInterrupt"
+description: "用于处理 Agent 中断事件并使用用户输入恢复执行的 React Hook"
+---
+
+## 概述
+
+`useInterrupt` 监听名为 `on_interrupt` 的 Agent 自定义事件，捕获运行的最新中断负载，并在运行完成时渲染中断 UI。您的 UI 可以调用 `resolve(response)` 以使用恢复负载恢复 Agent。
+
+默认情况下，中断 UI 在 `<CopilotChat>` 内自动渲染。如果您设置 `renderInChat: false`，Hook 会返回元素以便您可以手动放置它。
+
+`event.value` 类型为 `any`，因为中断负载形状取决于您的 Agent。根据需要在回调中（例如 `handler`、`enabled`、`render`）进行类型缩小。
+
+## 签名
+
+```tsx
+import { useInterrupt } from "@copilotkit/react-core/v2";
+
+function useInterrupt<
+  TResult = never,
+  TRenderInChat extends boolean | undefined = undefined,
+>(
+  config: UseInterruptConfig<any, TResult, TRenderInChat>,
+): TRenderInChat extends false
+  ? React.ReactElement | null
+  : TRenderInChat extends true | undefined
+    ? void
+    : React.ReactElement | null | void;
+```
+
+## 参数
+
+<PropertyReference name="config" type="UseInterruptConfig<any, TResult, TRenderInChat>" required>
+  中断配置。
+
+  <PropertyReference name="render" type="(props: InterruptRenderProps<any, TResult | null>) => React.ReactElement" required>
+    中断 UI 的渲染回调。当有中断可用时调用。回调接收：
+    - `event` -- 中断事件（`{ name, value }`）。`value` 是 `any`；在回调中根据需要类型缩小。
+    - `result` -- 从 `handler` 返回类型推断，或 `null`
+    - `resolve(response)` -- 使用 `command.resume = response` 恢复 Agent
+  </PropertyReference>
+
+  <PropertyReference name="handler" type="(props: InterruptHandlerProps) => TResult | PromiseLike<TResult>">
+    可选的预处理回调。在渲染前运行，可以返回同步或异步数据，作为 `result` 暴露在 `render` 中。
+    `TResult` 自动从处理程序的返回类型推断。
+    如果处理程序抛出/拒绝，`result` 为 `null`。
+  </PropertyReference>
+
+  <PropertyReference name="enabled" type="(event: InterruptEvent) => boolean">
+    可选过滤器。返回 `false` 以忽略此 Hook 实例的匹配中断。
+  </PropertyReference>
+
+  <PropertyReference name="agentId" type="string">
+    可选 Agent ID。默认为当前配置的聊天 Agent。
+  </PropertyReference>
+
+  <PropertyReference name="renderInChat" type="boolean" default="true">
+    控制 UI 渲染位置：
+    - `true`（默认）：将中断 UI 发布到 `<CopilotChat>`
+    - `false`：从 Hook 返回中断元素以进行手动放置
+  </PropertyReference>
+</PropertyReference>
+
+## 返回值
+
+<PropertyReference name="element" type="Conditional by renderInChat">
+  返回类型从 `renderInChat` 推断：
+  - `renderInChat: false` -> `React.ReactElement | null`
+  - `renderInChat: true` 或省略 -> `void`
+  - 动态布尔值 -> `React.ReactElement | null | void`
+</PropertyReference>
+
+## 用法
+
+### 聊天内中断 UI（默认）
+
+```tsx
+import { useInterrupt } from "@copilotkit/react-core/v2";
+
+function ApprovalInterrupt() {
+  useInterrupt({
+    render: ({ event, resolve }) => (
+      <div className="p-3 border rounded">
+        <p>{event.value.question}</p>
+        <div className="mt-2 flex gap-2">
+          <button onClick={() => resolve({ approved: true })}>批准</button>
+          <button onClick={() => resolve({ approved: false })}>拒绝</button>
+        </div>
+      </div>
+    ),
+  });
+
+  return null;
+}
+```
+
+### 手动放置与异步预处理
+
+```tsx
+import { useInterrupt } from "@copilotkit/react-core/v2";
+
+function SidePanelInterrupt() {
+  const element = useInterrupt({
+    renderInChat: false,
+    enabled: (event) => event.value.startsWith("approval:"),
+    handler: async ({ event }) => ({ label: event.value.toUpperCase() }),
+    render: ({ event, result, resolve }) => (
+      <aside className="rounded border p-3">
+        <div className="font-medium">{result?.label ?? ""}</div>
+        <div className="mt-2">{event.value}</div>
+        <button className="mt-2" onClick={() => resolve({ accepted: true })}>
+          继续
+        </button>
+      </aside>
+    ),
+  });
+
+  return <>{element}</>;
+}
+```
+
+## 行为
+
+- 从名为 `on_interrupt` 的 Agent 自定义事件收集中断。
+- 当运行完成时显示中断 UI。
+- 开始新运行会清除挂起的中断状态。
+- `event.value` 是 `any` -- 根据需要在回调中类型缩小。
+- `render.result` 从 `handler` 返回类型推断，始终为 `TResult | null`。
+- 如果 `handler` 抛出或拒绝，`result` 设置为 `null`。
+
+## 相关
+
+- [`useHumanInTheLoop`](/reference/v2/hooks/useHumanInTheLoop) -- 结构化交互式工具工作流
+- [`useFrontendTool`](/reference/v2/hooks/useFrontendTool) -- 客户端工具注册
+- [`useAgent`](/reference/v2/hooks/useAgent) -- 访问和订阅 Agent 事件

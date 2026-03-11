@@ -1,0 +1,116 @@
+---
+title: "工具渲染"
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染 Agent 的工具调用。
+---
+
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="tool-based-generative-ui-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+工具是 LLM 调用预定义函数（通常是确定性函数）的方式。CopilotKit 允许您在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 何时使用？
+
+当您的 Agent 调用工具时，如果您想向用户提供有关 Agent 正在做什么的反馈，在 UI 中渲染工具非常有用。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+<Step>
+### 运行并连接您的 Agent
+<RunAndConnect components={props.components} />
+</Step>
+<Step>
+### 给您的 Agent 一个可调用的工具
+
+添加一个新的工具定义：
+
+```ts title="src/mastra/tools/weatherInfo.ts"
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
+
+export const weatherInfo = createTool({
+  id: "weatherInfo",
+  inputSchema: z.object({
+    location: z.string(),
+  }),
+  description: `Fetches the current weather information for a given location`,
+  execute: async ({ location }) => {
+    // 工具逻辑（例如 API 调用）
+    console.log("Using tool to fetch weather information for", location);
+    return { temperature: 20, conditions: "Sunny" }; // 示例返回值
+  },
+});
+```
+
+然后，将工具传递给 Agent：
+
+```ts title="src/mastra/agents/weatherAgent.ts"
+import { Agent } from "@mastra/core/agent";
+import { openai } from "@ai-sdk/openai";
+import { weatherInfo } from "../tools/weatherInfo";
+
+export const weatherAgent = new Agent({
+  name: "Weather Agent",
+  instructions:
+    "You are a helpful assistant that provides current weather information. When asked about the weather, use the weather information tool to fetch the data.",
+  model: openai("gpt-5.2-mini"),
+  tools: {
+    weatherInfo,
+  },
+});
+```
+
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，您的 Agent 将能够调用 `weatherInfo` 工具。现在
+我们只需要添加一个 `useRenderTool` hook 来在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  为了在 UI 中渲染工具调用，操作名称必须与工具名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:12]
+  useRenderTool({
+    name: "weatherInfo",
+    render: ({ status, args }) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "Calling weather API..."}
+          {status === "complete" &&
+            `Called the weather API for ${args.location}.`}
+        </p>
+      );
+    },
+  });
+  // ...
+};
+```
+
+</Step>
+<Step>
+### 试一试！
+
+尝试让 Agent 获取某个位置的天气。您应该会看到我们添加的自定义 UI 组件渲染工具调用并显示传递给工具的参数。
+
+</Step>
+</Steps>

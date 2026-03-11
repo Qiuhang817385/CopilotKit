@@ -1,0 +1,273 @@
+---
+title: "CopilotSidebar"
+description: "CopilotSidebar 组件，提供用于与你的 copilot 交互的侧边栏界面。"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行：
+  * packages/v1/react-ui/src/components/chat/Sidebar.tsx
+  */
+}
+
+<Callout type="warning">
+  `CopilotSidebar` 仍然受支持，但我们建议从 v2 API 迁移到 [`CopilotSidebar`](/reference/v2/components/CopilotSidebar)。
+</Callout>
+
+<br/>
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/CopilotSidebar.gif" width="500" />
+
+CopilotKit 框架的聊天机器人侧边栏组件。通过各种属性和自定义 CSS 高度可定制。
+
+请参见 [CopilotPopup](/reference/v1/components/chat/CopilotPopup) 了解此组件的弹出窗口版本。
+
+## 安装依赖
+
+此组件是 [@copilotkit/react-ui](https://npmjs.com/package/@copilotkit/react-ui) 包的一部分。
+
+```shell npm2yarn "@copilotkit/react-ui"\
+npm install @copilotkit/react-core @copilotkit/react-ui
+```
+
+## 用法
+
+```tsx
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
+
+<CopilotSidebar
+  labels={{
+    title: "Your Assistant",
+    initial: "Hi! 👋 How can I assist you today?",
+  }}
+>
+  <YourApp/>
+</CopilotSidebar>
+```
+
+### 使用可观察性钩子
+
+要监控用户交互，请提供 `observabilityHooks` 属性。
+注意：这需要在 `<CopilotKit>` provider 中提供 `publicApiKey`。
+
+```tsx
+<CopilotKit publicApiKey="YOUR_PUBLIC_API_KEY">
+  <CopilotSidebar
+    observabilityHooks={{
+      onChatExpanded: () => {
+        console.log("Sidebar opened");
+      },
+      onChatMinimized: () => {
+        console.log("Sidebar closed");
+      },
+    }}
+  >
+    <YourApp/>
+  </CopilotSidebar>
+</CopilotKit>
+```
+
+### 外观和感觉
+
+默认情况下，CopilotKit 组件没有任何样式。你可以在项目的根目录导入 CopilotKit 的样式表：
+```tsx title="YourRootComponent.tsx"
+...
+import "@copilotkit/react-ui/styles.css"; // [!code highlight]
+
+export function YourRootComponent() {
+  return (
+    <CopilotKit>
+      ...
+    </CopilotKit>
+  );
+}
+```
+有关如何自定义样式的更多信息，请查看[自定义外观](/custom-look-and-feel/slots)指南。
+
+## 属性
+
+<PropertyReference name="instructions" type="string"  >
+要添加到系统消息的自定义指示。使用此属性可提供
+  额外的上下文或指导给语言模型，影响
+  其响应。这些指示可以包括具体的方向、
+  偏好或模型在生成其输出时应考虑的标准，
+  从而更精确地将对话定制到用户的需求或应用程序的要求。
+</PropertyReference>
+
+<PropertyReference name="suggestions" type="ChatSuggestions"  >
+控制聊天界面中建议的行为。
+
+  `auto`（默认）- 建议自动生成：
+    - 当聊天首次打开时（空状态）
+    - 每次消息交换完成后
+    - 使用 `useCopilotChatSuggestions` 钩子的配置
+
+  `manual` - 建议以编程方式控制：
+    - 使用 `setSuggestions()` 设置自定义建议
+    - 使用 `generateSuggestions()` 触发 AI 生成
+    - 通过 `useCopilotChat` 钩子访问
+
+  `SuggestionItem[]` - 静态建议数组：
+    - 始终显示相同的建议
+    - 不涉及 AI 生成
+</PropertyReference>
+
+<PropertyReference name="onInProgress" type="(inProgress: boolean) => void"  >
+进行中状态更改时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="onSubmitMessage" type="(message: string) => void | Promise<void>"  >
+提交新消息时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="onStopGeneration" type="OnStopGeneration"  >
+自定义停止生成功能。
+</PropertyReference>
+
+<PropertyReference name="onReloadMessages" type="OnReloadMessages"  >
+自定义重新加载消息功能。
+</PropertyReference>
+
+<PropertyReference name="onRegenerate" type="(messageId: string) => void"  >
+重新生成助手响应的回调函数
+</PropertyReference>
+
+<PropertyReference name="onCopy" type="(message: string) => void"  >
+消息被复制时的回调函数
+</PropertyReference>
+
+<PropertyReference name="onThumbsUp" type="(message: Message) => void"  >
+点赞反馈的回调函数
+</PropertyReference>
+
+<PropertyReference name="onThumbsDown" type="(message: Message) => void"  >
+点踩反馈的回调函数
+</PropertyReference>
+
+<PropertyReference name="markdownTagRenderers" type="ComponentsMap"  >
+要在助手消息中渲染的 markdown 组件列表。
+  当你想在消息中渲染自定义元素时很有用（例如参考标签元素）
+</PropertyReference>
+
+<PropertyReference name="icons" type="CopilotChatIcons"  >
+可用于为聊天窗口设置自定义图标的图标。
+</PropertyReference>
+
+<PropertyReference name="labels" type="CopilotChatLabels"  >
+可用于为聊天窗口设置自定义标签的标签。
+</PropertyReference>
+
+<PropertyReference name="imageUploadsEnabled" type="boolean"  >
+启用图片上传按钮（仅部分模型支持图片输入）
+</PropertyReference>
+
+<PropertyReference name="inputFileAccept" type="string"  >
+用于图片上传的文件输入的 'accept' 属性。
+  默认为 "image"。
+</PropertyReference>
+
+<PropertyReference name="makeSystemMessage" type="SystemMessageFunction"  >
+一个接受上下文字符串和指示并返回
+  要包含在聊天请求中的系统消息的函数。
+  当仅提供指示不够时，使用此函数完全覆盖系统消息。
+</PropertyReference>
+
+<PropertyReference name="disableSystemMessage" type="boolean"  >
+禁用包含 CopilotKit 的默认系统消息。当为 true 时，不发送系统消息（这也抑制了来自 <code>makeSystemMessage</code> 的任何自定义消息）。
+</PropertyReference>
+
+<PropertyReference name="AssistantMessage" type="React.ComponentType<AssistantMessageProps>"  >
+要使用的自定义助手消息组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="UserMessage" type="React.ComponentType<UserMessageProps>"  >
+要使用的自定义用户消息组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="ErrorMessage" type="React.ComponentType<ErrorMessageProps>"  >
+要使用的自定义错误消息组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="Messages" type="React.ComponentType<MessagesProps>"  >
+要使用的自定义 Messages 组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="RenderMessage" type="React.ComponentType<RenderMessageProps>"  >
+要使用的自定义 RenderMessage 组件，而不是默认的。
+
+  警告：这是一个应急方案，允许自定义
+  消息的渲染。你很可能想要替换
+  AssistantMessage 和 UserMessage 组件，它们也是属性。
+</PropertyReference>
+
+<PropertyReference name="RenderSuggestionsList" type="React.ComponentType<RenderSuggestionsListProps>"  >
+要使用的自定义建议列表组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="Input" type="React.ComponentType<InputProps>"  >
+要使用的自定义 Input 组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="ImageRenderer" type="React.ComponentType<ImageRendererProps>"  >
+要使用的自定义图片渲染组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="className" type="string"  >
+要应用于根元素的类名。
+</PropertyReference>
+
+<PropertyReference name="children" type="React.ReactNode"  >
+要渲染的子元素。
+</PropertyReference>
+
+<PropertyReference name="hideStopButton" type="boolean"  >
+
+</PropertyReference>
+
+<PropertyReference name="observabilityHooks" type="CopilotObservabilityHooks"  >
+CopilotKit 聊天事件的事件钩子。
+  这些钩子仅在提供 publicApiKey 时有效。
+</PropertyReference>
+
+<PropertyReference name="renderError" type="(error: { message: string; operation?: string; timestamp: number; onDismiss: () => void; onRetry?: () => void; }) => React.ReactNode"  >
+聊天特定错误的自定义错误渲染器。
+  提供后，错误将以内联方式显示在聊天界面中。
+</PropertyReference>
+
+<PropertyReference name="onError" type="CopilotErrorHandler"  >
+用于全面调试和可观察性的可选处理程序。
+</PropertyReference>
+
+<PropertyReference name="defaultOpen" type="boolean"  default="false">
+聊天窗口是否默认打开。
+</PropertyReference>
+
+<PropertyReference name="clickOutsideToClose" type="boolean"  default="true">
+当用户点击窗口外部时聊天窗口是否应该关闭。
+</PropertyReference>
+
+<PropertyReference name="hitEscapeToClose" type="boolean"  default="true">
+当用户按下 Escape 键时聊天窗口是否应该关闭。
+</PropertyReference>
+
+<PropertyReference name="shortcut" type="string"  default="'/'">
+打开聊天窗口的快捷键。
+  在 Mac 上使用 Command-[shortcut]，在 Windows 上使用 Ctrl-[shortcut]。
+</PropertyReference>
+
+<PropertyReference name="onSetOpen" type="(open: boolean) => void"  >
+聊天窗口打开或关闭时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="Window" type="React.ComponentType<WindowProps>"  >
+要使用的自定义 Window 组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="Button" type="React.ComponentType<ButtonProps>"  >
+要使用的自定义 Button 组件，而不是默认的。
+</PropertyReference>
+
+<PropertyReference name="Header" type="React.ComponentType<HeaderProps>"  >
+要使用的自定义 Header 组件，而不是默认的。
+</PropertyReference>

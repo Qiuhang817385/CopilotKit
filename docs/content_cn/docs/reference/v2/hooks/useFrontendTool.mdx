@@ -1,0 +1,168 @@
+---
+title: "useFrontendTool"
+description: "用于注册带有可选 UI 渲染的客户端工具处理程序的 React Hook"
+---
+
+## 概述
+
+`useFrontendTool` 在组件范围内向 CopilotKit 注册客户端工具。当 Agent 决定调用该工具时，提供的 `handler` 函数在浏览器中执行。可选地，您可以提供一个 `render` 组件，以在聊天中显示自定义 UI，展示工具的执行进度和结果。
+
+Hook 管理完整的注册生命周期：如果已存在同名工具则发出警告，在挂载时注册工具和渲染组件，在卸载时清理这两个注册。在 v2 中，参数模式使用 [Zod](https://zod.dev) 定义，而不是普通的参数数组。
+
+## 签名
+
+```tsx
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+
+function useFrontendTool<T extends Record<string, unknown>>(
+  tool: ReactFrontendTool<T>,
+  deps?: ReadonlyArray<unknown>,
+): void;
+```
+
+## 参数
+
+<PropertyReference name="tool" type="ReactFrontendTool<T>" required>
+  工具定义对象。
+
+  <PropertyReference name="name" type="string" required>
+    工具的唯一名称。Agent 在决定调用该工具时引用此名称。如果已注册同名工具，则会记录警告。
+  </PropertyReference>
+
+  <PropertyReference name="description" type="string" required>
+    告诉 Agent 工具做什么以及何时使用它的自然语言描述。
+  </PropertyReference>
+
+  <PropertyReference name="parameters" type="z.ZodSchema" required>
+    定义工具输入参数的 Zod 模式。该模式用于验证和类型推断。
+  </PropertyReference>
+
+  <PropertyReference name="handler" type="(args: T) => Promise<string>" required>
+    当 Agent 调用工具时执行的异步函数。接收经过验证的、类型化的参数，并应返回发送回 Agent 的字符串结果。
+  </PropertyReference>
+
+  <PropertyReference name="render" type="React.ComponentType<{ name: string; args: Partial<T>; status: ToolCallStatus; result: string | undefined }>">
+    可选的 React 组件，在聊天界面中渲染以可视化工具执行。组件接收：
+    - `name` -- 工具名称
+    - `args` -- 参数（流式传输时为部分，执行开始后为完整）
+    - `status` -- `ToolCallStatus.InProgress`、`ToolCallStatus.Executing` 或 `ToolCallStatus.Complete` 之一
+    - `result` -- 处理程序返回的字符串结果（仅在状态为 `Complete` 时可用）
+  </PropertyReference>
+
+  <PropertyReference name="available" type='"enabled" | "disabled" | "remote"' default='"enabled"'>
+    控制工具可用性。设置为 `"disabled"` 以暂时阻止 Agent 调用该工具，或 `"remote"` 以指示工具在服务器端处理。
+  </PropertyReference>
+</PropertyReference>
+
+<PropertyReference name="deps" type="ReadonlyArray<unknown>">
+  可选的依赖数组，类似于 `useEffect`。提供时，当数组中的任何值更改时，工具注册会刷新。当处理程序或渲染函数捕获外部状态时，请使用此选项。
+</PropertyReference>
+
+## 用法
+
+### 带 Zod 参数的基本工具
+
+```tsx
+import { z } from "zod";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+
+function TodoManager() {
+  const [todos, setTodos] = useState<string[]>([]);
+
+  useFrontendTool({
+    name: "addTodo",
+    description: "向用户的待办事项列表添加新项目",
+    parameters: z.object({
+      text: z.string().describe("待办事项文本"),
+      priority: z.enum(["low", "medium", "high"]).describe("优先级"),
+    }),
+    handler: async ({ text, priority }) => {
+      setTodos((prev) => [...prev, text]);
+      return `已添加 "${text}"，优先级为 ${priority}`;
+    },
+  }, []);
+
+  return <ul>{todos.map((t, i) => <li key={i}>{t}</li>)}</ul>;
+}
+```
+
+### 带自定义渲染组件的工具
+
+```tsx
+import { z } from "zod";
+import { useFrontendTool, ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function WeatherWidget() {
+  useFrontendTool({
+    name: "getWeather",
+    description: "获取并显示城市的天气信息",
+    parameters: z.object({
+      city: z.string().describe("城市名称"),
+      units: z.enum(["celsius", "fahrenheit"]).default("celsius"),
+    }),
+    handler: async ({ city, units }) => {
+      const response = await fetch(`/api/weather?city=${city}&units=${units}`);
+      const data = await response.json();
+      return JSON.stringify(data);
+    },
+    render: ({ args, status, result }) => {
+      if (status === ToolCallStatus.InProgress) {
+        return <div className="animate-pulse">正在获取 {args.city} 的天气...</div>;
+      }
+      if (status === ToolCallStatus.Complete && result) {
+        const data = JSON.parse(result);
+        return (
+          <div className="p-4 border rounded">
+            <h3>{data.city}</h3>
+            <p>{data.temperature}&deg; {data.units}</p>
+            <p>{data.conditions}</p>
+          </div>
+        );
+      }
+      return null;
+    },
+  }, []);
+
+  return null;
+}
+```
+
+### 有条件可用的工具
+
+```tsx
+import { z } from "zod";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+
+function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
+  useFrontendTool({
+    name: "deleteUser",
+    description: "按 ID 删除用户帐户（仅限管理员）",
+    parameters: z.object({
+      userId: z.string().describe("要删除的用户 ID"),
+    }),
+    handler: async ({ userId }) => {
+      await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      return `用户 ${userId} 已删除`;
+    },
+    available: isAdmin ? "enabled" : "disabled",
+  }, [isAdmin]);
+
+  return <div>{/* 管理员 UI */}</div>;
+}
+```
+
+## 行为
+
+- **重复检测**：如果已注册同名 `name` 的工具，Hook 会记录警告。一次只有一个同名工具处于活动状态。
+- **挂载/卸载生命周期**：工具和可选的渲染组件在挂载时注册，在卸载时移除。
+- **依赖跟踪**：提供 `deps` 时，当任何依赖值更改时，工具注册会刷新，类似于 `useEffect`。
+- **渲染组件生命周期**：如果提供 `render` 函数，它会添加到内部渲染工具调用注册表中。它接收流式 `args`（`InProgress` 期间为部分，`Executing` 和 `Complete` 期间为完整）。
+- **无返回值**：Hook 返回 `void`。
+
+## 相关
+
+- [`useHumanInTheLoop`](/reference/v2/hooks/useHumanInTheLoop) -- 用于暂停执行并等待用户输入的工具
+- [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall) -- 用于渲染没有客户端处理程序的后端工具调用
+- [`useComponent`](/reference/v2/hooks/useComponent) -- 用于从工具参数渲染 React 组件的便捷包装器
+- [`useRenderTool`](/reference/v2/hooks/useRenderTool) -- 注册仅渲染的工具调用 UI（命名或通配符）
+- [`useCopilotAction`](/reference/v1/hooks/useCopilotAction) -- v1 等效项

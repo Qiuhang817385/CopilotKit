@@ -1,0 +1,198 @@
+---
+title: 前端工具
+icon: "lucide/Wrench"
+description: 创建前端工具并在 Strands 智能体中使用它们。
+---
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/aws-strands/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="frontend-actions-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/agentic_chat?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/agentic_chat?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+前端工具使您能够定义客户端函数，您的 Strands 智能体可以调用这些函数，执行完全在用户的浏览器中进行。当您的智能体调用前端工具时，
+逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于让[您的智能体控制 UI](/aws-strands/frontend-tools)、[生成式 UI](/aws-strands/frontend-tools)，或进行人机协作交互。
+
+在本指南中，我们将介绍驱动 UI 并与 UI 交互的前端工具的使用。
+
+## 什么时候应该使用这个？
+当您需要智能体与客户端原语交互时，请使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Callout>
+查看[前端工具概述](/aws-strands/frontend-tools)以了解它们是什么以及何时使用它们。
+</Callout>
+
+<Steps>
+    <Step>
+        ### 运行并连接您的智能体
+        <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 在智能体中注册前端工具
+
+        在您的 Strands 智能体中，定义一个返回 `None` 的工具。这会将工具注册到 LLM，使其知道该工具，
+        但实际执行将在前端进行。
+
+        ```python title="main.py"
+        import os
+        from strands import Agent, tool
+        from strands.models.openai import OpenAIModel
+        from ag_ui_strands import StrandsAgent, create_strands_app
+
+        @tool
+        def change_background(background: str):
+            """
+            Change the background color of the chat. Can be anything that CSS accepts.
+
+            Args:
+                background: The background color or gradient. Prefer gradients.
+
+            Returns:
+                None - execution happens on the frontend
+            """
+            # Return None - frontend will handle execution
+            return None  # [!code highlight]
+
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        model = OpenAIModel(
+            client_args={"api_key": api_key},
+            model_id="gpt-5.2",
+        )
+
+        agent = Agent(
+            model=model,
+            tools=[change_background],  # [!code highlight]
+            system_prompt="You are a helpful assistant.",
+        )
+
+        agui_agent = StrandsAgent(
+            agent=agent,
+            name="my_agent",
+            description="A helpful assistant",
+        )
+
+        app = create_strands_app(agui_agent, "/")
+        ```
+    </Step>
+
+    <Step>
+        ### 创建前端工具处理程序
+
+        使用 [useFrontendTool](/reference/v1/hooks/useFrontendTool) 钩子创建前端工具。名称必须与
+        在智能体中定义的工具名称匹配。
+
+        ```tsx title="app/page.tsx"
+        "use client";
+
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+        import { CopilotSidebar, CopilotKitCSSProperties } from "@copilotkit/react-core/v2";
+        import { useState } from "react";
+
+        export default function Page() {
+          const [background, setBackground] = useState("#6366f1");
+
+          // [!code highlight:12]
+          useFrontendTool({
+            name: "change_background",
+            description: "Change the background color of the chat.",
+            parameters: z.object({
+              background: z.string().describe("The background color or gradient. Prefer gradients."),
+            }),
+            handler: async ({ background }) => {
+              setBackground(background);
+              return `Background changed to ${background}`;
+            },
+          });
+
+          return (
+            <main
+              style={{
+                background,
+                transition: "background 0.3s ease",
+              }}
+              className="h-screen"
+            >
+              <CopilotSidebar />
+            </main>
+          );
+        }
+        ```
+    </Step>
+    <Step>
+        ### 试试看！
+
+        尝试让智能体更改背景：
+
+        ```
+        将背景更改为日落渐变
+        ```
+
+        ```
+        将背景设为深紫色
+        ```
+
+        当智能体调用您的前端工具时，您应该会看到背景实时变化！
+
+        <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/frontend-actions-demo.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+    </Step>
+
+</Steps>
+
+## 访问 React 状态
+
+前端工具可以完全访问 DOM - 包括您的 React 组件状态。例如，您可以
+通过 `useFrontendTool` 钩子让智能体触发重新渲染。
+
+```tsx
+"use client";
+
+import { z } from "zod";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+import { useState } from "react";
+
+export default function Page() {
+  const [tasks, setTasks] = useState<string[]>([]);
+
+  useFrontendTool({
+    name: "add_task",
+    description: "Add a task to the todo list",
+    parameters: z.object({
+      task: z.string().describe("The task to add"),
+    }),
+    handler: async ({ task }) => {
+      setTasks((prev) => [...prev, task]);
+      return `Added task: ${task}`;
+    },
+  });
+
+  return (
+    <div>
+      <h1>Todo List</h1>
+      <ul>
+        {tasks.map((task, i) => (
+          <li key={i}>{task}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+请记住在返回 `None` 的 Strands 智能体中定义相应的工具！

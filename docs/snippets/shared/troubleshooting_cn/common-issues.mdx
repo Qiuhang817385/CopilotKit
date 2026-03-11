@@ -1,0 +1,136 @@
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
+欢迎使用 CopilotKit 故障排除指南！在这里，您可以找到常见问题的答案
+
+<Callout>
+    有未列出的问题？在 [GitHub](https://github.com/CopilotKit/CopilotKit/issues) 上提交工单或在 [Discord](https://discord.com/invite/6dffbvGU3D) 上联系我们
+    ，我们很乐意提供帮助。
+
+    我们也非常鼓励任何想在 [Github 上作为 pull request](https://github.com/CopilotKit/CopilotKit/blob/main/CONTRIBUTING.md) 添加自己的故障排除问题的开源贡献者。
+
+</Callout>
+
+## 我收到网络错误 / API 未找到错误
+
+如果您遇到网络或 API 错误，请按以下步骤进行故障排除：
+
+<Accordions>
+    <Accordion title="检查您的端点配置">
+        验证 CopilotKit 设置中的端点配置：
+
+        ```tsx
+        <CopilotKit
+          runtimeUrl="/api/copilotkit"
+        >
+          {/* 您的应用 */}
+        </CopilotKit>
+        ```
+
+        或者，如果使用 CopilotCloud
+        ```tsx
+        <CopilotKit
+            publicApiKey="<your-copilot-cloud-public-api-key>"
+        >
+            {/* 您的应用 */}
+        </CopilotKit>
+        ```
+
+        常见问题：
+        - 端点路径缺少前导斜杠
+        - 相对于应用基本 URL 的路径不正确，或者，如果使用绝对路径，完整 URL 不正确
+        - 端点路径中的拼写错误
+        - 如果使用 CopilotCloud，请确保省略 `runtimeUrl` 属性并提供有效的 API 密钥
+    </Accordion>
+    <Accordion title="localhost vs 127.0.0.1">
+        如果您在本地运行并遇到连接错误，请尝试使用 `127.0.0.1` 代替 `localhost`：
+
+        ```bash
+        # 如果这个不起作用：
+        http://localhost:3000/api/copilotkit
+
+        # 尝试这个：
+        http://127.0.0.1:3000/api/copilotkit
+        ```
+
+        这通常是由于 `/etc/hosts` 或网络配置中的本地 DNS 解析问题导致的。
+    </Accordion>
+    <Accordion title="验证您的后端是否正在运行">
+        确保您的后端服务器：
+        - 在预期端口上运行
+        - 可从您的前端访问
+        - 未被 CORS 或防火墙阻止
+
+        查看[快速入门](/quickstart)了解如何设置
+    </Accordion>
+
+</Accordions>
+
+## 我收到 "CopilotKit 的远程端点" 未找到错误
+
+如果您收到 "CopilotKit 的远程端点未找到" 错误，通常意味着提供 `/info` 端点的服务器无法访问。以下是修复方法：
+
+<Accordions>
+    <Accordion title="检查您的 FastAPI 设置（如果使用 python 的 FastAPI）">
+        确保您的 FastAPI 应用正确设置了 CopilotKitSDK。<br/>
+        请参阅[远程 Python 端点](/guides/backend-actions/remote-backend-endpoint)了解如何设置
+    </Accordion>
+    <Accordion title="测试您的端点">
+        `/info` 端点应返回智能体或操作信息。直接测试它：
+
+        ```bash
+        curl -v -d '{}' http://localhost:8000/copilotkit/info
+        ```
+        响应如下所示：
+        ```bash
+        * Host localhost:8000 was resolved.
+        * IPv6: ::1
+        * IPv4: 127.0.0.1
+        *   Trying [::1]:8000...
+        * connect to ::1 port 8000 from ::1 port 55049 failed: Connection refused
+        *   Trying 127.0.0.1:8000...
+        * Connected to localhost (127.0.0.1) port 8000
+        > POST /copilotkit/info HTTP/1.1
+        > Host: localhost:8000
+        > User-Agent: curl/8.7.1
+        > Accept: */*
+        > Content-Length: 2
+        > Content-Type: application/x-www-form-urlencoded
+        >
+        * upload completely sent off: 2 bytes
+        < HTTP/1.1 200 OK
+        < date: Thu, 16 Jan 2025 17:45:05 GMT
+        < server: uvicorn
+        < content-length: 214
+        < content-type: application/json
+        <
+        * Connection #0 to host localhost left intact
+        {"actions":[],"agents":[{"name":"my_agent","description":"A helpful agent.","type":"langgraph"},],"sdkVersion":"0.1.32"}%
+        ```
+
+        如您所见，它是带有您注册的智能体和操作的 JSON 响应，以及 `200 OK` HTTP 响应状态。
+        如果您看到不同的响应，请检查您的 FastAPI 日志以查找错误。
+    </Accordion>
+
+</Accordions>
+
+## 隧道创建连接问题
+
+如果您注意到隧道创建过程无限旋转，您的路由器或 ISP 可能正在阻止连接到 CopilotKit 的隧道服务。
+
+<Accordions>
+    <Accordion title="路由器或 ISP 阻止隧道连接">
+        要验证与隧道服务的连接，请尝试这些命令：
+
+        ```bash
+        ping tunnels.devcopilotkit.com
+        curl -I https://tunnels.devcopilotkit.com
+        telnet tunnels.devcopilotkit.com 443
+        ```
+
+        如果这些失败，您路由器的安全功能或 ISP 可能正在阻止连接。常见解决方案：
+        - 检查路由器安全设置
+        - 联系您的 ISP 验证他们是否正在阻止连接
+        - 尝试不同的网络以确认问题
+    </Accordion>
+
+</Accordions>

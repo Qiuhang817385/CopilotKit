@@ -1,0 +1,146 @@
+---
+title: "仅显示"
+icon: "lucide/Eye"
+description: "注册 React 组件，让你的智能体可以在聊天中渲染。"
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import FrontEndToolsImpl from "@/snippets/integrations/langgraph/frontend-tools.mdx"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+
+## 这是什么？
+
+`useComponent` 让你可以将 React 组件注册为智能体可以调用的工具。当智能体调用该工具时，CopilotKit 会使用工具参数作为 props 直接在聊天中渲染你的组件。
+
+这是生成式 UI 最简单的形式——你的智能体决定何时显示组件，CopilotKit 负责渲染。不需要处理逻辑，也不需要用户交互。
+
+## 什么时候使用？
+
+当你想要以下功能时使用 `useComponent`：
+- 在聊天中内联显示丰富的 UI（卡片、图表、表格）
+- 显示来自智能体响应的结构化数据
+- 渲染预览、状态指示器或视觉反馈
+- 让智能体呈现纯文本之外的信息
+
+对于需要用户交互的组件，请参阅[交互式](/langgraph/generative-ui/your-components/interactive)或[基于中断的](/langgraph/generative-ui/your-components/interrupt-based)。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接你的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 注册组件
+
+    使用 `useComponent` 钩子注册 React 组件。智能体将能够通过名称调用它，CopilotKit 将使用工具参数作为 props 渲染它。
+
+    ```tsx title="app/page.tsx"
+    import { useComponent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { z } from "zod";
+
+    const weatherSchema = z.object({
+      city: z.string().describe("城市名称"),
+      temperature: z.number().describe("华氏温度"),
+      condition: z.string().describe("天气状况"),
+    });
+
+    function WeatherCard({ city, temperature, condition }: z.infer<typeof weatherSchema>) {
+      return (
+        <div className="rounded-lg border p-4">
+          <h3 className="font-semibold">{city}</h3>
+          <p className="text-2xl">{temperature}°F</p>
+          <p className="text-sm text-gray-500">{condition}</p>
+        </div>
+      );
+    }
+
+    function YourMainContent() {
+      // [!code highlight:9]
+      useComponent({
+        name: "showWeather",
+        description: "显示城市的天气卡片。",
+        parameters: weatherSchema,
+        render: WeatherCard,
+      });
+
+      return <div>{/* ... */}</div>;
+    }
+    ```
+  </Step>
+  <Step>
+    ### 安装 CopilotKit SDK
+
+    现在，我们需要确保你的智能体可以访问前端工具。在你的终端中，导航到你的智能体文件夹并继续。
+
+    <InstallSDKSnippet components={props.components}/>
+  </Step>
+  <Step>
+    ### 继承自 CopilotKitState
+
+    要访问 CopilotKit 提供的前端工具，在你的智能体状态定义中继承 `CopilotKitState`：
+
+    <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit import CopilotKitState # [!code highlight]
+
+        class AgentState(CopilotKitState): # [!code highlight]
+            pass
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+        ```typescript title="agent-js/src/agent.ts"
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+        export const AgentStateAnnotation = Annotation.Root({
+          ...CopilotKitStateAnnotation.spec, // [!code highlight]
+        });
+        export type AgentState = typeof AgentStateAnnotation.State;
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 智能体调用组件
+
+    当你的智能体的 LLM 决定使用该工具时，CopilotKit 会自动在聊天中渲染你的组件。该工具被注册为智能体可以发现和调用的前端工具。
+
+    <FrontEndToolsImpl components={props.components} />
+  </Step>
+  <Step>
+    ### 试一试！
+
+    问你的智能体一些会触发组件的问题（例如"旧金山天气怎么样？"）。你应该看到你的 `WeatherCard` 直接渲染在聊天中。
+  </Step>
+</Steps>
+
+## 无参数
+
+对于不需要类型化参数的简单组件：
+
+```tsx
+useComponent({
+  name: "showGreeting",
+  render: ({ message }: { message: string }) => (
+    <div className="rounded border p-3 bg-blue-50">
+      <p>{message}</p>
+    </div>
+  ),
+});
+```
+
+## 限定到智能体
+
+在多智能体设置中，将组件限定到特定智能体：
+
+```tsx
+useComponent({
+  name: "renderProfile",
+  parameters: z.object({ userId: z.string() }),
+  render: ProfileCard,
+  agentId: "support-agent",
+});
+```

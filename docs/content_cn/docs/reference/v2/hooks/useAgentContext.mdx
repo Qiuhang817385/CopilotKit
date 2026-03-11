@@ -1,0 +1,132 @@
+---
+title: "useAgentContext"
+description: "用于向 Agent 提供动态上下文的 React Hook"
+---
+
+## 概述
+
+`useAgentContext` 在组件的生命周期内将动态上下文对象注册到活动的 Copilot 运行时。Hook 在挂载时添加上下文，在卸载时移除它，因此 Agent 始终可以看到您应用程序状态的最新快照，无需手动清理。
+
+更新传入的上下文对象以刷新 Agent 看到的内容。这是 `useCopilotReadable` 的 v2 等效项 -- 它允许您将任何可序列化的应用程序状态（用户偏好、选定项目、计算值等）作为上下文呈现，Agent 可以在生成响应或做出决策时引用这些上下文。
+
+## 签名
+
+```tsx
+import { useAgentContext } from "@copilotkit/react-core/v2";
+
+function useAgentContext(context: AgentContextInput): void;
+```
+
+## 参数
+
+<PropertyReference name="context" type="AgentContextInput" required>
+  描述要暴露给 Agent 的上下文的对象。
+
+  <PropertyReference name="description" type="string" required>
+    上下文的人类可读描述。Agent 使用此描述来理解值代表什么以及何时引用它。
+  </PropertyReference>
+
+  <PropertyReference name="value" type="JsonSerializable" required>
+    要提供的上下文值。必须是 JSON 可序列化的：`string`、`number`、`boolean`、`null`、数组或具有字符串键和可序列化值的普通对象。对象值会自动序列化。
+  </PropertyReference>
+</PropertyReference>
+
+## 用法
+
+### 基本用法
+
+提供简单的应用程序状态作为 Agent 的上下文。
+
+```tsx
+import { useAgentContext } from "@copilotkit/react-core/v2";
+
+function UserGreeting({ user }: { user: { name: string; role: string } }) {
+  useAgentContext({
+    description: "当前登录的用户",
+    value: { name: user.name, role: user.role },
+  });
+
+  return <div>欢迎，{user.name}</div>;
+}
+```
+
+### 来自组件状态的动态上下文
+
+当值在渲染之间更改时，上下文会自动更新。
+
+```tsx
+import { useState } from "react";
+import { useAgentContext } from "@copilotkit/react-core/v2";
+
+function ProductCatalog() {
+  const [selectedCategory, setSelectedCategory] = useState("electronics");
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 500 });
+
+  useAgentContext({
+    description: "用户当前的产品筛选设置",
+    value: {
+      category: selectedCategory,
+      priceRange,
+    },
+  });
+
+  return (
+    <div>
+      <select
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
+      >
+        <option value="electronics">电子产品</option>
+        <option value="books">图书</option>
+        <option value="clothing">服装</option>
+      </select>
+      {/* ... 价格范围控件 ... */}
+    </div>
+  );
+}
+```
+
+### 嵌套组件中的多个上下文
+
+每个组件都可以注册自己的上下文。所有注册的上下文同时对 Agent 可见。
+
+```tsx
+import { useAgentContext } from "@copilotkit/react-core/v2";
+
+function Dashboard() {
+  useAgentContext({
+    description: "当前仪表板视图和布局",
+    value: { view: "analytics", columns: 3 },
+  });
+
+  return (
+    <div>
+      <Sidebar />
+      <MainPanel />
+    </div>
+  );
+}
+
+function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useAgentContext({
+    description: "侧边栏导航状态",
+    value: { collapsed, activeSection: "reports" },
+  });
+
+  return <nav>{/* ... */}</nav>;
+}
+```
+
+## 行为
+
+- **挂载/卸载生命周期**：上下文在组件挂载时注册，在卸载时自动移除。无需手动清理。
+- **响应式更新**：当 `context` 对象在渲染之间更改时，Agent 立即看到更新的值。
+- **序列化**：`value` 必须符合 `JsonSerializable`（`string | number | boolean | null | JsonSerializable[] | { [key: string]: JsonSerializable }`）。非可序列化值（如函数、类实例或符号）将导致错误。
+- **多个上下文**：组件树中的多个 `useAgentContext` 调用对 Agent 同时可见。每个都由其描述和值标识。
+- **无返回值**：Hook 返回 `void`。与 `useCopilotReadable` 不同，它不为父子层次结构返回 ID。
+
+## 相关
+
+- [`useCopilotReadable`](/reference/v1/hooks/useCopilotReadable) -- 用于提供上下文的 v1 等效项

@@ -1,0 +1,51 @@
+---
+title: 介绍
+icon: "custom/agno"
+description: 通过 AG-UI 将您的 Agno Agent 带给您的用户。
+hideHeader: true
+---
+import { customIcons } from "@/lib/icons/custom-icons";
+import { FrameworkOverview } from "@/components/content/landing-pages/framework-overview";
+
+<FrameworkOverview
+  frameworkName="Agno"
+  frameworkIcon={<></>}
+  header="将您的 Agno Agent 带给用户"
+  subheader="使用 CopilotKit 和 AG-UI 赋予您的 Agno Agent 真正的用户交互能力。构建丰富、交互式、由 Agent 驱动的应用程序。"
+  bannerVideo="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/overview.mp4"
+  guideLink="/agno/quickstart"
+  initCommand="npx copilotkit@latest init"
+  featuresLink="https://feature-viewer.copilotkit.ai/agno/feature/agentic_chat"
+  supportedFeatures={[
+    {
+      title: "生成式 UI",
+      description: "使用自定义 UI 组件实时渲染 Agent 的状态、进度、输出和工具调用。弥合 AI Agent 和用户界面之间的差距。",
+      documentationLink: "/agno/generative-ui",
+      demoLink: "https://feature-viewer.copilotkit.ai/agno/feature/tool_based_generative_ui",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/haiku.mp4"
+    },
+    {
+      title: "人机协同",
+      description: "在关键检查点赋能用户引导 Agent。结合 AI 和人类判断的最佳优势，实现更可靠和可控的 Agent 行为。",
+      documentationLink: "/agno/human-in-the-loop",
+      demoLink: "https://examples-coagents-ai-travel-app.vercel.app/",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+    },
+  ]}
+  architectureImage="https://cdn.copilotkit.ai/docs/copilotkit/images/generic-agui-architecture.png"
+  liveDemos={[
+    {
+      type: "saas",
+      title: "SaaS 助手",
+      description: "由 AI Agent 增强的传统 SaaS 应用程序。这些助手无缝集成到现有工作流程中，为特定业务流程提供智能协助。非常适合客户服务、销售自动化、项目管理和领域特定任务，用户需要引导式的分步 AI 协助。"
+      iframeUrl: "https://examples-coagents-ai-travel-app.vercel.app?copilotOpen=true"
+    },
+    {
+      type: "canvas",
+      title: "画布助手",
+      description: "一个无限画布界面，用户在其中与 AI Agent 在空间、视觉环境中协作。这些助手在 research、头脑风暴、内容创作和复杂问题解决方面表现出色，信息需要以非线性、创造性的方式组织、连接和探索。"
+      iframeUrl: "https://examples-coagents-research-canvas-ui.vercel.app/"
+    }
+  ]}
+/>
+

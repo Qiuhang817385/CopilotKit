@@ -1,0 +1,221 @@
+---
+title: "CopilotChatUserMessage"
+description: "用于显示带有分支导航的用户撰写消息的组件"
+---
+
+## 概述
+
+`CopilotChatUserMessage` 显示右对齐的、用户撰写的消息，并带有可选的分支导航。默认消息渲染器使用 `white-space: pre-wrap` 格式化内容以保留换行。仅当 `numberOfBranches` 大于 1 且提供 `onSwitchToBranch` 处理程序时，才会渲染分支导航控件，使用户能够在替代对话分支之间导航。
+
+## 导入
+
+```tsx
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## Props
+
+<PropertyReference name="message" type="UserMessage" required>
+  要渲染的用户消息对象。包含消息的 `content`、 `id` 和 `role`。
+</PropertyReference>
+
+<PropertyReference name="onEditMessage" type="(props: { message: UserMessage }) => void">
+  当用户点击编辑按钮时调用的回调。未提供时，编辑按钮从工具栏隐藏。
+</PropertyReference>
+
+<PropertyReference name="onSwitchToBranch" type="(props: { message: UserMessage; branchIndex: number; numberOfBranches: number }) => void">
+  当用户导航到不同分支时调用的回调。接收目标 `branchIndex` 和总计 `numberOfBranches`。仅当提供此回调且 `numberOfBranches` 大于 1 时，才会渲染分支导航控件。
+</PropertyReference>
+
+<PropertyReference name="branchIndex" type="number">
+  当前活动分支的基于零的索引。分支导航控件使用它来显示当前位置。
+</PropertyReference>
+
+<PropertyReference name="numberOfBranches" type="number">
+  此消息的可用分支总数。仅当此值大于 1 且提供 `onSwitchToBranch` 时，才会渲染分支导航。
+</PropertyReference>
+
+<PropertyReference name="additionalToolbarItems" type="React.ReactNode">
+  附加到工具栏中默认操作按钮旁边的额外 React 元素。
+</PropertyReference>
+
+## 插槽
+
+所有插槽 prop 遵循 CopilotKit 插槽系统：每个都接受替换的 React 组件、合并到默认组件类中的 `className` 字符串，或扩展默认组件的部分 props 对象。
+
+<PropertyReference name="messageRenderer" type="SlotProp<typeof CopilotChatUserMessage.MessageRenderer>">
+  消息内容渲染器的插槽。默认为 `CopilotChatUserMessage.MessageRenderer`，它使用 `white-space: pre-wrap` 格式化消息文本以保留空白和换行。
+
+  **作为替换组件：**
+  ```tsx
+  <CopilotChatUserMessage
+    message={msg}
+    messageRenderer={({ message }) => (
+      <div className="font-mono text-sm">{message.content}</div>
+    )}
+  />
+  ```
+
+  **作为 className：**
+  ```tsx
+  <CopilotChatUserMessage
+    message={msg}
+    messageRenderer="text-lg font-medium"
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="toolbar" type="SlotProp<typeof CopilotChatUserMessage.Toolbar>">
+  操作工具栏容器的插槽。默认为 `CopilotChatUserMessage.Toolbar`，它在消息内容下方渲染一行水平操作按钮。
+
+  **作为 className：**
+  ```tsx
+  <CopilotChatUserMessage
+    message={msg}
+    toolbar="opacity-0 group-hover:opacity-100 transition-opacity"
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="copyButton" type="SlotProp<typeof CopilotChatUserMessage.CopyButton>">
+  复制到剪贴板按钮的插槽。默认为 `CopilotChatUserMessage.CopyButton`。工具提示标签来自 `CopilotChatLabels.userMessageToolbarCopyMessageLabel`。
+</PropertyReference>
+
+<PropertyReference name="editButton" type="SlotProp<typeof CopilotChatUserMessage.EditButton>">
+  编辑按钮的插槽。默认为 `CopilotChatUserMessage.EditButton`。仅在提供 `onEditMessage` 时渲染。工具提示标签来自 `CopilotChatLabels.userMessageToolbarEditMessageLabel`。
+</PropertyReference>
+
+<PropertyReference name="branchNavigation" type="SlotProp<typeof CopilotChatUserMessage.BranchNavigation>">
+  分支导航控件的插槽。默认为 `CopilotChatUserMessage.BranchNavigation`，它渲染上一个/下一个箭头和分支计数器（例如 "2 / 3"）。仅在 `numberOfBranches` 大于 1 且提供 `onSwitchToBranch` 时渲染。
+
+  **作为替换组件：**
+  ```tsx
+  <CopilotChatUserMessage
+    message={msg}
+    numberOfBranches={3}
+    branchIndex={1}
+    onSwitchToBranch={handleSwitch}
+    branchNavigation={({ branchIndex, numberOfBranches, onSwitchToBranch, message }) => (
+      <div className="flex items-center gap-1 text-xs">
+        <button
+          onClick={() => onSwitchToBranch({ message, branchIndex: branchIndex - 1, numberOfBranches })}
+          disabled={branchIndex === 0}
+        >
+          上一个
+        </button>
+        <span>{branchIndex + 1} / {numberOfBranches}</span>
+        <button
+          onClick={() => onSwitchToBranch({ message, branchIndex: branchIndex + 1, numberOfBranches })}
+          disabled={branchIndex === numberOfBranches - 1}
+        >
+          下一个
+        </button>
+      </div>
+    )}
+  />
+  ```
+</PropertyReference>
+
+## 用法
+
+### 基本用户消息
+
+```tsx
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+
+function UserBubble({ message }) {
+  return <CopilotChatUserMessage message={message} />;
+}
+```
+
+### 带编辑支持
+
+```tsx
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+
+function EditableUserMessage({ message, onEdit }) {
+  return (
+    <CopilotChatUserMessage
+      message={message}
+      onEditMessage={({ message }) => onEdit(message)}
+    />
+  );
+}
+```
+
+### 带分支导航
+
+```tsx
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+
+function BranchedUserMessage({ message, branchIndex, totalBranches, onSwitch }) {
+  return (
+    <CopilotChatUserMessage
+      message={message}
+      branchIndex={branchIndex}
+      numberOfBranches={totalBranches}
+      onSwitchToBranch={({ branchIndex }) => onSwitch(branchIndex)}
+    />
+  );
+}
+```
+
+### 使用插槽自定义外观
+
+```tsx
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+
+function StyledUserMessage({ message }) {
+  return (
+    <CopilotChatUserMessage
+      message={message}
+      messageRenderer="bg-blue-600 text-white rounded-2xl px-4 py-2"
+      toolbar="mt-1"
+      onEditMessage={({ message }) => console.log("编辑:", message.id)}
+      additionalToolbarItems={
+        <button onClick={() => console.log("固定:", message.id)}>固定</button>
+      }
+    />
+  );
+}
+```
+
+### 完整的编辑和分支工作流
+
+```tsx
+import { useState } from "react";
+import { CopilotChatUserMessage } from "@copilotkit/react-core/v2";
+
+function FullFeaturedUserMessage({ message, branches }) {
+  const [currentBranch, setCurrentBranch] = useState(0);
+
+  return (
+    <CopilotChatUserMessage
+      message={message}
+      branchIndex={currentBranch}
+      numberOfBranches={branches.length}
+      onSwitchToBranch={({ branchIndex }) => setCurrentBranch(branchIndex)}
+      onEditMessage={({ message }) => {
+        // 打开编辑模态框
+        openEditModal(message);
+      }}
+    />
+  );
+}
+```
+
+## 行为
+
+- **右对齐布局**：用户消息以右对齐定位渲染，以在视觉上与助手消息区分开。
+- **空白保留**：默认消息渲染器使用 `white-space: pre-wrap`，因此原始消息中的换行和间距被保留。
+- **条件分支导航**：仅当两个条件都满足时才渲染分支导航控件：`numberOfBranches > 1` 且提供 `onSwitchToBranch`。这防止为单分支对话显示导航。
+- **条件编辑按钮**：仅当提供 `onEditMessage` 时，编辑按钮才会出现在工具栏中。
+- **本地化标签**：工具栏按钮工具提示都从最近的 `CopilotChatConfigurationProvider` 获取。有关可用的标签键，请参阅 [`useCopilotChatConfiguration`](/reference/v2/hooks/useCopilotChatConfiguration)。
+- **插槽系统**：每个插槽 prop 接受三种形式——替换组件、合并到默认组件的 className 字符串，或扩展默认组件 props 的部分 props 对象。
+
+## 相关
+
+- [`CopilotChatMessageView`](/reference/v2/components/CopilotChatMessageView) -- 将此组件用作默认用户消息插槽的父组件
+- [`CopilotChatAssistantMessage`](/reference/v2/components/CopilotChatAssistantMessage) -- 用于助手消息的配套组件
+- [`useCopilotChatConfiguration`](/reference/v2/hooks/useCopilotChatConfiguration) -- 用于本地化工具栏标签的 Provider

@@ -1,0 +1,82 @@
+---
+title: 会话线程
+description: 了解如何使用 CrewAI Flows 在会话之间保持持久对话。
+icon: "lucide/MessagesSquare"
+---
+
+# 理解会话持久化
+
+CrewAI Flows 支持会话线程，这是一种将消息分组在一起并在会话之间保持连续聊天记录的方式。CopilotKit 提供了确保前端和后端之间正确持久化对话状态的机制。
+
+本指南假设您已经阅读了[快速入门](/crewai-flows/quickstart)指南。
+
+<Callout>
+  **注意：** 虽然前端使用 `threadId` 来管理对话会话，
+  但真正的跨会话持久化需要后端设置。后端代理
+  需要实现持久化机制（如
+  [消息持久化](/crewai-flows/persistence/message-persistence)中所示）
+  来保存和加载与每个 `threadId` 关联的状态。
+
+请参阅[示例代理实现](https://github.com/CopilotKit/CopilotKit/blob/main/examples/coagents-starter-crewai-flows/agent-py/sample_agent/agent.py#L291)
+以获取具体示例。
+
+</Callout>
+
+## 前端：设置 ThreadId
+
+### 加载现有会话
+
+要在 CopilotKit 中加载现有会话，请在 `<CopilotKit>` 上设置 `threadId` 属性：
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+<CopilotKit threadId="37aa68d0-d15b-45ae-afc1-0ba6c3e11353">
+  <YourApp />
+</CopilotKit>;
+```
+
+### 动态切换会话
+
+您可以使 `threadId` 动态化。设置后，CopilotKit 将加载该会话的先前消息。
+
+```tsx
+import { useState } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+
+const Page = () => {
+  const [threadId, setThreadId] = useState(
+    "af2fa5a4-36bd-4e02-9b55-2580ab584f89"
+  );
+  return (
+    <CopilotKit threadId={threadId}>
+      <YourApp setThreadId={setThreadId} />
+    </CopilotKit>
+  );
+};
+
+const YourApp = ({ setThreadId }) => {
+  return (
+    <Button onClick={() => setThreadId("679e8da5-ee9b-41b1-941b-80e0cc73a008")}>
+      切换会话
+    </Button>
+  );
+};
+```
+
+### 使用 setThreadId
+
+CopilotKit 从 `useCopilotContext` 钩子提供当前的 `threadId` 和 `setThreadId` 函数：
+
+```tsx
+import { useCopilotContext } from "@copilotkit/react-core/v2";
+
+const ChangeThreadButton = () => {
+  const { threadId, setThreadId } = useCopilotContext();
+  return (
+    <Button onClick={() => setThreadId("d73c22f3-1f8e-4a93-99db-5c986068d64f")}>
+      切换会话
+    </Button>
+  );
+};
+```

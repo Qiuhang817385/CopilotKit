@@ -1,0 +1,137 @@
+---
+title: "useSuggestions"
+description: "用于访问聊天建议的 React Hook"
+---
+
+## 概述
+
+`useSuggestions` 是一个 React Hook，提供对给定 Agent 的当前聊天建议的访问。它订阅建议更改，并在建议更新、清除或重新加载时自动重新渲染。
+
+建议通过 [`useConfigureSuggestions`](/reference/v2/hooks/useConfigureSuggestions) 配置，可以是静态（预定义）或动态（由 Agent 生成）。
+
+## 签名
+
+```tsx
+import { useSuggestions } from "@copilotkit/react-core/v2";
+
+function useSuggestions(options?: UseSuggestionsOptions): UseSuggestionsResult
+```
+
+## 参数
+
+<PropertyReference name="options" type="UseSuggestionsOptions">
+  Hook 的可选配置对象。
+
+  <PropertyReference name="agentId" type="string" default='"default"'>
+    要检索其建议的 Agent ID。如果省略，将回退到最近的 `CopilotChatConfigurationProvider` 中的 Agent ID，或 `"default"`。
+  </PropertyReference>
+</PropertyReference>
+
+## 返回值
+
+<PropertyReference name="result" type="UseSuggestionsResult">
+  包含当前建议和控制函数的对象。
+
+  <PropertyReference name="suggestions" type="Suggestion[]">
+    当前建议数组。每个 `Suggestion` 包含：
+    - `title: string` -- 建议的简短显示标题。
+    - `message: string` -- 选中建议时发送的消息内容。
+    - `isLoading: boolean` -- 此建议是否仍在生成中。
+  </PropertyReference>
+
+  <PropertyReference name="reloadSuggestions" type="() => void">
+    触发已解析 Agent 的建议重新加载。对于动态建议，这会重新调用生成过程。`isLoading` 状态通过订阅事件自动更新。
+  </PropertyReference>
+
+  <PropertyReference name="clearSuggestions" type="() => void">
+    清除已解析 Agent 的所有当前建议。
+  </PropertyReference>
+
+  <PropertyReference name="isLoading" type="boolean">
+    建议当前是否正在生成或加载。
+  </PropertyReference>
+</PropertyReference>
+
+## 用法
+
+### 基本用法
+
+```tsx
+import { useSuggestions } from "@copilotkit/react-core/v2";
+
+function SuggestionsList() {
+  const { suggestions, isLoading } = useSuggestions();
+
+  if (isLoading) {
+    return <div>Loading suggestions...</div>;
+  }
+
+  return (
+    <ul>
+      {suggestions.map((suggestion, i) => (
+        <li key={i}>
+          <strong>{suggestion.title}</strong>
+          <p>{suggestion.message}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 带重新加载和清除控件
+
+```tsx
+import { useSuggestions } from "@copilotkit/react-core/v2";
+
+function SuggestionsPanel() {
+  const { suggestions, reloadSuggestions, clearSuggestions, isLoading } =
+    useSuggestions();
+
+  return (
+    <div>
+      <div>
+        <button onClick={reloadSuggestions} disabled={isLoading}>
+          Refresh
+        </button>
+        <button onClick={clearSuggestions}>Clear</button>
+      </div>
+      {suggestions.map((suggestion, i) => (
+        <button key={i} disabled={suggestion.isLoading}>
+          {suggestion.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+### 针对特定 Agent
+
+```tsx
+import { useSuggestions } from "@copilotkit/react-core/v2";
+
+function AgentSuggestions() {
+  const { suggestions } = useSuggestions({ agentId: "support-agent" });
+
+  return (
+    <div>
+      <h3>Support Agent Suggestions</h3>
+      {suggestions.map((s, i) => (
+        <div key={i}>{s.title}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+## 行为
+
+- **自动订阅**：Hook 订阅核心实例上的建议更改事件，并在已解析 Agent 的建议添加、移除或更新时重新渲染。
+- **Agent 解析**：`agentId` 按以下优先顺序解析：显式 `agentId` 选项、最近的 `CopilotChatConfigurationProvider` 中的 `agentId`，然后是默认 Agent ID (`"default"`)。
+- **加载状态**：动态建议重新加载开始时 `isLoading` 变为 `true`，生成完成时返回 `false`。
+- **初始状态**：挂载时，Hook 从核心实例同步读取当前建议，因此静态建议不会有不必要的加载闪烁。
+
+## 相关
+
+- [`useConfigureSuggestions`](/reference/v2/hooks/useConfigureSuggestions) -- 配置静态或动态建议

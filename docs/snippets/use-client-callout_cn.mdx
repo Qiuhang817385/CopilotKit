@@ -1,0 +1,12 @@
+### 指定 `"use client"`（Next.js App Router）
+
+<Callout type="info">
+  仅当您使用 Next.js 的 App Router 时才需要此操作。
+</Callout>
+
+```tsx title="YourComponent.tsx"
+"use client"
+```
+
+像 `useState` 和 `useEffect` 等其他 React 钩子一样，这是一个**客户端**钩子。
+如果您使用 Next.js 的 App Router，需要在任何使用此钩子的文件顶部添加 `"use client"` 指令。

@@ -1,0 +1,107 @@
+---
+title: "CrewAIAgent"
+description: "CrewAIAgent 允许你定义用于 CopilotKit 的 Agent。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * sdk-python/copilotkit/crewai/crewai_agent.py
+  */
+}
+## CrewAIAgent
+
+CrewAIAgent 允许你定义用于 CopilotKit 的 Agent。
+
+    要安装，请运行：
+
+    ```bash
+    pip install copilotkit[crewai]
+    ```
+
+    每个 Agent 必须定义 `name` 和 `crew` 或 `flow` 属性。还可以提供可选的
+    `description`。当 CopilotKit 动态路由请求到
+    Agent 时会使用此描述。
+
+    ## 服务基于 Crew 的 Agent
+
+    要服务基于 Crew 的 Agent，请将 `Crew` 对象传递给 `crew` 参数。
+
+    注意：
+    你需要确保在 `Crew` 对象上设置了 `chat_llm`。
+    更多信息请参阅 [CrewAI 文档](https://docs.crewai.com/concepts/cli#9-chat)。
+
+    ```python
+    from copilotkit import CrewAIAgent
+
+
+    CrewAIAgent(
+        name="email_agent_crew",
+        description="这个基于 crew 的 Agent 发送电子邮件",
+        crew=SendEmailCrew(),
+    )
+    ```
+
+    ## 服务基于 Flow 的 Agent
+
+    要服务基于 Flow 的 Agent，请将 `Flow` 对象传递给 `flow` 参数。
+
+    ```python
+    CrewAIAgent(
+        name="email_agent_flow",
+        description="这个基于 flow 的 Agent 发送电子邮件",
+        flow=SendEmailFlow(),
+    )
+    ```
+
+    注意：
+    必须向 CrewAIAgent 提供 `crew` 或 `flow` 之一。
+
+### 参数
+
+<PropertyReference name="name" type="str" required> 
+Agent 的名称。
+</PropertyReference>
+
+<PropertyReference name="crew" type="Crew" required> 
+使用基于 Crew 的 Agent 时，将 `Crew` 对象传递给 `crew` 参数。
+</PropertyReference>
+
+<PropertyReference name="flow" type="Flow" required> 
+使用基于 Flow 的 Agent 时，将 `Flow` 对象传递给 `flow` 参数。
+</PropertyReference>
+
+<PropertyReference name="description" type="Optional[str]" > 
+Agent 的描述。
+</PropertyReference>
+
+<PropertyReference name="copilotkit_config" type="Optional[CopilotKitConfig]" > 
+与 Agent 一起使用的 CopilotKit 配置。
+</PropertyReference>
+
+## CopilotKitConfig
+
+CrewAIAgent 的 CopilotKit 配置
+
+    这用于你想自定义 CopilotKit 与
+    CrewAI 交互方式的高级场景。
+
+    ```python
+    # 函数签名：
+    def merge_state(
+        *,
+        state: dict,
+        messages: List[BaseMessage],
+        actions: List[Any],
+        agent_name: str
+    ):
+        # ...实现...
+
+    ```
+
+### 参数
+
+<PropertyReference name="merge_state" type="Callable" required> 
+此函数允许你自定义 CopilotKit 如何合并 Agent 状态。
+</PropertyReference>

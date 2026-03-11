@@ -1,0 +1,50 @@
+---
+title: "第 3 步：Copilot 可读状态"
+---
+
+至此，我们已经设置了 CopilotKit 提供程序和 `<CopilotTextarea />`，并且已经受益于一个很棒的 AI 助手。然而，还有最后一个问题——copilot 助手无法感知邮件线程。让我们来解决这个问题。
+
+## 我们应用的状态
+
+让我们快速回顾一下我们应用的状态是如何工作的。打开 [`lib/hooks/use-emails.tsx`](https://github.com/CopilotKit/example-textarea/blob/base-start-here/lib/hooks/use-emails.tsx) 文件。
+
+乍一看，我们可以看到该文件暴露了一个提供程序（`EmailsProvider`），它保存着我们的 `emails`。这是我们需要提供给我们的 copilot 以获得 AI 自动补全的上下文。
+
+## `useCopilotReadable` 钩子
+
+我们的目标是让我们的 copilot 能够感知这个状态，这样它就能提供更准确、更有用的回复。我们可以通过使用 [`useCopilotReadable`](/reference/v1/hooks/useCopilotReadable) 钩子轻松实现这一点。
+
+```tsx title="libs/hooks/use-emails.tsx"
+// ... 文件的其余部分
+
+import { useCopilotReadable } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+export const EmailsProvider = ({ children }: { children: ReactNode }) => {
+  const [emails, setEmails] = useState<Email[]>(emailHistory);
+
+  // [!code highlight:4]
+  useCopilotReadable({
+    description: "此邮件线程的历史记录",
+    value: emails
+  });
+
+  // ... 文件的其余部分
+}
+```
+
+在这个例子中，我们使用 `useCopilotReadable` 钩子向 copilot 提供我们邮件线程的状态。
+
+- 对于 `description` 属性，我们提供一个简洁的描述，告诉 copilot 这段可读数据意味着什么。
+- 对于 `value` 属性，我们将整个状态作为 JSON 字符串传递。
+
+在下一步中，我们将设置我们的 AI 驱动文本区域，它将使用这个可读状态来提供准确、有用的回复。
+
+## 试试看！
+
+现在，回到应用程序并开始输入与邮件线程相关的内容。一些想法：
+
+- `"Thanks Jo..."`（助手将补全 John 的名字）
+- `"I'm glad Spac..."`（助手将补全公司名称为 SpaceY）
+- `"I'm glad they liked my..."`（助手将添加上下文）
+
+您的文本区域现在完全能够感知邮件线程，因此它能提供有用且相关的自动补全。🚀

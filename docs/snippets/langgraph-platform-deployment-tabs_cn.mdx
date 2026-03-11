@@ -1,0 +1,116 @@
+import { Tab } from "../components/react/tabs";
+
+<Tabs groupId="lg-deployment-type" items={['本地 (LangGraph Studio)', '自托管 (FastAPI)', 'LangGraph Platform']}>
+  <Tab value="本地 (LangGraph Studio)">
+    对于本地开发，您可以使用 [LangGraph CLI](https://docs.langchain.com/langsmith/cli) 启动开发服务器和 LangGraph studio 会话。
+
+    <Callout type="info">
+      使用此方法需要 [LangSmith 账户](https://smith.langchain.com)。
+    </Callout>
+
+    <Callout type="warning">
+      **仅限 Python 代理**：如果您遇到 "No checkpointer set" 错误，请在命令前添加 `LANGGRAPH_API=true`：
+
+      ```bash
+      LANGGRAPH_API=true langgraph dev --host localhost --port 8000
+      ```
+
+      这会告诉您的代理在没有自定义检查点的情况下运行，依赖 LangGraph 的内置状态管理。
+    </Callout>
+
+    ```bash
+    # 适用于 Python 3.11 或更高版本
+    langgraph dev --host localhost --port 8000
+    ```
+
+    ```bash
+    # 适用于 Node 18 或更高版本的 TypeScript
+    npx @langchain/langgraph-cli dev --host localhost --port 8000
+    ```
+
+    启动 LangGraph 服务器后，部署 URL 将是 `http://localhost:8000`。
+
+    <Accordions className="mb-4">
+        <Accordion title="遇到问题？">
+            如果您无法运行 `langgraph dev` 命令，或遇到任何问题，请尝试使用以下命令：
+            `uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.12 langgraph dev`
+        </Accordion>
+        <Accordion title='langgraph dev 出现 "No checkpointer set" 错误'>
+          Python 代理会自动检测其运行时环境，但有时需要明确的指导：
+
+          - **使用 `langgraph dev`**：设置 `LANGGRAPH_API=true` 以禁用自定义检查点
+          - **使用本地 FastAPI**：不要设置此标志；会自动使用 MemorySaver
+          - **JavaScript 代理**：不受此问题影响
+        </Accordion>
+    </Accordions>
+
+  </Tab>
+
+  <Tab value="自托管 (FastAPI)">
+    <Callout type="info">
+      此方法目前仅支持 Python LangGraph 代理。
+    </Callout>
+
+    1. 添加一个 `.env` 文件来包含您的 LangSmith API 密钥。
+
+    ```plaintext title=".env"
+    LANGSMITH_API_KEY=your_langsmith_api_key
+    ```
+
+    2. 接下来，使用 CopilotKit 的 FastAPI 集成来提供您的 LangGraph 代理服务。
+
+    ```python title="server.py"
+    import os
+    from fastapi import FastAPI
+    import uvicorn
+    from copilotkit import LangGraphAGUIAgent # [!code highlight]
+    from ag_ui_langgraph import add_langgraph_fastapi_endpoint # [!code highlight]
+    from sample_agent.agent import graph # coagents-starter 路径，如果不同请替换 # [!code highlight]
+
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    app = FastAPI()
+    # [!code highlight:9]
+    add_langgraph_fastapi_endpoint(
+      app=app,
+      agent=LangGraphAGUIAgent(
+        name="sample_agent", # 您在 langgraph.json 中定义的代理名称
+        description="在此描述您的代理，将用于多代理编排",
+        graph=graph, # 从您的 langgraph 导入的 graph 对象
+      ),
+      path="/your-agent-path", # 您希望提供代理服务的端点路径
+    )
+
+    # 添加健康检查路由
+    @app.get("/health")
+    def health():
+        """健康检查。"""
+        return {"status": "ok"}
+
+    def main():
+        """运行 uvicorn 服务器。"""
+        port = int(os.getenv("PORT", "8000"))
+        uvicorn.run(
+            "sample_agent.demo:app", # 指向您的 FastAPI 文件的路径，如果不同请替换
+            host="0.0.0.0",
+            port=port,
+            reload=True,
+        )
+
+    ```
+
+  </Tab>
+
+  <Tab value="LangGraph Platform">
+    对于生产环境，您可以按照官方的 [LangGraph Platform 部署指南](https://docs.langchain.com/langsmith/cloud) 部署到 LangGraph Platform。
+
+    完成后，带着该 URL 和 LangSmith API 密钥返回继续。
+
+    <Callout type="info">
+      成功的部署将产生一个 API URL（通常在此处称为"部署 URL"）。
+      在 LangGraph Platform 中，它看起来像这样：`https://{project-identifiers}.langgraph.app`。
+    </Callout>
+
+  </Tab>
+</Tabs>

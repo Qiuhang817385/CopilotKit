@@ -1,0 +1,27 @@
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+在继续之前，您需要运行您的智能体并将其连接到 CopilotKit。
+
+如果您尚未将 CopilotKit 与您的智能体连接，请选择以下选项之一：
+
+<Accordions>
+  <Accordion title="我已经有一个智能体">
+    您可以按照 [快速入门](/langgraph/quickstart) 指南中的说明进行操作。
+  </Accordion>
+  <Accordion title="我想从头开始">
+    运行以下命令创建一个带有预配置智能体的全新项目：
+
+    <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+      <Tab value="Python">
+        ```bash
+        npx copilotkit@latest create -f langgraph-py
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+       ```bash
+       npx copilotkit@latest create -f langgraph-js
+       ```
+     </Tab>
+    </Tabs>
+  </Accordion>
+</Accordions>

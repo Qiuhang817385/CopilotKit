@@ -1,0 +1,76 @@
+---
+title: 常见问题
+description: 我们有一些常见问题的答案！
+hideTOC: true
+---
+
+import { Accordions } from 'fumadocs-ui/components/accordion';
+import { Accordion } from 'fumadocs-ui/components/accordion';
+
+# 常见问题
+
+我们有一些常见问题的答案！
+
+<Accordions>
+  <Accordion title="什么是 Copilot？">
+    Copilot 是一个生活在您的应用程序中帮助用户完成任务的值得信赖的伙伴。
+    有两种主要类型，**Concierge** 和 **Worker**。
+
+    ### Concierge
+
+    Concierge Copilot 了解您的应用程序功能和完整的用户上下文。它作为智能中介将高级用户意图转化为操作。
+
+    例如，我们的[银行助手](https://github.com/CopilotKit/demo-banking)实现了 Concierge Copilots 来帮助用户管理他们的（假）银行需求。
+
+
+    ### Worker
+
+    Worker Copilot 是一个特定领域的 Agent，可以帮助用户执行他们的核心工作任务。
+    它作为用户的合作伙伴，在某些任务上表现更好，在其他任务上表现较差。
+    最终，它增强用户的能力，使他们能够产生比想象中更好的工作成果。这种模式通常用于后台 Copilot。
+
+    将 Worker Copilot 视为 Cursor、Replit Agent 或 Windsurf，但适用于任何领域。例如，
+    查看我们的 [Open Researcher ANA](https://github.com/CopilotKit/open-research-ana)。
+  </Accordion>
+  <Accordion title="CopilotKit 的主要功能有哪些？">
+    ### 开箱即用的聊天组件
+    美观、强大且可自定义的聊天组件，只需导入即可使用。
+    | | |
+    |---------|-------------|
+    | [**聊天**](/reference/v1/components/chat/CopilotChat) | 简单而强大的聊天界面 |
+    | [**弹出窗口**](/reference/v1/components/chat/CopilotPopup) | 弹出窗口格式的聊天组件 |
+    | [**侧边栏**](/reference/v1/components/chat/CopilotSidebar) | 侧边栏格式的聊天组件 |
+    | [**Copilot 文本域**](/reference/v1/components/CopilotTextarea) | 强大的 AI 自动补全功能，可作为任何文本域的即插即用替代品 |
+    | [**无头**](/custom-look-and-feel/slots) | 完全自定义聊天界面 |
+
+    ### 深度集成的 Copilots
+    让 Copilots 能够直接在您的应用程序中执行工具。
+    |  |  |
+    |---------|-------------|
+    | [**Copilot 可读状态**](/reference/v1/hooks/useCopilotReadable) | 使 Copilots 能够读取和理解应用程序状态 |
+    | [**前端工具**](/reference/v1/hooks/useFrontendTool) | Copilots 可以在应用程序中执行工具 |
+    | [**生成式 UI**](/generative-ui/your-components/display-only) | 在 Copilot 聊天界面中渲染任何组件 |
+    | [**AI 自动建议**](/reference/v1/hooks/useCopilotChatSuggestions) | AI 驱动的 AI 聊天界面自动建议 |
+    | [**Copilot 任务**](/reference/v1/classes/CopilotTask) | 让您的 Copilots 根据应用程序状态主动执行工具 |
+
+    ### 丰富的 Agent 体验
+    轻松将您的 LangGraph Agent 集成到您的产品中。
+    | |  |
+    |---------|-------------|
+    | [**深度支持 LangGraph**](/langgraph/quickstart) | 将您的 LangGraph Agent 直接带入您的产品 |
+    | [**人机协同**](/langgraph/human-in-the-loop) | 让用户与您的 Agent 协作解决复杂问题 |
+    | [**共享状态**](/langgraph/shared-state) | 用不到 10 行代码渲染 LangGraph Agent 的状态 |
+  </Accordion>
+  <Accordion title="它是如何工作的？">
+    好问题！CopilotKit 有三个主要组件：
+    1. **CopilotKit UI**：用于构建 Copilots 和 Agent 的 UI 组件。
+    2. **CopilotKit Runtime**：用于构建 Copilots 和 Agent 的运行时。这是您的 Copilots 和 Agent 的后端。
+    3. **CopilotKit SDK**：在更复杂的应用程序中，您将使用 SDK 将 CopilotKit 深度集成到您的 Agent 中。
+  </Accordion>
+
+  <Accordion title="我可以将任何 LLM 与 CopilotKit 一起使用吗？">
+    是的！CopilotKit 支持大多数 LLM，包括 OpenAI、Anthropic、Google 等。此外，您可以使用 LangGraph 或 LangChain 支持的任何 LLM。
+
+    有关更多信息，请查看我们关于[使用自己的 LLM](/built-in-agent/model-selection)的文档。
+  </Accordion>
+</Accordions>

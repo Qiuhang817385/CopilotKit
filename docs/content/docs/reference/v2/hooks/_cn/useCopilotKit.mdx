@@ -1,0 +1,129 @@
+---
+title: "useCopilotKit"
+description: "用于访问 CopilotKit 上下文的低级 React hook"
+---
+
+## 概述
+
+`useCopilotKit` 是一个低级 React hook，返回 CopilotKit 上下文值，提供对核心实例和 provider 级别状态的直接访问。它订阅运行时连接状态变化，并在连接状态更新时触发重新渲染。
+
+<Callout type="info">
+  `useCopilotKit` 是一个低级 hook。大多数应用程序应该使用更高级的 hooks，如 `useAgent` 或 `useFrontendTool`。
+</Callout>
+
+**如果在 `CopilotKitProvider`（或 `<CopilotKit>` 包装组件）外部使用会抛出错误。**
+
+## 签名
+
+```tsx
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+
+function useCopilotKit(): CopilotKitContextValue
+```
+
+## 参数
+
+此 hook 不接受任何参数。
+
+## 返回值
+
+<PropertyReference name="context" type="CopilotKitContextValue">
+  包含核心实例和 provider 级别状态的上下文对象。
+
+  <PropertyReference name="copilotkit" type="CopilotKitCoreReact">
+    活动的 CopilotKit 核心实例。这是管理代理、工具、建议和运行时通信的中央协调器。它暴露以下方法：
+    - 代理管理（`agents`、 `getAgent`）
+    - 工具注册和执行
+    - 建议配置和检索
+    - 运行时连接管理
+    - 通过 `subscribe()` 的事件订阅
+
+    每个 `CopilotKitProvider` 只创建一次核心实例，并在重新渲染之间保持稳定。
+  </PropertyReference>
+
+  <PropertyReference name="executingToolCallIds" type="ReadonlySet<string>">
+    当前正在执行的工具调用 ID 集合。这在 provider 级别跟踪，以确保在子组件挂载之前捕获工具执行事件。这对于人在回路重新连接等场景很重要，其中待处理的工具调用可能在组件树挂载时已存在。
+  </PropertyReference>
+</PropertyReference>
+
+## 用法
+
+### 访问核心实例
+
+```tsx
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+
+function DebugPanel() {
+  const { copilotkit } = useCopilotKit();
+
+  const agents = Object.keys(copilotkit.agents ?? {});
+
+  return (
+    <div>
+      <h3>已注册代理</h3>
+      <ul>
+        {agents.map((id) => (
+          <li key={id}>{id}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### 订阅核心事件
+
+```tsx
+import { useEffect } from "react";
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+
+function ConnectionMonitor() {
+  const { copilotkit } = useCopilotKit();
+
+  useEffect(() => {
+    const subscription = copilotkit.subscribe({
+      onRuntimeConnectionStatusChanged: () => {
+        console.log("运行时连接状态已更改");
+      },
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [copilotkit]);
+
+  return null;
+}
+```
+
+### 检查工具执行状态
+
+```tsx
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+
+function ToolExecutionIndicator() {
+  const { executingToolCallIds } = useCopilotKit();
+
+  if (executingToolCallIds.size === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      正在执行 {executingToolCallIds.size} 个工具调用...
+    </div>
+  );
+}
+```
+
+## 行为
+
+- **缺少 Provider 时出错**：如果在 `CopilotKitProvider` 或 `<CopilotKit>` 包装组件外部使用 hook 会抛出错误。
+- **运行时状态订阅**：该 hook 订阅 `onRuntimeConnectionStatusChanged` 事件，因此组件在运行时连接完成或失败时重新渲染。
+- **稳定的核心引用**：`copilotkit` 实例每个 provider 只创建一次，并在重新渲染之间保持稳定。只有 `executingToolCallIds` 集合会随着工具调用开始和完成而变化。
+- **Provider 级别工具跟踪**：`executingToolCallIds` 在 provider 级别而不是单个组件中跟踪。这确保在子组件挂载之前触发的工具执行开始事件不会丢失。
+
+## 相关
+
+- [`useAgent`](/reference/v2/hooks/useAgent) -- 用于访问代理实例的高级 hook
+- [`CopilotKitProvider`](/reference/v2) -- 创建上下文的 provider 组件

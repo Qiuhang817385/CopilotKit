@@ -1,0 +1,97 @@
+---
+title: 人机交互
+description: 了解如何使用 Mastra 代理实现人机交互（HITL）。
+icon: lucide/Pause
+---
+
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="human-in-the-loop-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+CopilotKit 允许您添加自定义 UI 来接收用户输入，然后在完成后将其传递回代理。
+
+<Callout type="warning">
+在工作流内部调用 `suspend()` 或 `resume()` 在此集成中目前不受支持。
+</Callout>
+
+## 为什么应该使用此功能？
+
+人机交互是实现可用于生产的复杂工作流的强大方式。通过让人参与循环，您可以确保代理始终做出正确的决策，并最终朝着正确的方向发展。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+
+  <Step>
+    ### 将人机交互工具添加到您的前端
+    首先，我们将创建一个向用户提供选项并等待他们选择的组件。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+    function YourMainContent() {
+      // ...
+
+      useHumanInTheLoop({
+        name: "offerOptions",
+        description: "Give the user a choice between two options and have them select one.",
+        parameters: [
+          {
+            name: "option_1",
+            type: "string",
+            description: "The first option",
+            required: true,
+          },
+          {
+            name: "option_2",
+            type: "string",
+            description: "The second option",
+            required: true,
+          },
+        ],
+        render: ({ args, respond }) => {
+          if (!respond) return <></>;
+          return (
+            <div>
+              {/* [!code highlight:2] */}
+              <button onClick={() => respond(`${args.option_1} was selected`)}>{args.option_1}</button>
+              <button onClick={() => respond(`${args.option_2} was selected`)}>{args.option_2}</button>
+            </div>
+          );
+        },
+      });
+
+      // ...
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 设置 Mastra 代理
+    在代理端，我们已经完成了！Mastra 原生支持 AG-UI 协议，当代理调用 `offerOptions` 工具时，会自动将控制权交还给前端。
+  </Step>
+  <Step>
+    ### 试一试！
+    尝试向代理询问需要做出选择的问题。
+
+    ```
+    Can you show me two good options for a restaurant name?"
+    ```
+
+    您会看到代理将呈现两个选项，并等待您选择一个，然后再继续。
+  </Step>
+</Steps>

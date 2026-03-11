@@ -1,0 +1,169 @@
+---
+title: 工具渲染
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染智能体的工具调用。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcherGroup } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+import RunAndConnect from "@/snippets/integrations/agent-spec/run-and-connect.mdx"
+
+<IframeSwitcherGroup
+  id="backend-tools-example"
+  variants={[
+    {
+      label: "LangGraph",
+      exampleUrl: "https://feature-viewer.copilotkit.ai/agent-spec-langgraph/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false",
+      codeUrl: "https://feature-viewer.copilotkit.ai/agent-spec-langgraph/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs",
+    },
+    {
+      label: "WayFlow",
+      exampleUrl: "https://feature-viewer.copilotkit.ai/agent-spec-wayflow/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false",
+      codeUrl: "https://feature-viewer.copilotkit.ai/agent-spec-wayflow/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs",
+    },
+  ]}
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout>
+  此示例演示了在 <a href="https://feature-viewer.copilotkit.ai/agent-spec-wayflow/feature/agentic_chat" target="_blank">CopilotKit 功能查看器</a>中应用的[实现](#implementation)部分。
+</Callout>
+
+## 这是什么？
+
+工具是 LLM 调用预定义（通常是确定性）函数的一种方式。CopilotKit 允许您在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 什么时候使用？
+
+当您的智能体调用工具时，如果您想向用户提供关于智能体正在做什么的反馈，在 UI 中渲染工具会很有用。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现步骤
+
+<Steps>
+<Step>
+### 运行并连接您的智能体
+<RunAndConnect components={props.components} />
+</Step>
+<Step>
+### 给您的智能体一个可调用的工具
+
+<Tabs groupId="language_agent-spec_agent" items={['Python']} default="Python" persist>
+    <Tab value="Python">
+        ```python title="agent.py"
+
+        # 创建智能体
+        from pyagentspec.agent import Agent
+        from pyagentspec.llms import OpenAiCompatibleConfig
+        from pyagentspec.property import StringProperty
+        from pyagentspec.tools import ServerTool
+        from pyagentspec.serialization import AgentSpecSerializer
+
+        llm = OpenAiCompatibleConfig(
+            name="my_llm",
+            model_id="gpt-5.2-mini",
+            url="https://api.openai.com/v1",
+        )
+        weather_tool = ServerTool( # ServerTool 是 Agent Spec 中的后端工具
+            name="get_weather",
+            description="Get the weather for a given location.",
+            inputs=[StringProperty(title="location", description="The location to get the weather forecast. Must be a city/town name.")],
+            outputs=[StringProperty(title="weather_result")],
+        )
+        agent = Agent(
+            name="my_agent",
+            llm_config=llm,
+            system_prompt="Based on the weather forecast result and the user input, write a response to the user",
+            tools=[weather_tool],
+            human_in_the_loop=True,
+        )
+        agentspec_json_config = AgentSpecSerializer().to_json(agent)
+
+        async def get_weather(location: str = "Everywhere ever") -> str:
+            """Get the weather for a given location. Ensure location is fully spelled out."""
+            return f"The weather in {location} is sunny."
+
+        # 启动服务器
+        from fastapi import APIRouter, FastAPI
+        from ag_ui_agentspec.agent import AgentSpecAgent
+        from ag_ui_agentspec.endpoint import add_agentspec_fastapi_endpoint
+
+
+        runtime = "langgraph" # 您也可以选择 "wayflow"
+        router = APIRouter()
+        add_agentspec_fastapi_endpoint(
+            app=router,
+            agentspec_agent=AgentSpecAgent(
+                agentspec_json_config,
+                runtime=runtime,
+                tool_registry={"get_weather": get_weather},
+            ),
+            path=f"/{runtime}/path_to_my_agent",
+        )
+        app = FastAPI(title="Agent-Spec x AG-UI Examples - Backend Tool")
+        app.include_router(router)
+
+        if __name__ == "__main__":
+            import uvicorn
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+
+        ```
+    </Tab>
+
+</Tabs>
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，您的智能体将能够调用 `get_weather` 工具。现在
+我们只需要添加一个 `useRenderTool` 钩子来在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  为了在 UI 中渲染工具调用，操作的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:12]
+  useRenderTool({
+    name: "get_weather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "Calling weather API..."}
+          {status === "complete" && `Called the weather API for ${args.location}.`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让智能体获取某个位置的天气。您应该看到我们添加的自定义 UI 组件
+渲染工具调用并显示传递给工具的参数。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tool-based-gen-ui.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

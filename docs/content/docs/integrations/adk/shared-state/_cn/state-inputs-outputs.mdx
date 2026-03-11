@@ -1,0 +1,178 @@
+---
+title: 工作流执行
+icon: "lucide/Play"
+description: 决定哪些状态属性接收并返回到前端。
+---
+
+## 这是什么？
+
+并非所有状态属性都与前后端共享相关。
+本指南展示如何确保只有正确的状态部分在两者之间传输。
+
+## 什么时候使用它？
+
+根据您的实现，某些属性是用于内部处理的，而其他属性则是 UI 与用户通信的方式。
+此外，某些状态属性包含大量信息。在智能体和 UI 之间同步它们可能会很耗费资源，而实际收益可能有限。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 检查您的状态结构
+    ADK 智能体是有状态的。当您执行工具和回调时，该状态会更新并在整个会话中可用。在本示例中，
+    假设我们的智能体应该使用的状态可以这样描述：
+
+    ```python title="agent.py"
+    from typing import Dict, List
+    from pydantic import BaseModel
+
+
+    class AgentState(BaseModel):
+        """智能体的完整状态。"""
+        question: str = ""       # 用户输入
+        answer: str = ""         # 向用户输出
+        resources: List[str] = []  # 仅内部使用
+    ```
+  </Step>
+  <Step>
+    ### 按用途组织状态
+    我们的示例案例列出了几个状态属性，每个都有其用途：
+      - **question** 是用户提出的，期望 LLM 回答
+      - **answer** 是 LLM 返回的内容
+      - **resources** 列表将被 LLM 用于回答问题，不应传达给用户或由他们设置
+
+    这里是一个完整示例，展示如何根据这些考虑来组织您的智能体：
+
+    ```python title="agent.py"
+    from typing import Dict, List
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+    from google.adk.agents import LlmAgent
+    from google.adk.tools import ToolContext
+
+
+    class AgentState(BaseModel):
+        """智能体的状态。"""
+        question: str = ""       # 输入：从前端接收
+        answer: str = ""         # 输出：发送到前端
+        resources: List[str] = []  # 内部：不与前端共享
+
+
+    def answer_question(tool_context: ToolContext, answer: str) -> Dict[str, str]:
+        """存储用户问题的答案。
+
+        Args:
+            tool_context (ToolContext): 用于访问状态的工具上下文。
+            answer (str): 要存储在状态中的答案。
+
+        Returns:
+            Dict[str, str]: 表示成功状态的字典。
+        """
+        tool_context.state["answer"] = answer
+        return {"status": "success", "message": "答案已存储。"}
+
+
+    def add_resource(tool_context: ToolContext, resource: str) -> Dict[str, str]:
+        """添加资源到内部资源列表。
+
+        Args:
+            tool_context (ToolContext): 用于访问状态的工具上下文。
+            resource (str): 要添加的资源 URL 或引用。
+
+        Returns:
+            Dict[str, str]: 表示成功状态的字典。
+        """
+        resources = tool_context.state.get("resources", [])
+        resources.append(resource)
+        tool_context.state["resources"] = resources
+        return {"status": "success", "message": "资源已添加。"}
+
+
+    agent = LlmAgent(
+        name="my_agent",
+        model="gemini-2.5-flash",
+        instruction="""
+        你是一个有用的助手。回答问题时：
+        1. 使用 add_resource 跟踪你引用的任何来源（内部使用）
+        2. 使用 answer_question 向用户提供你的最终答案
+        
+        用户的问题在状态中作为 'question' 可用。
+        """,
+        tools=[answer_question, add_resource],
+    )
+
+    adk_agent = ADKAgent(
+        adk_agent=agent,
+        app_name="demo_app",
+        user_id="demo_user",
+        session_timeout_seconds=3600,
+        use_in_memory_services=True,
+    )
+
+    app = FastAPI()
+    add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+  </Step>
+  <Step>
+    ### 在前端中使用状态
+    现在我们知道智能体使用哪些状态属性，我们可以在 UI 中使用它们：
+    - **question**: 由 UI 设置以向智能体提问
+    - **answer**: 从智能体的响应中读取
+    - **resources**: UI 无法访问（仅智能体内部使用）
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2";
+
+    // 只定义您将与之交互的状态类型
+    type AgentState = {
+      question: string;
+      answer: string;
+      // 注意：'resources' 被故意省略 - 它是智能体内部的
+    }
+
+    function YourMainContent() {
+      const { agent } = useAgent({
+        agentId: "my_agent",
+        initialState: {
+          question: "旧金山天气怎么样？",
+          answer: "",
+        }
+      });
+
+      const askQuestion = (newQuestion: string) => {
+        agent.setState({ ...agent.state, question: newQuestion });
+      };
+
+      return (
+        <div>
+          <h1>问答助手</h1>
+          <p><strong>问题：</strong> {agent.state?.question}</p>
+          <p><strong>答案：</strong> {agent.state?.answer || "等待响应..."}</p>
+          <button onClick={() => askQuestion("法国首都是哪里？")}>
+            提出新问题
+          </button>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    现在我们已经按用途组织了状态：
+    - UI 可以设置 `question` 和读取 `answer`
+    - 智能体内部使用 `resources` 而不将其暴露给前端
+    - 状态更新在前后端之间高效流动
+  </Step>
+</Steps>
+

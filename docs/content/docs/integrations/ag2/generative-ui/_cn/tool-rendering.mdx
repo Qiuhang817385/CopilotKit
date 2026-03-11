@@ -1,0 +1,126 @@
+---
+title: 工具渲染
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染代理的工具调用。
+---
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx";
+
+## 这是什么？
+
+工具是 LLM 调用预定义的、通常是确定性函数的一种方式。CopilotKit 允许您在 UI 中将
+these 工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+<Callout type="info">
+  CopilotKit 消费 AG2 通过 <code>/chat</code> 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 何时使用？
+
+在 UI 中渲染工具在您想向用户提供有关代理正在做什么的反馈时非常有用，特别是
+当您的代理正在调用工具时。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+<Step>
+### 运行并连接您的代理
+启动您的 AG2 后端，使用 `/chat` 端点并将 CopilotKit 连接到该端点。
+</Step>
+<Step>
+### 给代理一个可调用的工具
+
+<Tabs groupId="language_ag2_agent_backend_tools" items={['Python']} default="Python" persist>
+    <Tab value="Python">
+        ```python title="agent.py"
+        from typing import Annotated
+
+        from fastapi import FastAPI, Header
+        from fastapi.responses import StreamingResponse
+        from autogen import ConversableAgent, LLMConfig
+        from autogen.ag_ui import AGUIStream, RunAgentInput
+
+        agent = ConversableAgent(
+            name="assistant",
+            system_message="You are a helpful assistant.",
+            llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+        )
+
+        @agent.register_for_llm(
+            description="Get the weather for a given location. Ensure location is fully spelled out."
+        )
+        def get_weather(location: Annotated[str, "Fully spelled out location"]) -> str:
+            return f"The weather in {location} is sunny."
+
+        # 在同一后端进程中注册相同的函数以执行。
+        agent.register_for_execution(name="get_weather")(get_weather)
+
+        stream = AGUIStream(agent)
+        app = FastAPI()
+
+        @app.post("/chat")
+        async def run_agent(
+            message: RunAgentInput,
+            accept: str | None = Header(None),
+        ):
+            return StreamingResponse(
+                stream.dispatch(message, accept=accept),
+                media_type=accept or "text/event-stream",
+            )
+        ```
+    </Tab>
+
+</Tabs>
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，您的代理将能够调用 `get_weather` 工具。现在
+我们只需要添加一个 `useRenderTool` 钩子来在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  为了在 UI 中渲染工具调用，操作的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:12]
+  useRenderTool({
+    name: "get_weather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "Calling weather API..."}
+          {status === "complete" && `Called the weather API for ${args.location}.`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让代理获取某个位置的天气。您应该看到我们添加的自定义 UI 组件
+渲染工具调用并显示传递给工具的参数。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tool-based-gen-ui.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

@@ -1,0 +1,83 @@
+import {
+  MessageCircle,
+  Database,
+  Zap,
+  BookOpen,
+  Play,
+  Settings,
+} from "lucide-react"
+
+## 概述
+
+`useAgent` 钩子提供从任何 React 组件对代理的直接访问。它为您提供对代理状态、消息、执行状态的实时访问，并允许您订阅自定义事件。
+
+这使您能够构建自定义代理仪表板、监控工具以及响应代理行为的交互功能。
+
+<Cards className="gap-6 mt-6 mb-8">
+  <Card
+    icon={<Play className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="运行代理"
+    description="使用 copilotkit.runAgent() 以编程方式触发您的代理。"
+    href="#running-the-agent-programmatically"
+  />
+  <Card
+    icon={<Settings className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="完全无头 UI"
+    description="使用 CopilotKit 的无头钩子从头开始构建完全自定义的聊天界面。"
+    href="custom-look-and-feel/headless-ui"
+  />
+</Cards>
+
+import UseAgentSnippet from "@/snippets/use-agent.mdx";
+
+<UseAgentSnippet components={props.components} />
+
+## 以编程方式运行代理
+
+使用 `copilotkit.runAgent()` 从任何组件触发您的代理——无需聊天 UI。这与 CopilotKit 内置的 `<CopilotChat />` 内部使用的方法相同。
+
+```tsx title="page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2";
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+import { randomUUID } from "@copilotkit/shared/v2";
+
+export function AgentTrigger() {
+  const { agent } = useAgent();
+  // [!code highlight:1]
+  const { copilotkit } = useCopilotKit();
+
+  const handleRun = async () => {
+    // 向代理的对话添加用户消息
+    agent.addMessage({
+      id: randomUUID(),
+      role: "user",
+      content: "总结最新的销售数据",
+    });
+
+    // [!code highlight:2]
+    // 运行代理——处理工具执行、后续操作和流式传输
+    await copilotkit.runAgent({ agent });
+  };
+
+  return <button onClick={handleRun}>运行代理</button>;
+}
+```
+
+### `copilotkit.runAgent()` 与 `agent.runAgent()`
+
+两种方法都可以触发代理，但它们在两个不同的层面上运行：
+
+- **`copilotkit.runAgent({ agent })`** — 推荐的方法。编排完整的代理生命周期：执行前端工具、在工具请求时处理后续运行，并通过订阅者系统管理错误。
+- **`agent.runAgent()`** — 代理实例上的低级方法。向 Runtime 发送请求，但**不会**执行前端工具或处理后续操作。仅当您需要对代理执行进行直接控制时使用此方法（例如，使用 `forwardedProps` 从中断中恢复）。
+
+### 停止运行
+
+您可以使用 `copilotkit.stopAgent()` 停止正在运行的代理：
+
+```tsx title="page.tsx"
+const handleStop = () => {
+  copilotkit.stopAgent({ agent });
+};
+```

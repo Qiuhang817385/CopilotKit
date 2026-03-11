@@ -1,0 +1,112 @@
+Copilot 运行时是连接您的前端应用程序与 AI 代理的后端层。它在[快速入门](/quickstart)期间设置，是使用 CopilotKit 的推荐方式。
+
+## 设置运行时
+
+运行时是一个添加到您后端的轻量级服务器端点。以下是一个使用 Next.js 的最小示例：
+
+```ts title="app/api/copilotkit/route.ts"
+import {
+  CopilotRuntime,
+  ExperimentalEmptyAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint,
+} from "@copilotkit/runtime";
+import { NextRequest } from "next/server";
+
+const serviceAdapter = new ExperimentalEmptyAdapter();
+
+const runtime = new CopilotRuntime({
+  agents: {
+    // 您的代理放在这里
+  },
+});
+
+export const POST = async (req: NextRequest) => {
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter,
+    endpoint: "/api/copilotkit",
+  });
+
+  return handleRequest(req);
+};
+```
+
+然后将您的前端指向该端点：
+
+```tsx
+<CopilotKit runtimeUrl="/api/copilotkit">
+  <YourApp />
+</CopilotKit>
+```
+
+有关其他后端框架（Express、NestJS、Node.js HTTP）的设置，请参阅[快速入门](/quickstart)。
+
+## 默认代理
+
+如果您使用名称 `"default"` 注册一个代理，CopilotKit 的预构建 UI 组件将自动使用它，而无需在前端进行任何额外配置。当您有一个主要代理并且不想在每个地方都指定 `agentId` 时，这很有用。
+
+```ts title="app/api/copilotkit/route.ts"
+const runtime = new CopilotRuntime({
+  agents: {
+    // 此代理将被 CopilotPopup、CopilotSidebar 等自动使用
+    "default": new HttpAgent({ url: "https://my-agent.example.com" }),
+  },
+});
+```
+
+当您注册多个代理时，`"default"` 代理是驱动聊天的默认代理，除非选择了特定的代理。其他代理仍可以通过将它们的 `agentId` 传递给 `useAgent` 或预构建组件来使用。
+
+## 运行时提供的功能
+
+### 认证与安全
+
+运行时运行在您的服务器上，这意味着代理通信保持在服务器端。这为您提供了一个可信的环境来执行认证、验证请求和保护 API 密钥的安全。当您使用运行时时，会设置安全默认值，以便您的代理端点不会暴露给未经认证的访问。
+
+### AG-UI 中间件
+
+[AG-UI 协议](/ag-ui-protocol) 支持一个中间件层（`agent.use`），用于日志记录、护栏、请求转换等。因为运行时运行在服务器端，所以这个中间件在可信环境中执行，客户端无法篡改。
+
+### 代理路由
+
+当您向运行时注册多个代理时，它会自动处理发现和路由。您的前端不需要知道每个代理的详细信息或如何访问它。
+
+### 高级功能
+
+[线程](/premium/threads)、[可观察性](/premium/observability) 和 [检查器](/premium/inspector) 等功能通过运行时提供。这些功能为您提供开箱即用的对话持久化、监控和调试功能。
+
+## 如果我想直接连接到我的 AG-UI 代理怎么办？
+
+CopilotKit 建立在 [AG-UI 协议](/ag-ui-protocol) 之上，这是一个开放标准。如果您想在没有运行时的情况下将前端直接连接到 AG-UI 兼容代理，可以通过将代理实例直接传递给 `CopilotKit` 提供商来实现：
+
+```tsx
+import { HttpAgent } from "@ag-ui/client";
+
+const myAgent = new HttpAgent({
+  url: "https://my-agent.example.com",
+});
+
+<CopilotKit agents__unsafe_dev_only={{ "my-agent": myAgent }}>
+  <YourApp />
+</CopilotKit>
+```
+
+<Callout type="warn">
+直接代理连接仅用于开发和原型设计。除非您对自己的设置有信心，否则不建议用于生产，并且不受 CopilotKit 官方支持。如果您在直接连接时遇到问题，需要自行排查。
+</Callout>
+
+在选择此方式之前，有一些重要的事情需要了解：
+
+1. **认证是您的责任。** 当您使用 Copilot 运行时时，会设置安全默认值，以便您的代理端点不会暴露给未经认证的访问。当您直接连接时，完全由您来保护代理端点和管理认证。
+
+2. **许多生态系统功能将无法工作。** AG-UI 协议支持一个设计用于在后端运行的中间件层。CopilotKit 生态系统中的许多功能都依赖于这个服务器端中间件。没有运行时，这些功能——包括 [线程](/premium/threads)、[可观察性](/premium/observability) 和其他功能——将不可用。
+
+### 对比
+
+| | 使用运行时 | 直接连接 |
+|---|---|---|
+| **认证** | 提供安全默认值 | 由您管理 |
+| **AG-UI 中间件** | 在服务器端运行 | 不可用 |
+| **代理路由** | 自动 | 手动 |
+| **生态系统功能** | 完全支持 | 有限 |
+| **CopilotKit 支持** | 支持 | 不支持 |
+| **设置** | 需要后端端点 | 仅前端 |

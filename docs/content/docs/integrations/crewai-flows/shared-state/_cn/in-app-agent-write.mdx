@@ -1,0 +1,155 @@
+---
+title: 写入智能体状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入智能体的状态。
+---
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/write-agent-state.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  这个视频展示了运行 `npx copilotkit@latest init` 并应用[实现](#实现)部分的结果！
+</Callout>
+
+## 这是什么？
+
+本指南向您展示如何从您的应用程序写入智能体的状态。
+
+## 什么时候应该使用它？
+
+您可以在想向用户提供关于智能体正在做什么的反馈时使用它，特别是当您的智能体正在调用工具时。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并将您的智能体连接到 CopilotKit
+
+    在继续之前，您需要运行您的智能体并将其连接到 CopilotKit。如果您还没有这样做，
+    可以按照 [快速入门](/crewai-flows/quickstart) 指南中的说明进行操作。
+
+    如果您还没有智能体，可以使用 [coagent starter](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-starter-crewai-flows) 作为起点，
+    因为本指南使用它作为起点。
+
+  </Step>
+  <Step>
+    ### 定义智能体状态
+    CrewAI Flows 是有状态的。当您通过流程时，该状态会被更新并可用于下一个函数。对于这个示例，
+    让我们假设我们的智能体状态看起来像这样。
+
+    <Tabs groupId="language_crewai-flows_agent" items=["Python", "TypeScript"] persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit.crewai import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            language: Literal["english", "spanish"] = "english"
+        ```
+      </Tab>
+    </Tabs>
+
+  </Step>
+  <Step>
+    ### 从 `useAgent` hook 调用 `agent.setState`
+    `useAgent` 返回一个带有 `setState` 方法的 `agent` 对象，您可以使用它来更新智能体状态。调用此方法
+    将更新智能体状态并触发任何依赖于智能体状态的内容重新渲染。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    // 伪 React 组件中的示例用法
+    function YourMainContent() {
+      const { agent } = useAgent({ // [!code highlight]
+        agentId: "sample_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state?.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:2] */}
+          <p>语言: {agent.state?.language}</p>
+          <button onClick={toggleLanguage}>切换语言</button>
+        </div>
+      );
+    }
+    ```
+
+  </Step>
+  <Step>
+    ### 试试看！
+    您现在可以使用 `agent.setState` 来更新智能体状态，并使用 `agent.state` 来读取它。尝试切换语言按钮
+    并与您的智能体交谈。您会看到语言更改为与智能体的状态匹配。
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用关于已更改内容的提示重新运行智能体
+
+新的智能体状态将在智能体下次运行时使用。
+如果您想手动重新运行它，请使用 `copilotkit.runAgent()`。
+
+智能体将使用最新的更新状态重新运行。您还可以在重新运行之前添加提示消息。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "sample_agent",
+  });
+  const { copilotkit } = useCopilotKit(); // [!code highlight]
+
+  // 设置为在应用中发生某些事件时调用
+  const toggleLanguage = async () => {
+    const newLanguage = agent.state?.language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // 添加提示消息并重新运行智能体
+    // [!code highlight:7]
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `语言已更新为 ${newLanguage}`,
+    });
+    await copilotkit.runAgent({ agent });
+  };
+
+  return (
+    // ...
+  );
+}
+```
+
+### 中间流式传输和渲染智能体状态
+
+默认情况下，CrewAI Flow 智能体状态只会在 CrewAI Flow 节点转换之间更新——
+这意味着状态更新将是不连续和延迟的。
+
+您可能希望将智能体状态渲染为**连续**更新。
+
+请参阅 **[预测性状态更新](/crewai-flows/shared-state/predictive-state-updates)。**

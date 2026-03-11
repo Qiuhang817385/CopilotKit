@@ -1,0 +1,104 @@
+---
+title: "useCoAgent"
+description: "useCoAgent Hook 允许你在应用和 Agent 之间双向共享状态。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-core/src/hooks/use-coagent.ts
+  */
+}
+
+<Callout type="warning">
+  `useCoAgent` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useAgent`](/reference/v2/hooks/useAgent)。
+</Callout>
+
+<Callout type="info">
+  此 Hook 的使用假定你的应用中进行了一些额外的设置，有关更多信息
+  请参阅 CoAgents <span className="text-blue-500">[入门指南](/langgraph/quickstart)</span>。
+</Callout>
+<Frame className="my-12">
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+    alt="CoAgents 演示"
+    className="w-auto"
+  />
+</Frame>
+ 
+此 Hook 用于将 Agent 集成到你的应用中。通过使用它，你可以
+渲染和更新 Agent 的状态，从而实现动态和交互式体验。
+我们称这些共享状态体验为 Agentic Copilots，或简称 CoAgents。
+ 
+## 用法
+ 
+### 简单用法
+ 
+```tsx
+import { useCoAgent } from "@copilotkit/react-core";
+ 
+type AgentState = {
+  count: number;
+}
+ 
+const agent = useCoAgent<AgentState>({
+  name: "my-agent",
+  initialState: {
+    count: 0,
+  },
+});
+ 
+```
+ 
+`useCoAgent` 返回一个具有以下属性的对象：
+ 
+```tsx
+const {
+  name,     // 当前使用的 Agent 名称。
+  nodeName, // 当前 LangGraph 节点的名称。
+  state,    // Agent 的当前状态。
+  setState, // 更新 Agent 状态的函数。
+  running,  // 一个布尔值，指示 Agent 当前是否正在运行。
+  start,    // 启动 Agent 的函数。
+  stop,     // 停止 Agent 的函数。
+  run,      // 重新运行 Agent 的函数。接受一个 HintFunction 来告知 Agent 为什么它被重新运行。
+} = agent;
+```
+ 
+最后，我们可以利用这些属性来创建与 Agent 的响应式体验！
+ 
+```tsx
+const { state, setState } = useCoAgent<AgentState>({
+  name: "my-agent",
+  initialState: {
+    count: 0,
+  },
+});
+ 
+return (
+  <div>
+    <p>计数：{state.count}</p>
+    <button onClick={() => setState({ count: state.count + 1 })}>增加</button>
+  </div>
+);
+```
+ 
+这种响应性是双向的，意味着来自 Agent 的状态更改将反映在 UI 中，反之亦然。
+ 
+## 参数
+<PropertyReference name="options" type="UseCoagentOptions<T>" required>
+  创建 coagent 时要使用的选项。
+  <PropertyReference name="name" type="string" required>
+    要使用的 Agent 名称。
+  </PropertyReference>
+  <PropertyReference name="initialState" type="T | any">
+    Agent 的初始状态。
+  </PropertyReference>
+  <PropertyReference name="state" type="T | any">
+    如果你将此 Hook 与外部状态管理一起使用，则为外部管理的状态。
+  </PropertyReference>
+  <PropertyReference name="setState" type="(newState: T | ((prevState: T | undefined) => T)) => void">
+    如果你将此 Hook 与外部状态管理一起使用，则用于更新 Agent 状态的函数。
+  </PropertyReference>
+</PropertyReference>

@@ -1,0 +1,154 @@
+---
+title: 读取 Agent 状态
+icon: "lucide/ArrowLeft"
+description: 在你的原生应用中读取实时 Agent 状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/aws-strands/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  本示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/aws-strands/feature/shared_state)中从共享状态读取。
+</Callout>
+
+## 这是什么？
+
+你不仅可以在聊天 UI 中使用实时 Agent 状态，还可以在原生应用 UX 中使用。
+
+## 何时使用？
+
+当你想向用户提供关于 Agent 状态的反馈时，可以使用此功能。随着 Agent 状态的更新，你可以将这些更新原生地反映在你的应用中。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接你的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 设置带状态的 Agent
+
+    定义你的 Agent 状态 schema。AWS Strands 在整个执行过程中维护状态。
+
+    ```python title="agent/main.py"
+    import os
+    from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
+    from strands import Agent
+    from strands.models.openai import OpenAIModel
+
+    model = OpenAIModel(
+        client_args={"api_key": os.getenv("OPENAI_API_KEY", "")},
+        model_id="gpt-4o",
+    )
+
+    # 创建 Strands Agent
+    strands_agent = Agent(
+        model=model,
+        system_prompt="始终使用用户偏好语言进行沟通，如你的状态中所定义。不要使用任何其他语言进行沟通。",
+    )
+
+    # 将状态注入提示词
+    def language_prompt(input_data, user_message: str) -> str:
+        state_dict = getattr(input_data, "state", None)
+        if isinstance(state_dict, dict) and "language" in state_dict:
+            return f"当前语言: {state_dict['language']}\n\n用户请求: {user_message}"
+        return user_message
+
+    config = StrandsAgentConfig(state_context_builder=language_prompt)
+
+    # 使用 AG-UI 集成进行包装
+    agui_agent = StrandsAgent(
+        agent=strands_agent,
+        name="languageAgent",
+        description="始终使用用户偏好语言进行沟通",
+        config=config,
+    )
+
+    app = create_strands_app(agui_agent)
+    ```
+  </Step>
+
+  <Step>
+    ### 使用 `useAgent` Hook
+
+    在你的 Agent 连接并运行后，调用 `useAgent` Hook，传入 Agent 的名称，并可选择提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义 Agent 状态类型以匹配你的 Strands Agent
+    type AgentState = {
+      language: "english" | "spanish";
+    };
+
+    function YourMainContent() {
+      // [!code highlight:5]
+      const { agent } = useAgent({
+        agentId: "languageAgent",
+        // 可选择提供类型安全的初始状态
+        initialState: { language: "spanish" }
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见，省略了样式
+        <div>
+          <h1>你的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当 Agent 状态变化时会自动更新。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### 试试看！
+
+    随着 Agent 状态的更新，你的 `state` 变量会自动随之更新！在这种情况下，你会看到语言设置为 "spanish"，因为那是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染 Agent 状态
+
+你也可以在聊天 UI 中渲染 Agent 状态。这对于以更情境化的方式向用户通知状态非常有用。为此，你可以将 `useAgent` Hook 与 `render` 函数一起使用。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义 Agent 状态类型，应与你的 Agent 实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+}
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "languageAgent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当 Agent 状态变化时会自动更新。
+</Callout>

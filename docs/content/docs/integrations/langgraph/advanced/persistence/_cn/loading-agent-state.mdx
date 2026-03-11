@@ -1,0 +1,41 @@
+---
+title: 加载代理状态
+description: 了解 threadId 如何用于加载先前的代理状态。
+icon: "lucide/ChartBar"
+---
+
+### 设置 threadId
+
+在 CopilotKit 中设置 `threadId` 属性时，即：
+
+<Callout>
+  使用 LangGraph 平台时，`threadId` 必须是 UUID。
+</Callout>
+
+```tsx
+<CopilotKit threadId="2140b272-7180-410d-9526-f66210918b13">
+  <YourApp />
+</CopilotKit>
+```
+
+CopilotKit 将从数据库中恢复线程的完整状态，包括消息。（有关更多详细信息，请参阅 [消息持久化](/langgraph/advanced/persistence/message-persistence)。）
+
+### 加载代理状态
+
+这意味着任何代理的状态也将被恢复。例如：
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+const { agent } = useAgent({ agentId: "research_agent" });
+
+// agent.state 现在将是上面给定线程 ID 中 research_agent 的状态
+```
+
+### 了解更多
+
+要了解更多关于 CopilotKit 中的持久化和状态，请参阅：
+
+- [读取代理状态](/langgraph/shared-state/in-app-agent-read)
+- [写入代理状态](/langgraph/shared-state/in-app-agent-write)
+- [加载消息历史](/langgraph/advanced/persistence/loading-message-history)

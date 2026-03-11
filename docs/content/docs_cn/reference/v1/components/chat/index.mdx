@@ -1,0 +1,29 @@
+---
+title: 所有聊天组件
+---
+import { LinkIcon } from "lucide-react"
+
+<Callout type="warning">
+  v1 聊天组件仍然受支持，但我们建议新项目使用 [v2 聊天组件](/reference/v2/components/CopilotChat)。
+</Callout>
+
+<Cards>
+  <Card
+    title="<CopilotChat />"
+    description="CopilotChat 组件，提供用于与你的 copilot 交互的聊天界面。"
+    href="/reference/v1/components/chat/CopilotChat"
+    icon={<LinkIcon />}
+  />
+  <Card
+    title="<CopilotPopup />"
+    description="CopilotPopup 组件，提供用于与你的 copilot 交互的弹出窗口界面。"
+    href="/reference/v1/components/chat/CopilotPopup"
+    icon={<LinkIcon />}
+  />
+  <Card
+    title="<CopilotSidebar />"
+    description="CopilotSidebar 组件，提供用于与你的 copilot 交互的侧边栏界面。"
+    href="/reference/v1/components/chat/CopilotSidebar"
+    icon={<LinkIcon />}
+  />
+</Cards>

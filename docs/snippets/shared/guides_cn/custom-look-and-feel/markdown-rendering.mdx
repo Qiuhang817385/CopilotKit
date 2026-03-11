@@ -1,0 +1,81 @@
+import { Frame } from "@/components/react/frame"
+
+在渲染助手消息时，CopilotKit 在底层使用 [`react-markdown`](https://remarkjs.github.io/react-markdown/)。
+这使我们能够渲染带有链接、标题和其他 UI 组件的富文本。
+
+如果你希望修改此行为，你可以丰富和覆盖单独的 markdown 组件，或者完全替换整个 `<AssistantMessage />`。
+这对于在助手回答文本中显示元素（例如来源引用、推理步骤等）很有用。
+
+<Frame>
+    <img className="rounded-none w-80" src="https://cdn.copilotkit.ai/docs/copilotkit/images/custom-markdown-example.png" />
+</Frame>
+
+以下是如何实现：
+
+## 使用你自己的 markdown 组件替换/提供它们
+我们将添加一个 chip 组件。类似于 ChatGPT 在引用来源时可用的那个。
+<Steps>
+<Step>
+首先，让我们创建一个 chip 组件
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar, ComponentsMap } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-ui/v2/styles.css";
+// 为了便于使用，我们将样式包含在一个单独的 css 文件中
+import "./styles.css";
+
+function YourComponent() {
+    const customMarkdownTagRenderers: ComponentsMap<{ "reference-chip": { href: string } }> = {
+        // 你可以使用你自己的标签，或使用现有的有效 HTML 标签！
+        "reference-chip": ({ children, href }) => {
+            return (
+                <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-fit border rounded-xl py-1 px-2 text-xs" // 为简洁起见，类列表已精简
+                >
+                    {children}
+                    <LinkIcon className="w-3.5 h-3.5" />
+                </a>
+            );
+        },
+    };
+
+    return (
+        <CopilotKit>
+          <CopilotSidebar
+            markdownTagRenderers={customMarkdownTagRenderers}
+          />
+        </CopilotKit>
+    )
+}
+```
+</Step>
+<Step>
+现在，让我们为组件添加样式
+```css
+.reference-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f1f2;
+    color: #444;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    margin: 0 2px;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+```
+</Step>
+</Steps>
+
+## 替换整个 markdown 渲染器
+
+如果你希望完全避免使用 markdown 渲染器，你可以替换 `<AssistantMessage />` 组件，因为它是使用它的那个组件。
+参见 [自定义子组件](/guides/custom-look-and-feel/bring-your-own-components)

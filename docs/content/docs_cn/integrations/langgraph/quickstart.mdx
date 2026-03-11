@@ -1,0 +1,560 @@
+---
+title: 快速开始
+description: 在 10 分钟内将你的 LangGraph 转变为智能体原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import { CoAgentsDiagram } from "@/components/react/coagents/coagents-diagram.tsx";
+import { FaPython, FaJs, FaCloud } from "react-icons/fa";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotCloudConfigureRemoteEndpointLangGraph from "@/snippets/copilot-cloud-configure-remote-endpoint-langgraph.mdx";
+import CopilotKitCloudCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import LangGraphPlatformDeploymentTabs from "@/snippets/langgraph-platform-deployment-tabs.mdx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+import ConnectCopilotUI from "@/snippets/copilot-ui.mdx";
+import CloudCopilotKitProvider from "@/snippets/coagents/cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/coagents/self-host-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeLangGraphEndpoint from "@/snippets/self-hosting-copilot-runtime-langgraph-endpoint.mdx";
+import SelfHostingCopilotRuntimeStarter from "@/snippets/self-hosting-copilot-runtime-starter.mdx";
+import SelfHostingRemoteEndpoints from "@/snippets/self-hosting-remote-endpoints.mdx";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+  ServerIcon,
+} from "lucide-react";
+import { SiLangchain } from "react-icons/si";
+import CopilotUI from "@/snippets/copilot-ui.mdx";
+import { PathIcon } from "lucide-react";
+import { SquareTerminal, SquareChartGantt } from "lucide-react";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 准备工作
+
+在开始之前，你需要准备以下内容：
+
+- OpenAI API 密钥
+- Node.js 20+
+- 你喜欢的包管理器
+- （可选）LangSmith API 密钥 - 仅在使用现有 LangGraph 智能体时需要
+
+## 开始使用
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择你的起点</p>
+                <p className="text-base">
+                    你可以使用我们的入门模板从头开始，或将 CopilotKit 集成到你现有的 LangGraph 智能体中。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从零开始"
+            description="使用我们现成的入门应用程序快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                首先，我们将使用 CLI 创建一个新项目。选择 Python 或 JavaScript：
+
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'JavaScript']} persist>
+                    <Tab value="Python">
+                        ```bash
+                        npx copilotkit@latest create -f langgraph-py
+                        ```
+                    </Tab>
+                    <Tab value="JavaScript">
+                        ```bash
+                        npx copilotkit@latest create -f langgraph-js
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                ```npm
+                npm install
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                在你的智能体目录中创建一个 `.env` 文件并添加你的 OpenAI API 密钥：
+
+                ```plaintext title=".env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  入门模板默认配置为使用 OpenAI 的 GPT-4o，但你可以修改它以使用 LangGraph 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+
+                这将同时启动 UI 和智能体服务器。
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="bring-your-own"
+            title="使用现有智能体"
+            description="我已经有一个 LangGraph 智能体，想要添加 CopilotKit。"
+        >
+          <Step>
+              ### 初始化你的智能体项目
+
+              如果你还没有设置 Python 项目，请使用 `uv` 创建一个：
+
+              ```bash
+              uv init my-agent
+              cd my-agent
+              ```
+          </Step>
+          <Step>
+              ### 安装 LangGraph 和 AG-UI
+
+              将 LangGraph 和所需的 AG-UI 包添加到你的项目中：
+
+              ```bash
+              uv add langgraph copilotkit langchain-openai langchain-core
+              ```
+          </Step>
+          <Step>
+            ### 通过 AG-UI 暴露你的智能体
+
+            如果你已经编写了一个 LangGraph 智能体，请参考以下代码。在此步骤中，我们创建一个简单的 LangGraph 智能体用于演示。
+              <Tabs groupId="deployment_method" items={['LangSmith', 'FastAPI']}>
+                <Tab value="LangSmith">
+                  首先，我们将创建一个简单的 LangGraph 智能体：
+
+                  ```python title="main.py"
+                  from langchain_core.messages import SystemMessage
+                  from langchain_openai import ChatOpenAI
+                  from langgraph.graph import END, START, MessagesState, StateGraph
+
+                  async def mock_llm(state: MessagesState):
+                    model = ChatOpenAI(model="gpt-4.1-mini")
+                    system_message = SystemMessage(content="你是一个有用的助手。")
+                    response = await model.ainvoke(
+                      [
+                        system_message,
+                        *state["messages"],
+                      ]
+                    )
+                    return {"messages": response}
+
+                  graph = StateGraph(MessagesState)
+                  graph.add_node(mock_llm)
+                  graph.add_edge(START, "mock_llm")
+                  graph.add_edge("mock_llm", END)
+                  graph = graph.compile()
+                  ```
+
+                  然后为了使用 LangSmith 进行测试和部署，我们还需要一个 `langgraph.json`
+
+                  ```sh
+                  touch langgraph.json
+                  ```
+
+                  ```json title="langgraph.json"
+                  {
+                    "python_version": "3.12",
+                    "dockerfile_lines": [],
+                    "dependencies": ["."],
+                    "package_manager": "uv",
+                    "graphs": {
+                      "sample_agent": "./main.py:graph"
+                    },
+                    "env": ".env"
+                  }
+                  ```
+                </Tab>
+                <Tab value="FastAPI">
+                  首先，将 `ag-ui-langgraph` 包添加到你的项目中：
+
+                  ```bash
+                  uv add ag-ui-langgraph fastapi uvicorn copilotkit
+                  ```
+
+                  然后创建一个简单的 LangGraph 智能体，添加 FastAPI 应用，并将我们的智能体作为 AG-UI 端点附加。
+
+                  ```python title="main.py"
+                  import os
+
+                  # [!code highlight:2]
+                  from ag_ui_langgraph import add_langgraph_fastapi_endpoint
+                  from copilotkit import LangGraphAGUIAgent
+                  from fastapi import FastAPI
+                  from langgraph.graph import END, START, MessagesState, StateGraph
+                  from langchain_core.messages import SystemMessage
+                  from langchain_openai import ChatOpenAI
+
+                  async def mock_llm(state: MessagesState):
+                    model = ChatOpenAI(model="gpt-4.1-mini")
+                    system_message = SystemMessage(content="你是一个有用的助手。")
+                    response = await model.ainvoke(
+                      [
+                        system_message,
+                        *state["messages"],
+                      ]
+                    )
+                    return {"messages": response}
+
+
+                  graph = StateGraph(MessagesState)
+                  graph.add_node(mock_llm)
+                  graph.add_edge(START, "mock_llm")
+                  graph.add_edge("mock_llm", END)
+                  graph = graph.compile()
+
+                  app = FastAPI()
+
+                  # [!code highlight:9]
+                  add_langgraph_fastapi_endpoint(
+                    app=app,
+                    agent=LangGraphAGUIAgent(
+                      name="sample_agent",
+                      description="一个示例智能体，可用作你自己智能体的起点。",
+                      graph=graph,
+                    ),
+                    path="/",
+                  )
+
+                  def main():
+                    """运行 uvicorn 服务器。"""
+                    uvicorn.run(
+                      "main:app",
+                      host="0.0.0.0",
+                      port="8123",
+                      reload=True,
+                    )
+
+                  if __name__ == "__main__":
+                    main()
+                  ```
+                </Tab>
+              </Tabs>
+
+              <Callout type="info" title="什么是 AG-UI？">
+                AG-UI 是一个用于前端与智能体通信的开放协议。
+              </Callout>
+          </Step>
+          <Step>
+              ### 配置环境
+
+              在你的智能体目录中创建一个 `.env` 文件并添加你的 OpenAI API 密钥：
+
+              ```plaintext title=".env"
+              OPENAI_API_KEY=your_openai_api_key
+              ```
+
+              <Callout type="info" title="其他模型呢？">
+                入门模板默认配置为使用 OpenAI 的 GPT-4o，但你可以修改它以使用 LangGraph 支持的任何语言模型。
+              </Callout>
+          </Step>
+          <Step>
+              ### 创建前端
+
+              CopilotKit 适用于任何基于 React 的前端。本例中将使用 Next.js。
+
+              ```bash
+              npx create-next-app@latest frontend
+              cd frontend
+              ```
+          </Step>
+          <Step>
+              ### 安装 CopilotKit 包
+
+              ```npm
+              npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime
+              ```
+          </Step>
+          <Step>
+              ### 设置 Copilot Runtime
+
+              创建一个 API 路由将 CopilotKit 连接到你的 LangGraph 智能体：
+
+              ```sh
+              mkdir -p app/api/copilotkit && touch app/api/copilotkit/route.ts
+              ```
+
+              <Tabs groupId="deployment_method" items={['LangSmith', 'FastAPI']}>
+                <Tab value="LangSmith">
+                  ```tsx title="app/api/copilotkit/route.ts"
+                  import {
+                    CopilotRuntime,
+                    ExperimentalEmptyAdapter,
+                    copilotRuntimeNextJSAppRouterEndpoint,
+                  } from "@copilotkit/runtime";
+                  // [!code highlight]
+                  import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+                  import { NextRequest } from "next/server";
+
+                  const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                  const runtime = new CopilotRuntime({
+                    agents: {
+                    // [!code highlight:5]
+                      sample_agent: new LangGraphAgent({
+                        deploymentUrl:  process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123",
+                        graphId: "sample_agent",
+                        langsmithApiKey: process.env.LANGSMITH_API_KEY || "",
+                      }),
+                    }
+                  });
+
+                  export const POST = async (req: NextRequest) => {
+                    const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                      runtime,
+                      serviceAdapter,
+                      endpoint: "/api/copilotkit",
+                    });
+
+                    return handleRequest(req);
+                  };
+                ```
+              </Tab>
+              <Tab value="FastAPI">
+                ```tsx title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                // [!code highlight]
+                import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
+                import { NextRequest } from "next/server";
+
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                const runtime = new CopilotRuntime({
+                  agents: {
+                    // [!code highlight:3]
+                    sample_agent: new LangGraphHttpAgent({
+                      url:  process.env.LANGGRAPH_DEPLOYMENT_URL || "http://localhost:8123",
+                    }),
+                  }
+                });
+
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+              ```
+              </Tab>
+            </Tabs>
+          </Step>
+          <Step>
+              ### 配置 CopilotKit Provider
+
+              使用 CopilotKit provider 包装你的应用程序：
+
+              ```tsx title="app/layout.tsx"
+              // [!code highlight:2]
+              import { CopilotKit } from "@copilotkit/react-core";
+              import "@copilotkit/react-ui/v2/styles.css";
+
+              // ...
+
+              export default function RootLayout({ children }: {children: React.ReactNode}) {
+                return (
+                  <html lang="zh">
+                    <body>
+                      {/* [!code highlight:3] */}
+                      <CopilotKit runtimeUrl="/api/copilotkit" agent="sample_agent">
+                        {children}
+                      </CopilotKit>
+                    </body>
+                  </html>
+                );
+              }
+              ```
+          </Step>
+          <Step>
+            ### 添加聊天界面
+
+            将 CopilotSidebar 组件添加到你的页面：
+
+            ```tsx title="app/page.tsx"
+            import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
+
+            export default function Page() {
+              return (
+                <main>
+                  <h1>你的应用</h1>
+                  {/* [!code highlight:1] */}
+                  <CopilotSidebar />
+                </main>
+              );
+            }
+            ```
+          </Step>
+          <Step>
+              ### 启动你的智能体
+              在你的智能体目录中，启动智能体服务器：
+
+              <Tabs groupId="deployment_method" items={['LangSmith', 'FastAPI']}>
+                <Tab value="LangSmith">
+                  ```bash
+                  cd ..
+                  npx @langchain/langgraph-cli dev --port 8123 --no-browser
+                  ```
+                </Tab>
+                <Tab value="FastAPI">
+                  ```bash
+                  cd ..
+                  uv run main.py
+                  ```
+                </Tab>
+              </Tabs>
+
+              你的智能体将在 `http://localhost:8123` 可用。
+          </Step>
+          <Step>
+              ### 启动你的 UI
+
+              在另一个终端中，导航到你的前端目录并启动开发服务器：
+
+              <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                  <Tab value="npm">
+                      ```bash
+                      cd frontend
+                      npm run dev
+                      ```
+                  </Tab>
+                  <Tab value="pnpm">
+                      ```bash
+                      cd frontend
+                      pnpm dev
+                      ```
+                  </Tab>
+                  <Tab value="yarn">
+                      ```bash
+                      cd frontend
+                      yarn dev
+                      ```
+                  </Tab>
+                  <Tab value="bun">
+                      ```bash
+                      cd frontend
+                      bun dev
+                      ```
+                  </Tab>
+              </Tabs>
+          </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 开始聊天！
+
+        你的 AI 智能体现在可以使用了！试着问它一些问题：
+
+        ```
+        能给我讲个笑话吗？
+        ```
+
+        ```
+        你能帮我理解一下 AI 吗？
+        ```
+
+        ```
+        你觉得 React 怎么样？
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                - 如果遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                - 确保你的智能体文件夹包含一个 `langgraph.json` 文件
+                - 在 `langgraph.json` 文件中，引用 `.env` 文件的路径
+                - 检查你的 OpenAI API 密钥是否正确设置在 `.env` 文件中
+                - 如果使用现有智能体，请确保也配置了 LangSmith API 密钥
+                - 确保在运行 `langgraph dev` 命令时与 `langgraph.json` 文件在同一文件夹中
+            </Accordion>
+        </Accordions>
+
+    </Step>
+</Steps>
+
+## 下一步是什么？
+
+现在你已经设置好了基本智能体，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="实现人机协同"
+    description="让你的用户和智能体能够在任务上协同工作。"
+    href="/langgraph/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="利用共享状态"
+    description="学习如何将智能体的状态与 UI 的状态同步，反之亦然。"
+    href="/langgraph/shared-state"
+    icon={<RepeatIcon />}
+  />
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染智能体的进度和输出。"
+    href="/langgraph/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="让你的智能体能够调用前端工具，直接更新你的应用程序。"
+    href="/langgraph/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

@@ -1,0 +1,79 @@
+---
+title: "步骤 8：渐进式状态更新"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+至此，我们已经拥有了一个功能相当完善的应用程序。我们可以运行智能体，在聊天中查看进度，并在右侧面板中看到最终的研究结果。
+
+然而，我们还缺少一样东西。我们无法看到 LLM 实际生成研究内容的过程，只能看到最终结果。
+
+在这一步中，我们将学习如何利用预测性状态渲染（predictive state rendering）在聊天中展示智能体的进度。具体来说，我们将在研究内容的各个章节生成时进行渲染。
+
+为此，我们将使用 `copilotkit_customize_config` 函数。
+
+<Callout>
+`copilotkit_customize_config` 函数将在下一步中用于在聊天中渲染智能体的进度。
+</Callout>
+
+## 创建 copilotkit_customize_config 并发出中间状态
+CopilotKit 允许你自定义前端与智能体之间的交互配置。在本例中，我们希望设置 `emit_intermediate_state` 属性。我们定义一个对象列表，用于根据工具调用将状态发送到前端。
+
+```python title="agent/section_writer.py"
+from copilotkit.langchain import copilotkit_customize_config, copilotkit_emit_state // [!code ++]
+
+# ...
+@tool("section_writer", args_schema=SectionWriterInput, return_direct=True)
+async def section_writer(research_query, section_title, idx, state):
+    """根据查询、章节标题和提供的来源撰写研究报告的特定章节。"""
+
+    # ...
+
+    # 定义我们要发出的状态键，为本教程预先创建
+    content_state = {
+        "state_key": f"section_stream.content.{idx}.{section_id}.{section_title}",
+        "tool": "WriteSection",
+        "tool_argument": "content"
+    }
+    footer_state = {
+        "state_key": f"section_stream.footer.{idx}.{section_id}.{section_title}",
+        "tool": "WriteSection",
+        "tool_argument": "footer"
+    }
+
+    # [!code ++:5]
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[content_state, footer_state]
+    )
+
+    # ...
+
+    # [!code highlight:3]
+    # LLM 将采用这个新的配置，我们定义的工具调用将被预测性地发送到前端。
+    response = await model.bind_tools([WriteSection]).ainvoke(lc_messages, config)
+
+    # ...
+
+```
+
+预测性状态发出有三个主要部分：
+1. `state_key` 是我们要发出的智能体状态的键。
+2. `tool` 是将被调用来生成状态的工具。
+3. `tool_argument` 是将被传递给工具的参数，该参数将成为预测状态。
+
+## 回顾
+就是这样！现在当 LLM 调用我们定义的工具时，状态将被预测性地发送到前端。
+
+要尝试一下，请完成进行研究的全流程。你现在可以看到各个章节在生成过程中的实时状态。
+
+```
+请研究一下狗狗！
+```
+
+<video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-8-finish.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+
+回顾一下，我们完成了以下工作：
+- 学习了 `copilotkit_customize_config` 函数。
+- 使用该配置预测性地发出智能体的状态
+
+你已经成功使用 CopilotKit 的核心概念创建了一个协同智能体（CoAgent）。在下一步中，我们将通过回顾整个过程并展示一些后续步骤来结束本教程。

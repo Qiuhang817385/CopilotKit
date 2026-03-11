@@ -1,0 +1,150 @@
+---
+title: "API Reference"
+description: "下一代 CopilotKit React API 的 API 参考。"
+---
+
+import { LinkIcon } from "lucide-react";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
+v2 React API (`@copilotkit/react-core/v2`) 是用于构建 copilot 驱动应用程序的下一代接口。它提供了一套精简的 hooks 和组件，构建在 [AG-UI](https://docs.ag-ui.com) 代理协议之上。
+
+## Provider 设置
+
+v2 API 使用 [`<CopilotKit>`](/reference/v2/components/CopilotKit) provider。用它包裹你的应用程序以配置运行时连接：
+
+```tsx
+// CopilotKit 从根包导入，而不是从 v2 子包导入
+import { CopilotKit } from "@copilotkit/react-core";
+
+function App() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      <YourApp />
+    </CopilotKit>
+  );
+}
+```
+
+<Accordions>
+<Accordion title="高级：直接使用 CopilotKitProvider">
+
+<Callout type="warn">
+  `CopilotKitProvider` 是一个用于高级用例的低级 provider。大多数应用程序应该使用 `@copilotkit/react-core` 中的 `<CopilotKit>` 组件。
+</Callout>
+
+如果你需要直接控制 v2 provider（例如用于自定义集成），你可以从 `@copilotkit/react-core/v2` 导入 `CopilotKitProvider`：
+
+```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+
+<CopilotKitProvider runtimeUrl="/api/copilotkit">
+  <App />
+</CopilotKitProvider>
+```
+
+### Props
+
+<PropertyReference name="runtimeUrl" type="string">
+  CopilotKit 运行时端点的 URL。挂载后延迟转发到核心。
+</PropertyReference>
+
+<PropertyReference name="headers" type="Record<string, string>" default="{}">
+  随运行时调用转发的请求头。
+</PropertyReference>
+
+<PropertyReference name="credentials" type="RequestCredentials">
+  fetch 请求的凭据模式（例如 `"include"` 用于跨域请求中的 HTTP-only cookie）。
+</PropertyReference>
+
+<PropertyReference name="publicApiKey" type="string">
+  Copilot Cloud 公共 API 密钥。
+</PropertyReference>
+
+<PropertyReference name="publicLicenseKey" type="string">
+  `publicApiKey` 的别名。
+</PropertyReference>
+
+<PropertyReference name="properties" type="Record<string, unknown>" default="{}">
+  运行时元数据负载。
+</PropertyReference>
+
+<PropertyReference name="useSingleEndpoint" type="boolean">
+  启用后，所有运行时调用使用单个端点。
+</PropertyReference>
+
+<PropertyReference name="agents__unsafe_dev_only" type="Record<string, AbstractAgent>">
+  用于开发/测试的预实例化代理。**不适用于生产环境。**
+</PropertyReference>
+
+<PropertyReference name="renderToolCalls" type="ReactToolCallRenderer[]">
+  静态工具调用渲染器集合。该数组应该在渲染之间保持稳定。
+</PropertyReference>
+
+<PropertyReference name="renderActivityMessages" type="ReactActivityMessageRenderer[]">
+  静态活动消息渲染器集合。
+</PropertyReference>
+
+<PropertyReference name="renderCustomMessages" type="ReactCustomMessageRenderer[]">
+  静态自定义消息渲染器集合。
+</PropertyReference>
+
+<PropertyReference name="frontendTools" type="ReactFrontendTool[]">
+  在 provider 级别定义的静态工具处理程序。该数组应该在渲染之间保持稳定。
+</PropertyReference>
+
+<PropertyReference name="humanInTheLoop" type="ReactHumanInTheLoop[]">
+  声明式人在回路工具定义。每个都同时成为工具处理程序和工具调用渲染器。
+</PropertyReference>
+
+<PropertyReference name="showDevConsole" type='boolean | "auto"'>
+  显示 CopilotKit 开发者控制台进行调试。
+</PropertyReference>
+
+<PropertyReference name="onError" type="(event: { error: Error; code: CopilotKitCoreErrorCode; context: Record<string, any> }) => void | Promise<void>">
+  当 CopilotKit 遇到错误时调用的错误处理程序。对所有错误类型触发：运行时连接失败、代理错误和工具错误。
+
+  与 v1 的 `onError` 不同，这**不需要** `publicApiKey` — 错误处理适用于任何配置。
+
+  ```tsx
+  <CopilotKitProvider
+    runtimeUrl="/api/copilotkit"
+    onError={(event) => {
+      console.error(`[${event.code}]`, event.error.message, event.context);
+    }}
+  >
+    <App />
+  </CopilotKitProvider>
+  ```
+</PropertyReference>
+
+</Accordion>
+</Accordions>
+
+## 样式
+
+使用 v2 UI 组件时，在你的应用边界处导入样式表一次：
+
+```tsx
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## API 参考
+
+<Callout type="info">
+  在寻找工具渲染 hooks？从 [`useComponent`](/reference/v2/hooks/useComponent)、[`useRenderTool`](/reference/v2/hooks/useRenderTool) 和 [`useDefaultRenderTool`](/reference/v2/hooks/useDefaultRenderTool) 开始。
+</Callout>
+
+<Cards>
+  <Card
+    title="Hooks"
+    description="用于代理、工具、上下文和聊天配置的 React hooks。"
+    href="/reference/v2/hooks/useAgent"
+    icon={<LinkIcon />}
+  />
+  <Card
+    title="UI 组件"
+    description="预构建的聊天组件：CopilotChat、CopilotPopup、CopilotSidebar 等。"
+    href="/reference/v2/components/CopilotChat"
+    icon={<LinkIcon />}
+  />
+</Cards>

@@ -1,0 +1,133 @@
+---
+title: 写入代理状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入代理状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-write-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/mastra/feature/shared_state) 中演示写入共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地从原生应用程序写入代理状态，允许您从 UI 更新代理的工作内存。
+
+<Callout type="info" title="重要">
+  本指南假设您将 Mastra 代理嵌入到 Copilot Runtime 中，如下所示。
+
+  ```ts
+  const runtime = new CopilotRuntime({
+    agents: MastraAgent.getLocalAgents({ mastra }),
+  });
+  ```
+
+  如果您使用的是**远程 Mastra 代理**，此功能将**无法工作**。
+</Callout>
+
+## 何时应该使用此功能？
+
+当您想向代理的工作内存提供用户输入或控制时，可以使用此功能。随着应用程序状态的变化，您可以更新代理状态以反映这些变化。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义代理状态
+    Mastra 有高级的[工作内存概念](https://mastra.ai/en/docs/memory/working-memory)来为您的代理提供有状态性。CopilotKit 利用 Mastra 的工作内存概念，让您能够实现代理和应用程序之间的共享状态。
+
+    为代理提供工作内存就像为其提供 Zod 模式一样简单。
+
+    ```ts title="mastra/agents/language-agent.ts"
+    import { openai } from "@ai-sdk/openai";
+    import { Agent } from "@mastra/core/agent";
+    import { LibSQLStore } from "@mastra/libsql";
+    import { z } from "zod";
+    import { Memory } from "@mastra/memory";
+
+    // [!code highlight:4]
+    // 1. 定义代理状态模式
+    export const AgentStateSchema = z.object({
+      language: z.enum(["english", "spanish"]),
+    });
+
+    // 2. 从模式推断代理状态类型
+    export const AgentState = z.infer<typeof AgentStateSchema>;
+
+    // 3. 创建代理
+    export const languageAgent = new Agent({
+      name: "Language Agent",
+      model: openai("gpt-5.2"),
+      instructions: "Always communicate in the preferred language of the user as defined in your working memory. Do not communicate in any other language.",
+      memory: new Memory({
+        storage: new LibSQLStore({ id: "mastra-storage", url: ":memory:" }),
+        options: {
+          // [!code highlight:4]
+          workingMemory: {
+            enabled: true,
+            schema: AgentStateSchema,
+          },
+        },
+      }),
+    });
+    ```
+  </Step>
+  <Step>
+    ### 使用 `useAgent` 钩子
+    代理连接并运行后，剩下要做的就是调用 `useAgent` 钩子，传递代理名称，并使用 `agent.setState` 更新代理状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { AgentState } from "@/mastra/agents/language-agent";
+
+    function YourMainContent() {
+      // [!code highlight:5]
+      const { agent } = useAgent({
+        agentId: "your-mastra-agent-name",
+        // 可选地提供类型安全的初始状态
+        initialState: { language: "english" }
+      });
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state?.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      return (
+        // 为简洁起见，省略了样式
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:2] */}
+          <p>Language: {agent.state?.language}</p>
+          <button onClick={toggleLanguage}>Toggle Language</button>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.setState` 函数将更新工作内存，并在状态变化时触发重新渲染。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    您现在可以使用 `setState` 函数更新代理状态，使用 `state` 读取它。尝试切换语言按钮并与代理交谈。您会看到语言变化与代理状态匹配。
+
+    <Callout type="info" title="重要">
+      Mastra 中的共享状态是提示驱动的。这意味着您的代理对共享状态的意识将通过您提供给代理的指令得到增强。
+    </Callout>
+  </Step>
+</Steps>

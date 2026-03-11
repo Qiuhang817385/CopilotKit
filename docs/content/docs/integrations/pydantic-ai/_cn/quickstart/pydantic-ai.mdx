@@ -1,0 +1,317 @@
+---
+title: 快速入门
+description: 在 10 分钟内将您的 Pydantic AI Agent 转变为原生 Agent 应用程序。
+icon: "lucide/Play"
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import { CoAgentsDiagram } from "@/components/react/coagents/coagents-diagram.tsx";
+import { FaPython, FaJs, FaCloud } from "react-icons/fa";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotKitCloudCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+import CloudCopilotKitProvider from "@/snippets/coagents/cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/coagents/self-host-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeLangGraphEndpoint from "@/snippets/self-hosting-copilot-runtime-langgraph-endpoint.mdx";
+import SelfHostingCopilotRuntimeStarter from "@/snippets/self-hosting-copilot-runtime-starter.mdx";
+import SelfHostingRemoteEndpoints from "@/snippets/self-hosting-remote-endpoints.mdx";
+import { PydanticAIIcon } from "@/lib/icons/custom-icons";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+  ServerIcon,
+} from "lucide-react";
+import CopilotUI from "@/snippets/copilot-ui.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 前提条件
+
+在开始之前，您需要以下内容：
+
+- [**OpenAI API 密钥**](https://platform.openai.com/api-keys)
+
+## 开始使用
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="path"
+        header={
+            <div>
+                <p className="text-xl font-semibold">您已经有 Pydantic AI Agent 了吗？</p>
+                <p className="text-base">
+                    您可以快速创建一个新项目，或将现有 Agent 引入 CopilotKit。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="create"
+            title="从零开始"
+            description="我还没有 Agent，但想快速开始。"
+            icon={<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/copilotkit-logo.svg" alt="CopilotKit 徽标" width={20} height={20} />}
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                ```bash
+                npx copilotkit@latest create -f pydantic-ai
+                ```
+            </Step>
+            <Step>
+                ### 安装依赖
+                ```package-install
+                ```
+                <Callout type="info">
+                    这也将安装您的 Agent 的 Python 依赖！如果遇到问题，请尝试运行 `npm run install:agent`。
+                </Callout>
+            </Step>
+            <Step>
+                ### 配置您的 OpenAI API 密钥
+                您的 Agent 需要一个 LLM 来进行对话。此示例使用 OpenAI，但您可以使用任何您想要的 LLM 提供商。
+
+                ```bash
+                export OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                或在 Agent 的 `.env` 文件中设置。
+
+                ```plaintext title="agent/.env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+            </Step>
+            <Step>
+                ### 运行您的 Agent
+                现在您可以在同一个终端中一起运行您的 Agent 和 UI！
+
+                ```bash
+                npm run dev
+                ```
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="exiting-agent"
+            title="使用现有 Agent"
+            description="我已经有一个 Pydantic AI Agent，想将其与 CopilotKit 一起使用。"
+            icon={<PydanticAIIcon className="w-4 h-4 text-bold" />}
+        >
+            <Step>
+                ### 添加必要的依赖
+                Pydantic AI 的集成依赖于 [AG-UI](https://docs.ag-ui.com/)，因此
+                您需要将其安装到您的项目中。
+
+                我们的示例还将使用 uvicorn 来运行 Agent。
+
+                ```sh
+                pip install 'pydantic-ai-slim[ag-ui]' uvicorn
+                ```
+            </Step>
+            <Step>
+                ### 将您的 Agent 暴露为 AG-UI ASGI 应用程序
+
+                ```python title="agent.py"
+                from pydantic_ai import Agent
+
+                agent = Agent('openai:gpt-4.1', instructions='Be fun!')
+                app = agent.to_ag_ui()
+
+                # 如果您希望服务器在调用时运行，可以执行以下操作：
+                if __name__ == "__main__":
+                    import uvicorn
+                    uvicorn.run(app, host="localhost", port=8000)
+
+                ```
+            </Step>
+            <Step>
+                ### 创建您的前端
+                CopilotKit 可以在任何运行 React 的地方运行。因此，您可以使用 Next.js、
+                Vite 或任何其他 React 环境。
+
+                对于此示例，我们将创建一个新的 Next.js 应用程序。
+
+                ```bash
+                npx create-next-app@latest
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit
+                首先，将 CopilotKit 的最新包安装到您的前端。
+                ```package-install
+                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot 运行时
+                CopilotKit 的运行时负责 Agent 与前端之间的安全通信。随着您的应用程序的进展，
+                这将是您设置线程或身份验证的地方。
+
+                现在，让我们从一个最小设置开始。
+
+                ```tsx title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                import { HttpAgent } from "@ag-ui/client";
+                import { NextRequest } from "next/server";
+
+                // 1. 您可以在此处使用任何服务适配器以实现多 Agent 支持。我们使用
+                //    空适配器，因为我们只使用一个 Agent。
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                // 2. 创建 CopilotRuntime 实例并使用 PydanticAI AG-UI
+                //    集成来设置连接。
+                const runtime = new CopilotRuntime({
+                  agents: {
+                    // 我们的 AG-UI 端点 URL
+                    "my_agent": new HttpAgent({ url: "http://localhost:8000/" }),
+                  }
+                });
+
+                // 3. 构建一个处理 CopilotKit 运行时请求的 Next.js API 路由。
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+               ```
+            </Step>
+            <Step>
+                ### 设置 CopilotKit 提供商
+                CopilotKit 提供商组件负责管理与当前 Agent 的会话。通常，
+                用户会将整个应用程序包装在 CopilotKit 提供商中。
+
+                ```tsx title="app/layout.tsx"
+                import "./globals.css";
+                import { ReactNode } from "react";
+                import { CopilotKit } from "@copilotkit/react-core";
+
+                export default function RootLayout({ children }: { children: ReactNode }) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* 这指向我们在上一步中设置的运行时 */}
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit" agent="my_agent">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot UI
+                最后一步是使用 CopilotKit 的 UI 组件来渲染与您的 Agent 的聊天交互。在大多数情况下，
+                这是与您的核心页面组件一起完成的，例如在您的 `page.tsx` 文件中。
+
+                ```tsx title="page.tsx"
+                // [!code highlight:2]
+                import "@copilotkit/react-ui/v2/styles.css";
+                import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+                export function YourApp() {
+                return (
+                    <main>
+                    <h1>您的主内容</h1>
+                    {/* [!code highlight:6] */}
+                    <CopilotSidebar
+                        labels={{
+                            modalHeaderTitle: "弹出助手",
+                            welcomeMessageText: "嗨！我已连接到 Agent。我能帮您什么？",
+                        }}
+                    />
+                    </main>
+                );
+                }
+                ```
+
+                <Callout type="info">
+                    正在寻找其他聊天组件选项？查看我们的 [Agent 聊天 UI](/pydantic-ai/prebuilt-components) 指南。
+                </Callout>
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 与您的 Agent 对话！
+
+        恭喜！您已成功将 Pydantic AI Agent 聊天机器人集成到您的应用程序中。首先，尝试向您的 Agent 问几个问题。
+
+        ```
+        您能给我讲个笑话吗？
+        ```
+
+        ```
+        您能帮我理解 AI 吗？
+        ```
+
+        ```
+        您对 React 有什么看法？
+        ```
+
+        <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+
+        <Accordions className="mb-4">
+            <Accordion title="遇到问题？">
+                - 尝试将主机更改为 `0.0.0.0` 或 `127.0.0.1` 而不是 `localhost`。
+            </Accordion>
+        </Accordions>
+    </Step>
+
+</Steps>
+
+---
+
+## 下一步是什么？
+
+您现在已在 CopilotKit 中运行 Pydantic AI Agent！现在您可以开始探索 CopilotKit
+可以帮助您构建强大的原生 Agent 应用程序的各种方式。
+
+<Cards>
+  <Card
+    title="实现人机协同"
+    description="允许您的用户和 Agent 一起协作完成任务。"
+    href="/pydantic-ai/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="利用共享状态"
+    description="了解如何将您的 Agent 状态与 UI 状态同步，反之亦然。"
+    href="/pydantic-ai/shared-state"
+    icon={<RepeatIcon />}
+  />
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染您的 Agent 进度和输出。"
+    href="/pydantic-ai/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="让您的 Agent 能够调用前端工具，直接更新您的应用程序。"
+    href="/pydantic-ai/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

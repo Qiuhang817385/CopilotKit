@@ -1,0 +1,111 @@
+---
+title: "Open-JSON-UI"
+icon: "lucide/FileJson"
+description: "OpenAI 的声明式生成式 UI 开放标准化"
+---
+
+# Open-JSON-UI - OpenAI 的生成式 UI 标准
+
+**Open-JSON-UI** 是 OpenAI 内部声明式生成式 UI 模式的开放标准化，旨在使智能体能够生成结构化用户界面。
+
+## 什么是 Open-JSON-UI？
+
+Open-JSON-UI 是 OpenAI 对生成式 UI 生态系统的贡献。它提供：
+
+- **声明式模式** - 基于 JSON 的组件定义
+- **标准化结构** - UI 生成的通用模式
+- **类型安全** - 明确定义的组件类型和属性
+- **OpenAI 集成** - 在 OpenAI 生态系统中原生支持
+
+## 为什么选择 Open-JSON-UI？
+
+### OpenAI 生态系统集成
+作为 OpenAI 内部模式的标准化，Open-JSON-UI 与 OpenAI 的工具和模型无缝协作，为已经使用 OpenAI 服务的开发人员提供熟悉的界面。
+
+### 声明式和结构化
+该规范为 UI 组件提供清晰、类型安全的定义，使验证和渲染智能体生成的界面变得更加容易。
+
+### 行业标准
+在 OpenAI 的支持下，该规范正在成为声明式生成式 UI 的行业标准，确保长期支持和社区采用。
+
+## 将 Open-JSON-UI 与 CopilotKit 一起使用
+
+CopilotKit 的 AG-UI 协议原生支持 Open-JSON-UI 以及其他生成式 UI 规范。
+
+```typescript
+// 示例：智能体返回 Open-JSON-UI 规范
+{
+  type: "open-json-ui",
+  spec: {
+    components: [
+      {
+        type: "card",
+        properties: {
+          title: "数据可视化",
+          content: {...}
+        }
+      }
+    ]
+  }
+}
+```
+
+## 主要特性
+
+### 1. 结构化组件模型
+Open-JSON-UI 为组件定义提供明确定义的模式：
+
+```json
+{
+  "version": "1.0",
+  "components": [
+    {
+      "id": "main-container",
+      "type": "container",
+      "children": [
+        {
+          "type": "text",
+          "content": "Hello World",
+          "style": {
+            "fontSize": "large",
+            "color": "primary"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 2. 类型安全
+强类型确保生成的 UI 组件有效且可以正确渲染：
+
+```typescript
+interface OpenJsonUIComponent {
+  id?: string;
+  type: ComponentType;
+  properties?: Record<string, any>;
+  children?: OpenJsonUIComponent[];
+  style?: StyleProperties;
+}
+```
+
+### 3. OpenAI 模型优化
+该模式旨在被 OpenAI 的语言模型轻松生成，其模式与它们的训练保持一致。
+
+## 与其他规范的比较
+
+| 特性 | Open-JSON-UI | A2UI | MCP Apps |
+| --- | --- | --- | --- |
+| **格式** | JSON | JSONL | HTML/Iframe |
+| **流式** | 有限 | 原生 | 有限 |
+| **类型安全** | 强 | 中等 | 灵活 |
+| **平台** | 无关 | 无关 | Web 优先 |
+
+## 了解更多
+
+- [生成式 UI 规范概述](/learn/generative-ui/specs) - 比较所有支持的规范
+- [生成式 UI 指南](/generative-ui/your-components/display-only) - 在 CopilotKit 中使用生成式 UI
+- [AG-UI 协议](/ag-ui-protocol) - 了解支持 Open-JSON-UI 的协议
+- [A2UI](/learn/generative-ui/specs/a2ui) - Google 的流优先替代方案
+- [MCP Apps](/learn/generative-ui/specs/mcp-apps) - 扩展 MCP 的基于 Iframe 的生成式 UI

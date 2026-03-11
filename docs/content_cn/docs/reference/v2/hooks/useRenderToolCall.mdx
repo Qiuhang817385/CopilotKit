@@ -1,0 +1,183 @@
+---
+title: "useRenderToolCall"
+description: "返回用于在聊天界面中渲染工具调用的渲染器函数的 React Hook"
+---
+
+## 概述
+
+`useRenderToolCall` 返回一个将工具调用映射到 React 元素的渲染器函数。返回的函数按工具名称查找第一个匹配的渲染配置（如果找不到精确匹配，则回退到通配符 `"*"` 渲染器），解析 JSON 参数，确定当前的 `ToolCallStatus`，并返回适当的 React 元素 -- 如果没有为工具注册渲染器，则返回 `null`。
+
+此 Hook 主要由聊天 UI 组件用于显示工具调用的视觉反馈。在大多数应用程序中，您不会直接调用它；相反，您通过 `useFrontendTool` 或 `useHumanInTheLoop` 注册渲染组件，聊天组件在内部使用 `useRenderToolCall` 来解析它们。
+
+## 签名
+
+```tsx
+import { useRenderToolCall } from "@copilotkit/react-core/v2";
+
+function useRenderToolCall(): (props: UseRenderToolCallProps) => React.ReactElement | null;
+```
+
+## 返回值
+
+<PropertyReference name="renderer" type="(props: UseRenderToolCallProps) => React.ReactElement | null">
+  接受工具调用 props 并返回 React 元素或 `null` 的函数。
+
+  <PropertyReference name="props" type="UseRenderToolCallProps" required>
+    描述要渲染的工具调用的输入对象。
+
+    <PropertyReference name="toolCall" type="ToolCall" required>
+      包含工具 `name` 及其 JSON 编码 `args` 的工具调用对象。
+    </PropertyReference>
+
+    <PropertyReference name="toolMessage" type="ToolMessage">
+      工具结果消息（如果可用）。存在时表示工具调用已完成并包含结果字符串。
+    </PropertyReference>
+  </PropertyReference>
+</PropertyReference>
+
+## 状态解析
+
+渲染器根据输入确定 `ToolCallStatus`：
+
+| 条件 | 状态 | `result` |
+|-----------|--------|----------|
+| 没有 `toolMessage` 且工具调用仍在加载 | `ToolCallStatus.InProgress` | `undefined` |
+| 工具调用正在执行（参数已解析，尚无结果） | `ToolCallStatus.Executing` | `undefined` |
+| 存在匹配的 `toolMessage` | `ToolCallStatus.Complete` | 来自工具消息的结果字符串 |
+
+## ToolCallStatus
+
+`ToolCallStatus` 枚举从 `@copilotkit/react-core/v2` 导出：
+
+| 值 | 描述 |
+|-------|-------------|
+| `ToolCallStatus.InProgress` | 工具调用的参数仍在流式传输。 |
+| `ToolCallStatus.Executing` | 参数已完全解析；工具正在执行。 |
+| `ToolCallStatus.Complete` | 执行完成并返回结果。 |
+
+## 用法
+
+### 在自定义聊天组件中使用渲染器
+
+```tsx
+import { useRenderToolCall } from "@copilotkit/react-core/v2";
+
+function CustomChatMessage({ message }) {
+  const renderToolCall = useRenderToolCall();
+
+  if (message.type === "tool_call") {
+    const element = renderToolCall({
+      toolCall: message.toolCall,
+      toolMessage: message.toolMessage,
+    });
+
+    if (element) {
+      return <div className="tool-call-container">{element}</div>;
+    }
+
+    return <div className="text-gray-400">工具调用：{message.toolCall.name}</div>;
+  }
+
+  return <div>{message.content}</div>;
+}
+```
+
+### 使用 useFrontendTool 注册渲染器
+
+工具调用渲染器通常通过 `useFrontendTool` 或直接通过提供程序上的 `renderToolCalls` prop 注册。`useRenderToolCall` Hook 在渲染时解析这些注册。
+
+```tsx
+import { z } from "zod";
+import { useFrontendTool, ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function App() {
+  // 注册带渲染组件的工具
+  useFrontendTool({
+    name: "searchDatabase",
+    description: "搜索产品数据库",
+    parameters: z.object({
+      query: z.string().describe("搜索查询"),
+    }),
+    handler: async ({ query }) => {
+      const results = await fetch(`/api/search?q=${query}`);
+      return JSON.stringify(await results.json());
+    },
+    render: ({ args, status, result }) => {
+      if (status === ToolCallStatus.InProgress) {
+        return <div>正在搜索 "{args.query}"...</div>;
+      }
+      if (status === ToolCallStatus.Complete && result) {
+        const data = JSON.parse(result);
+        return (
+          <div>
+            <p>为 "{args.query}" 找到 {data.length} 个结果</p>
+            <ul>
+              {data.map((item: any) => (
+                <li key={item.id}>{item.name}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+      return null;
+    },
+  }, []);
+
+  return <ChatInterface />;
+}
+```
+
+### 通配符渲染器
+
+如果找不到精确名称匹配，Hook 会回退到通配符 `"*"` 渲染器。这对于为所有未处理的工具调用提供通用 UI 很有用。
+
+```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+import { ToolCallStatus } from "@copilotkit/react-core/v2";
+
+function App() {
+  return (
+    <CopilotKitProvider
+      runtimeUrl="/api/copilotkit"
+      renderToolCalls={[
+        {
+          name: "*",
+          render: ({ name, args, status, result }) => {
+            if (status === ToolCallStatus.InProgress) {
+              return (
+                <div className="text-gray-500 text-sm">
+                  正在运行 {name}...
+                </div>
+              );
+            }
+            if (status === ToolCallStatus.Complete) {
+              return (
+                <div className="text-green-600 text-sm">
+                  {name} 已完成。
+                </div>
+              );
+            }
+            return null;
+          },
+        },
+      ]}
+    >
+      <YourApp />
+    </CopilotKitProvider>
+  );
+}
+```
+
+## 行为
+
+- **基于名称的查找**：渲染器首先搜索注册的配置以查找精确工具名称匹配，然后回退到通配符（`"*"`）渲染器。
+- **JSON 解析**：工具调用的 `args` 字符串在传递给渲染组件之前从 JSON 解析。如果解析失败，args 默认为空对象。
+- **状态推断**：状态从 `toolMessage` prop 的存在和状态确定。渲染组件始终接收一致的形状，包含 `name`、`args`、`status` 和 `result`。
+- **对未匹配工具返回 null**：如果没有为工具名称注册渲染器且不存在通配符渲染器，函数返回 `null`。
+- **聊天组件内部使用**：内置的 `CopilotChat`、`CopilotPopup` 和 `CopilotSidebar` 组件使用此 Hook 来渲染工具调用。只有在构建自定义聊天 UI 时才需要直接调用它。
+
+## 相关
+
+- [`useFrontendTool`](/reference/v2/hooks/useFrontendTool) -- 注册带渲染组件的工具
+- [`useHumanInTheLoop`](/reference/v2/hooks/useHumanInTheLoop) -- 注册带渲染组件的交互式工具
+- [`CopilotKitProvider`](/reference/v2) -- 在提供程序级别配置静态渲染工具调用

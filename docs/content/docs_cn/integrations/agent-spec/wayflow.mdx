@@ -1,0 +1,116 @@
+---
+title: Agent Spec WayFlow 与 AG-UI 集成
+description: 通过 AG-UI 端点将 Agent Spec（WayFlow 运行时）连接到 CopilotKit，并将智能体运行流式传输到 UI。
+icon: "lucide/Gauge"
+---
+
+import RunAndConnect from "@/snippets/integrations/agent-spec/run-and-connect.mdx";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+## 这是什么？
+
+通过 AG-UI 事件协议将基于 WayFlow 的 Agent Spec 智能体连接到 CopilotKit 的 UI。您将运行一个发出 AG-UI 事件的 FastAPI 端点，并将您的 Next.js 应用指向它。
+
+关键部分：
+- 后端端点：`ag-ui/integrations/agent-spec/python/ag_ui_agentspec/endpoint.py`
+- 示例服务器：`ag-ui/integrations/agent-spec/python/examples/server.py`
+- 模板 UI：`npx copilotkit@latest create`
+
+## 什么时候使用这个？
+
+当您已经有一个由 Agent Spec 描述且基于 WayFlow 的智能体，并希望获得一个流式传输助手文本、工具调用/结果和运行生命周期的即用型 UI，且布线最少时，请使用此集成。
+
+## 先决条件
+
+- Python 3.10–3.14
+- Node.js 20+
+- 一个 Agent Spec 配置 JSON/YAML 文件（或通过 `pyagentspec` 的 Python 代码）
+
+## 安装运行时适配器
+
+从 AG-UI 仓库的 Agent Spec 适配器包：
+
+```bash
+git clone https://github.com/ag-ui-protocol/ag-ui.git
+cd ag-ui/integrations/agent-spec/python
+uv pip install -e .[wayflow]
+```
+
+请注意，这会从源代码安装 `wayflowcore`。或者，您可以使用 pip 安装它：
+
+```bash
+pip install wayflowcore
+```
+
+## 步骤
+
+<Steps>
+
+<Step>
+### 1. 启动 FastAPI 端点（最小示例）
+
+使用 WayFlow 运行时执行您的 Agent Spec 并流式传输 AG-UI 事件。
+
+```python
+from fastapi import FastAPI
+from ag_ui_agentspec.agent import AgentSpecAgent
+from ag_ui_agentspec.endpoint import add_agentspec_fastapi_endpoint
+
+agentspec_json = <加载您的 Agent Spec 配置的 json/yaml>
+
+app = FastAPI()
+agent = AgentSpecAgent(agentspec_json, runtime="wayflow")
+add_agentspec_fastapi_endpoint(app, agentspec_agent=agent, path="/")
+```
+
+在本地运行：
+
+```bash
+uvicorn backend.app:app --reload --port 8000
+```
+
+</Step>
+
+<Step>
+### 2. 搭建并连接 UI
+
+<RunAndConnect />
+
+如果您已经有启动器，请确保您的智能体运行在 8000 端口。
+
+然后运行应用（例如使用 `pnpm dev`）并打开 `http://localhost:3000`。
+
+</Step>
+
+</Steps>
+
+## 工作原理
+
+- `AgentSpecAgent(runtime="wayflow")` 使用 WayFlow 框架执行您的 Agent Spec 智能体。
+- `AgUiSpanProcessor` 将 Agent Spec 跟踪跨度映射到每个请求队列（`EVENT_QUEUE`）上的 AG-UI 事件。
+- FastAPI 端点将这些事件作为 SSE 流式传输，供 CopilotKit 渲染：
+  - 助手文本：`TEXT_MESSAGE_START/CONTENT/END`
+  - 工具调用：`TOOL_CALL_START/ARGS/END` 和 `TOOL_CALL_RESULT`
+  - 生命周期：`RUN_STARTED/RUN_FINISHED`
+
+## 故障排除
+
+- 端点路径必须与您 UI 预期的智能体端点匹配（在我们的启动器仓库中为 8000 端口）。
+- 端点断言队列已绑定。如果您收到队列错误，请检查请求是否通过提供的 FastAPI 路由。
+- 如果您没有收到任何事件，请确保智能体正在运行且没有崩溃。
+
+## 后续步骤
+
+- 使用智能体聊天和生成式 UI 构建更丰富的 UI。
+- 在回合之间传递完整的聊天记录。适配器和处理器会为您处理消息和工具调用生命周期。
+- 查看 [LangGraph 集成](/agent-spec/langgraph)
+
+启动器模板：https://github.com/CopilotKit/with-agent-spec（请参阅 README 了解安装选项）
+
+## 了解更多
+
+- AG-UI 文档：https://docs.ag-ui.com/introduction
+- Agent Spec 文档主页：https://oracle.github.io/agent-spec/development/docs_home.html
+- 规范概述：https://oracle.github.io/agent-spec/development/agentspec/index.html
+- Agent Spec 跟踪文档：https://oracle.github.io/agent-spec/26.1.0/agentspec/tracing.html
+- Agent Spec WayFlow 适配器文档：https://oracle.github.io/agent-spec/26.1.0/adapters/wayflow/index.html

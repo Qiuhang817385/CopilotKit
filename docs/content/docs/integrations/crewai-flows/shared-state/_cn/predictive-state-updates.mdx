@@ -1,0 +1,248 @@
+---
+title: "预测性状态更新"
+icon: "lucide/Podcast"
+description: 将进行中的智能体状态更新流式传输到前端。
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import InstallSDKSnippet from "@/snippets/install-python-sdk-crew.mdx";
+import { FaWrench } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/intermediate-state-render.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  这个视频展示了运行 `npx copilotkit@latest init` 并应用[实现](#实现)部分的结果！
+</Callout>
+
+## 这是什么？
+
+CrewAI Flow 的状态更新是不连续的；只在流程中的函数转换之间发生。
+但是，即使是流程中的_单个函数_通常也需要很多秒才能运行，并且包含用户感兴趣的子步骤。
+
+**智能体原生应用程序**向最终用户尽可能连续地反映智能体正在做什么。
+
+CopilotKit 通过其**_预测性状态更新_**的概念实现了这一点。
+
+## 什么时候应该使用它？
+
+当您想向用户提供关于智能体正在做什么的反馈时，您可以使用它，特别是：
+
+- **保持用户参与** 通过避免长时间加载指示器
+- **建立信任** 通过展示智能体正在做什么
+- 启用**智能体引导** - 允许用户在需要时进行纠正
+
+## 重要说明
+
+当您的 CrewAI 流程中的函数执行完成时，**其返回的状态将成为唯一的真实来源**。
+虽然中间状态更新对于实时反馈很好，但您想要持久化的任何更改必须明确
+包含在函数的最终返回状态中。否则，它们将在函数完成时被覆盖。
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 安装 CopilotKit SDK
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 定义状态
+        我们将在状态中定义一个 `observed_steps` 字段，随着智能体编写报告的不同部分而更新。
+
+        <Tabs groupId="language_crewai-flows_agent" items=["Python"] persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from copilotkit.crewai import CopilotKitState
+                from typing import Literal
+
+                class AgentState(CopilotKitState):
+                    observed_steps: list[str]  # 已完成步骤的数组
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+    <Step>
+        ### 发出中间状态
+        <TailoredContent
+            className="step"
+            id="state-emission"
+            header={
+                <div>
+                    <p className="text-xl font-semibold">您希望如何发出状态更新？</p>
+                    <p className="text-base">
+                        您可以手动发出状态更新或配置特定的工具调用以发出更新。
+                    </p>
+                </div>
+            }
+        >
+            <TailoredContentOption
+                id="manual-emission"
+                title="手动预测性状态更新"
+                description="手动发出状态更新，以最大程度控制何时发生更新。"
+                icon={<FaArrowUp />}
+            >
+                对于长时间运行的任务，您可以逐步发出状态更新作为最终状态的预测。在此示例中，我们通过在每个更新之间延迟一秒钟来模拟长时间运行的任务。
+                <Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from copilotkit.crewai import copilotkit_emit_state # [!code highlight]
+                        from crewai.flow.flow import Flow, start
+                        import asyncio
+
+                        class SampleAgentFlow(Flow):
+                            # ...
+                            @start()
+                            async def start_flow(self):
+                                # ...
+
+                                # 模拟逐个执行步骤
+                                steps = [
+                                    "分析输入数据...",
+                                    "识别关键模式...",
+                                    "生成建议...",
+                                    "格式化最终输出..."
+                                ]
+
+                                for step in steps:
+                                    self.state["observed_steps"] = self.state.get("observed_steps", []) + [step]
+                                    await copilotkit_emit_state(self.state) # [!code highlight]
+                                    await asyncio.sleep(1)
+
+                            # ...
+                        ```
+                    </Tab>
+                </Tabs>
+            </TailoredContentOption>
+
+            <TailoredContentOption
+                id="tool-emission"
+                title="基于工具的预测性状态更新"
+                description="配置特定的工具调用以自动发出中间状态更新。"
+                icon={<FaWrench />}
+            >
+                对于长时间运行的任务，您可以配置 CopilotKit 以在调用特定工具时自动预测状态更新。在此示例中，我们将配置 CopilotKit 以在 LLM 调用步骤进度工具时预测状态更新。
+                <Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python
+                        from copilotkit.crewai import copilotkit_predict_state
+                        from crewai.flow.flow import Flow, start
+
+                        class SampleAgentFlow(Flow):
+
+                            @start
+                            async def start_flow(self):
+                                # 告诉 CopilotKit 将步骤进度工具调用视为最终状态的预测
+                                copilotkit_predict_state({
+                                    "observed_steps": {
+                                        "tool": "StepProgressTool",
+                                        "tool_argument": "steps"
+                                    }
+                                })
+
+                                step_progress_tool = {
+                                    "type": "function",
+                                    "function": {
+                                        "name": "StepProgressTool",
+                                        "description": "通过更新步骤数组来记录进度",
+                                        "parameters": {
+                                            "type": "object",
+                                            "properties": {
+                                                "steps": {
+                                                    "type": "array",
+                                                    "items": {"type": "string"},
+                                                    "description": "已完成步骤的数组"
+                                                }
+                                            },
+                                            "required": ["steps"]
+                                        }
+                                    }
+                                }
+
+                                # 向 LLM 提供工具并调用模型
+                                response = await copilotkit_stream(
+                                    completion(
+                                        model="openai/gpt-5.2",
+                                        messages=[
+                                            {
+                                                "role": "system",
+                                                "content": "你是一个任务执行者。假装执行分配给你的任务，使用 StepProgressTool 报告步骤。" # [!code highlight]
+                                            },
+                                            *self.state.get("messages", [])
+                                        ],
+                                        tools=[step_progress_tool],
+                                        stream=True
+                                    )
+                                )
+                        ```
+                    </Tab>
+                </Tabs>
+            </TailoredContentOption>
+        </TailoredContent>
+    </Step>
+    <Step>
+        ### 观察预测
+        这些预测将在智能体运行时发出，允许您在最终状态确定之前跟踪其进度。
+
+        ```tsx title="ui/app/page.tsx"
+        import { useAgent } from "@copilotkit/react-core/v2";
+
+        // ...
+
+        const YourMainContent = () => {
+            // 获取对预测状态和最终状态的访问权限
+            const { agent } = useAgent({ agentId: "sample_agent" });
+
+            // 添加状态渲染器以观察预测
+            useAgent({
+                agentId: "sample_agent",
+                render: ({ state }) => {
+                    if (!state.observed_steps?.length) return null;
+                    return (
+                        <div>
+                            <h3>当前进度：</h3>
+                            <ul>
+                                {state.observed_steps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    );
+                },
+            });
+
+            return (
+                <div>
+                    <h1>智能体进度</h1>
+                    {agent.state?.observed_steps?.length > 0 && (
+                        <div>
+                            <h3>最终步骤：</h3>
+                            <ul>
+                                {agent.state.observed_steps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )
+        }
+        ```
+    </Step>
+    <Step>
+        ### 试试看！
+        现在您会注意到，当智能体取得进展时，状态预测会被发出，让您在最终状态确定之前了解其工作。
+        您可以将此模式应用于智能体中的任何长时间运行的任务。
+    </Step>
+
+</Steps>

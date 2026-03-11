@@ -1,0 +1,162 @@
+{
+ /*
+  * 注意！不要修改此文件！
+  * 此页面是自动生成的。如果您想对此页面进行任何更改，必须在以下位置进行：
+  * packages/v1/react-core/src/components/copilot-provider/copilotkit.tsx
+  */
+}
+
+此组件通常包装您的整个应用程序（或您想要拥有协驾驶舱的应用程序子树）。它向所有其他组件和钩子提供协驾驶舱上下文。
+
+## 示例
+
+您可以在[此处](/direct-to-llm/guides/self-hosting)找到有关自托管 CopilotKit 的更多信息。
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+<CopilotKit runtimeUrl="<your-runtime-url>">
+  // ... 您的应用 ...
+</CopilotKit>
+```
+
+## 属性
+
+<PropertyReference name="publicApiKey" type="string"  >
+您的 Copilot Cloud API 密钥。
+
+  还没有？前往 https://cloud.copilotkit.ai 免费获取一个。
+</PropertyReference>
+
+<PropertyReference name="publicLicenseKey" type="string"  >
+用于访问 CopilotKit 高级功能的公共许可证密钥。
+
+  还没有？前往 https://cloud.copilotkit.ai 免费获取一个。
+</PropertyReference>
+
+<PropertyReference name="guardrails_c" type="{ validTopics?: string[]; invalidTopics?: string[]; }"  >
+使用护栏将输入限制在特定主题。
+  @remarks
+
+  此功能仅在使用 CopilotKit 的托管云服务时可用。要使用此功能，请在 https://cloud.copilotkit.ai 注册以获取您的 publicApiKey。该功能允许将聊天对话限制在特定主题。
+</PropertyReference>
+
+<PropertyReference name="runtimeUrl" type="string"  >
+Copilot Runtime 实例的端点。请参阅 Copilot Runtime API 文档。
+</PropertyReference>
+
+<PropertyReference name="transcribeAudioUrl" type="string"  >
+Copilot 转录音频服务的端点。
+</PropertyReference>
+
+<PropertyReference name="textToSpeechUrl" type="string"  >
+Copilot 文本转语音服务的端点。
+</PropertyReference>
+
+<PropertyReference name="headers" type="Record<string, string>"  >
+随请求发送的附加头信息。
+
+  例如：
+  ```json
+  {
+    "Authorization": "Bearer X"
+  }
+  ```
+</PropertyReference>
+
+<PropertyReference name="children" type="ReactNode" required >
+要在 CopilotKit 中渲染的子元素。
+</PropertyReference>
+
+<PropertyReference name="properties" type="Record<string, any>"  >
+随请求发送的自定义属性。
+  可以包含用于线程创建的 threadMetadata 和用于 LangGraph Platform 身份验证的 authorization。
+  例如：
+  ```js
+  {
+    'user_id': 'users_id',
+    'authorization': 'your-auth-token', // 用于 LangGraph Platform 身份验证
+    threadMetadata: {
+      'account_id': '123',
+      'user_type': 'premium'
+    }
+  }
+  ```
+
+  注意：`authorization` 属性会自动转发给 LangGraph 智能体。有关详细信息，请参阅 LangGraph 智能体身份验证指南（见上面的代码示例）。
+</PropertyReference>
+
+<PropertyReference name="credentials" type="RequestCredentials"  >
+指示用户代理是否应在跨域请求的情况下从其他域发送或接收 cookie。
+
+  要启用仅 HTTP cookie 身份验证，请设置 `credentials="include"` 并在运行时端点上配置
+  CORS：
+
+  ```tsx
+  // 前端 (https://myapp.com)
+  <CopilotKit runtimeUrl="https://api.myapp.com/copilotkit" credentials="include">
+    {children}
+  </CopilotKit>
+
+  // 后端 (https://api.myapp.com)
+  copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    endpoint: "/copilotkit",
+    cors: {
+      origin: "https://myapp.com",
+      credentials: true,
+    },
+  });
+  ```
+</PropertyReference>
+
+<PropertyReference name="showDevConsole" type="boolean"  >
+是否显示开发控制台。
+
+  设置为 `true` 以显示错误横幅和提示，`false` 以隐藏所有错误 UI。
+  默认为生产安全设置为 `false`。
+</PropertyReference>
+
+<PropertyReference name="agent" type="string"  >
+要使用的智能体名称。
+</PropertyReference>
+
+<PropertyReference name="forwardedParameters" type="Pick<ForwardedParametersInput, 'temperature'>"  >
+用于任务的转发参数。
+</PropertyReference>
+
+<PropertyReference name="authConfig_c" type="{ SignInComponent: React.ComponentType<{ onSignInComplete: (authState: AuthState) => void; }>; }"  >
+用于 CopilotKit 的身份验证配置。
+  @remarks
+
+  此功能仅在使用 CopilotKit 的托管云服务时可用。要使用此功能，请在 https://cloud.copilotkit.ai 注册以获取您的 publicApiKey。该功能允许将聊天对话限制在特定主题。
+</PropertyReference>
+
+<PropertyReference name="threadId" type="string"  >
+用于 CopilotKit 的线程 ID。
+</PropertyReference>
+
+<PropertyReference name="onError" type="CopilotErrorHandler"  >
+用于全面调试和可观测性的可选错误处理程序。
+
+  需要 publicApiKey：仅当提供 publicApiKey 时错误处理才有效。
+  这是 Copilot Cloud 的高级功能。
+
+  @param errorEvent - 具有丰富调试上下文的结构化错误事件
+
+  @example
+  ```typescript
+  <CopilotKit
+    publicApiKey="ck_pub_your_key"
+    onError={(errorEvent) => {
+      debugDashboard.capture(errorEvent);
+    }}
+  >
+  ```
+</PropertyReference>
+
+<PropertyReference name="enableInspector" type="boolean"  >
+启用或禁用 CopilotKit Inspector，让您检查 AG-UI 事件、
+  查看智能体消息、检查智能体状态并可视化智能体上下文。默认为
+  启用。
+</PropertyReference>

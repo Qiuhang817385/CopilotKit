@@ -1,0 +1,42 @@
+---
+title: "GroqAdapter"
+description: "用于 Groq 的 Copilot Runtime 适配器。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/runtime/src/service-adapters/groq/groq-adapter.ts
+  */
+}
+用于 Groq 的 Copilot Runtime 适配器。
+ 
+## 示例
+
+```ts
+import { CopilotRuntime, GroqAdapter } from "@copilotkit/runtime";
+import { Groq } from "groq-sdk";
+ 
+const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
+ 
+const copilotKit = new CopilotRuntime();
+ 
+return new GroqAdapter({ groq, model: "<model-name>" });
+```
+
+## 构造函数参数
+
+<PropertyReference name="groq" type="Groq"  > 
+可选的 Groq 实例。
+</PropertyReference>
+
+<PropertyReference name="model" type="string"  > 
+要使用的模型。
+</PropertyReference>
+
+<PropertyReference name="disableParallelToolCalls" type="boolean"  default="false"> 
+是否禁用并行工具调用。
+  你可以禁用并行工具调用来强制模型按顺序执行工具调用。
+  如果你想按特定顺序执行工具调用，以便一个工具调用引入的状态变更对下一个工具调用可见（即新的 actions 或 readables），这会很有用。
+</PropertyReference>

@@ -1,0 +1,116 @@
+---
+title: 人机协同
+icon: "lucide/Wrench"
+description: 创建前端工具并在您的 Pydantic AI 智能体中使用它们进行人机协同交互。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/pydantic-ai/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义客户端函数，您的 Pydantic AI 智能体可以调用这些函数，执行完全在用户的浏览器中进行。当您的智能体调用前端工具时，
+逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于让[您的智能体控制 UI](/pydantic-ai/frontend-tools)、[生成式 UI](/pydantic-ai/frontend-tools)，或用于人机协同交互。
+
+在本指南中，我们介绍将前端工具用于人机协同。
+
+## 什么时候应该使用它？
+
+当您需要智能体与客户端原语交互时，请使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+      ### 运行并连接您的智能体
+      <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式加以利用。其中一种方式是设置一个
+        工具响应由用户决策决定的人机协同流程。
+
+        在本示例中，我们将模拟执行命令的"审批"流程。首先，使用 `useHumanInTheLoop` 钩子创建一个
+        提示用户审批的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "offerOptions",
+            description: "为用户提供两个选项之间的选择，让他们选择其中一个。",
+            parameters: [
+              {
+                name: "option_1",
+                type: "string",
+                description: "第一个选项",
+                required: true,
+              },
+              {
+                name: "option_2",
+                type: "string",
+                description: "第二个选项",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`${args.option_1} 被选中`)}>{args.option_1}</button>
+                  <button onClick={() => respond(`${args.option_2} 被选中`)}>{args.option_2}</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ### 设置您的智能体
+
+        当您创建智能体时，Pydantic AI 会自动识别人机协同工具。无需特殊配置：
+
+        ```python title="agent.py"
+        from pydantic_ai import Agent
+
+        agent = Agent('openai:gpt-5.2-mini')
+        app = agent.to_ag_ui()
+        ```
+
+        前端工具通过 AG-UI 协议由 CopilotKit 自动填充，并可供您的智能体使用。
+    </Step>
+    <Step>
+        ### 试试看！
+
+        您现在已经让您的智能体能够向用户显示两个选项并让他们选择其中一个。然后，智能体将知道用户的选择，并可以在后续步骤中使用它。
+
+        ```
+        你能给我展示两个好的餐厅名称选项吗？
+        ````
+    </Step>
+</Steps>

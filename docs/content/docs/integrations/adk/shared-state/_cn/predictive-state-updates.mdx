@@ -1,0 +1,212 @@
+---
+title: "预测性状态更新"
+icon: "lucide/Podcast"
+description: 将进行中的智能体状态更新流式传输到前端。
+---
+import { IframeSwitcher } from "@/components/content"
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { FaWrench } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
+
+{/* TODO: Re-add once the dojo example is updated and works */}
+{/* <IframeSwitcher
+  id="predictive-state-updates-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/predictive_state_updates?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/predictive_state_updates?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/adk-middleware/feature/predictive_state_updates) 中的预测性状态更新。
+</Callout> */}
+
+## 这是什么？
+
+ADK 智能体的状态更新是不连续的；只有在显式进行状态更改时才会更新。
+但即使是_单个操作_通常也需要很多秒才能运行，并且包含用户感兴趣的子步骤。
+
+**智能体原生应用**尽可能**持续地向最终用户反映**智能体正在做什么。
+
+CopilotKit 通过其**_预测性状态更新_**概念实现了这一点。
+
+## 什么时候使用它？
+
+当您想要：
+- **保持用户参与**，避免长时间的加载指示器
+- **建立信任**，向用户展示智能体正在做什么
+- 实现**智能体引导** - 允许用户在需要时纠正智能体的方向
+
+## 重要说明
+
+当您的智能体完成执行时，**其最终状态成为唯一的事实来源**。虽然中间状态更新对于实时反馈很好，但您想要持久化的任何更改都必须显式包含在最终状态中。否则，它们将在操作完成时被覆盖。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 定义状态
+    我们将在状态中定义一个 `observed_steps` 字段，随着智能体执行任务的不同步骤而更新。
+
+    ```python title="agent.py"
+    from typing import Dict, List
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+    from google.adk.agents import LlmAgent
+    from google.adk.tools import ToolContext
+
+
+    class AgentState(BaseModel):
+        """智能体的状态。"""
+        observed_steps: List[str] = []
+    ```
+  </Step>
+  <Step>
+    ### 发出中间状态
+
+    <TailoredContent
+        id="state-emission"
+        header={
+            <div>
+                <p className="text-xl font-semibold">您希望如何发出状态更新？</p>
+                <p className="text-base">
+                    您可以手动发出状态更新或配置特定的工具调用以发出更新。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="tool-emission"
+            title="基于工具的预测性状态更新"
+            description="配置特定的工具调用以自动发出中间状态更新。"
+            icon={<FaWrench />}
+        >
+            对于长时间运行的任务，您可以创建一个更新状态并将其发送到前端的工具。在此示例中，我们将创建一个步骤进度工具，LLM 调用它来报告其进度。
+
+            ```python title="agent.py"
+            from typing import Dict, List
+            from fastapi import FastAPI
+            from pydantic import BaseModel
+            from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+            from google.adk.agents import LlmAgent
+            from google.adk.tools import ToolContext
+
+
+            class AgentState(BaseModel):
+                """智能体的状态。"""
+                observed_steps: List[str] = []
+
+
+            def step_progress(tool_context: ToolContext, steps: List[str]) -> Dict[str, str]:
+                """报告当前进度步骤。
+
+                Args:
+                    tool_context (ToolContext): 用于访问状态的工具上下文。
+                    steps (List[str]): 到目前为止完成的步骤列表。
+
+                Returns:
+                    Dict[str, str]: 表示已收到进度的字典。
+                """
+                tool_context.state["observed_steps"] = steps
+                return {"status": "success", "message": "进度已接收。"}
+
+
+            agent = LlmAgent(
+                name="my_agent",
+                model="gemini-2.5-flash",
+                instruction="""
+                你是一个任务执行者。当接到任务时，将其分解为步骤
+                并在完成每个步骤后使用 step_progress 工具报告你的进度。
+                """,
+                tools=[step_progress],
+            )
+
+            adk_agent = ADKAgent(
+                adk_agent=agent,
+                app_name="demo_app",
+                user_id="demo_user",
+                session_timeout_seconds=3600,
+                use_in_memory_services=True,
+            )
+
+            app = FastAPI()
+            add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+            if __name__ == "__main__":
+                import uvicorn
+                uvicorn.run(app, host="0.0.0.0", port=8000)
+            ```
+
+            <Callout>
+              使用此配置，每次调用 `step_progress` 工具时，智能体都会发出状态更新，让前端实时了解进度。
+            </Callout>
+        </TailoredContentOption>
+    </TailoredContent>
+  </Step>
+  <Step>
+    ### 观察预测
+    这些预测将在智能体运行时发出，允许您在最终状态确定之前跟踪其进度。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2";
+
+    // ...
+    type AgentState = {
+        observed_steps: string[];
+    };
+
+    const YourMainContent = () => {
+        // 获取对预测状态和最终状态的访问
+        const { agent } = useAgent({ agentId: "my_agent" });
+
+        // 添加状态渲染器以观察预测
+        useAgent({
+            agentId: "my_agent",
+            render: ({ state }) => {
+                if (!state.observed_steps?.length) return null;
+                return (
+                    <div>
+                        <h3>当前进度：</h3>
+                        <ul>
+                            {state.observed_steps.map((step, i) => (
+                                <li key={i}>{step}</li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            },
+        });
+
+        return (
+            <div>
+                <h1>智能体进度</h1>
+                {agent.state?.observed_steps?.length > 0 && (
+                    <div>
+                        <h3>最终步骤：</h3>
+                        <ul>
+                            {agent.state.observed_steps.map((step, i) => (
+                                <li key={i}>{step}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    现在您会注意到，状态预测会在智能体取得进展时发出，让您在最终状态确定之前了解其工作情况。
+    您可以将此模式应用于智能体中的任何长时间运行的任务。
+  </Step>
+</Steps>
+

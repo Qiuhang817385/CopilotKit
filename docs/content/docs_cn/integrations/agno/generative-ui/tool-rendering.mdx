@@ -1,0 +1,114 @@
+---
+title: 工具渲染
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染代理的工具调用。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+import RunAndConnect from "@/snippets/integrations/agno/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="backend-tools-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/agno/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/agno/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout>
+  此示例演示了[实现](#implementation)部分在 <a href="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat" target="_blank">CopilotKit 功能查看器</a>中的应用。
+</Callout>
+
+## 这是什么？
+
+工具是 LLM 调用预定义、通常是确定性函数的一种方式。CopilotKit 允许你在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 什么时候应该使用这个？
+
+当你在 UI 中渲染工具时，可以为用户提供关于代理正在做什么的反馈，特别是当你的代理正在调用工具时。CopilotKit 允许你完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接你的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+<Step>
+### 给你的代理一个可调用的工具
+
+<Tabs groupId="language_agno_agent" items={['Python']} default="Python" persist>
+    <Tab value="Python">
+        ```python title="agent.py"
+        from agno.agent import Agent
+        from agno.models.openai import OpenAIChat
+        from agno.tools import tool
+        # ...
+
+        # [!code highlight:6]
+        @tool
+        def get_weather(location: str):
+            """
+            Get the weather for a given location.
+            """
+            return f"The weather for {location} is 70 degrees."
+
+        # ...
+
+        agent = Agent(
+            model=OpenAIChat(id="gpt-5.2"),
+            tools=[get_weather], # [!code highlight]
+            description="A helpful assistant that can answer questions and provide information.",
+            instructions="Be helpful and friendly. Format your responses using markdown where appropriate.",
+        )
+        ```
+    </Tab>
+
+</Tabs>
+</Step>
+<Step>
+### 在你的前端渲染工具调用
+此时，你的代理将能够调用 `get_weather` 工具。现在
+我们只需要添加一个 `useRenderTool` 钩子即可在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  为了在 UI 中渲染工具调用，操作的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  {/* [!code highlight:12] */}
+  useRenderTool({
+    name: "get_weather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "Calling weather API..."}
+          {status === "complete" && `Called the weather API for ${args.location}.`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让代理获取某个位置的天气。你应该会看到我们添加的自定义 UI 组件渲染工具调用并显示传递给工具的参数。
+
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

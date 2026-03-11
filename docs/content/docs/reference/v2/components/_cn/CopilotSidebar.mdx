@@ -1,0 +1,138 @@
+---
+title: "CopilotSidebar"
+description: "CopilotChat 的侧边栏变体，在固定的侧面板中渲染"
+---
+
+## 概述
+
+`CopilotSidebar` 渲染一个固定的侧边栏面板用于聊天交互。它包装 [`CopilotChat`](/reference/v2/components/CopilotChat) 并提供侧边栏特定的布局和打开/关闭行为。侧边栏包含一个带有标题和关闭按钮的头部，可以通过浮动按钮切换。
+
+有关此组件的弹窗变体，请参阅 [`CopilotPopup`](/reference/v2/components/CopilotPopup)。
+
+## 导入
+
+```tsx
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## Props
+
+### 自有 Props
+
+<PropertyReference name="header" type="SlotValue<typeof CopilotModalHeader>">
+  侧边栏头部的插槽覆盖。接受替换组件、合并到默认组件的 `className` 字符串，或部分 props 对象。默认头部显示标题和关闭按钮。
+</PropertyReference>
+
+<PropertyReference name="defaultOpen" type="boolean" default="false">
+  组件首次挂载时侧边栏是否应该打开。
+</PropertyReference>
+
+<PropertyReference name="width" type="number | string">
+  侧边栏面板的宽度。接受数字（像素）或 CSS 字符串（例如 `"400px"`、 `"30vw"`）。
+</PropertyReference>
+
+### 继承的 CopilotChat Props
+
+`CopilotSidebar` 接受来自 [`CopilotChatProps`](/reference/v2/components/CopilotChat) 的所有 props，**除了**在内部设置为 `CopilotSidebarView` 的 `chatView`。这包括：
+
+<PropertyReference name="agentId" type="string">
+  要使用的代理 ID。必须与 `CopilotKitProvider` 中配置的代理匹配。
+</PropertyReference>
+
+<PropertyReference name="threadId" type="string">
+  对话线程的 ID。
+</PropertyReference>
+
+<PropertyReference name="labels" type="Partial<CopilotChatLabels>">
+  聊天内部渲染的所有文本字符串的部分标签覆盖。
+</PropertyReference>
+
+<PropertyReference name="autoScroll" type="boolean" default="true">
+  当新消息到达时，聊天是否自动滚动到底部。
+</PropertyReference>
+
+<PropertyReference name="inputProps" type="Partial<Omit<CopilotChatInputProps, 'children'>>">
+  转发到内部 `CopilotChatInput` 组件的额外 props。
+</PropertyReference>
+
+<PropertyReference name="welcomeScreen" type='SlotValue<React.FC<WelcomeScreenProps>> | boolean'>
+  控制没有消息时显示的欢迎屏幕。
+</PropertyReference>
+
+所有 `CopilotChatView` 插槽 props（`messageView`、`input`、`scrollView`、`inputContainer`、`feather`、`disclaimer`、`suggestionView`）也被接受并转发。
+
+## 插槽系统
+
+所有插槽 prop 遵循 CopilotKit v2 组件中使用的相同覆盖模式。每个插槽接受以下三种值类型之一：
+
+| 值 | 行为 |
+|-------|----------|
+| **组件** | 完全替换默认组件。接收与默认值相同的 props。 |
+| **`className` 字符串** | 通过 `twMerge` 合并到默认组件的类列表中。 |
+| **部分 props 对象** | 作为额外或覆盖的 props 展开到默认组件中。 |
+
+## 用法
+
+### 基本用法
+
+```tsx
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotSidebar
+      agentId="my-agent"
+      labels={{ modalHeaderTitle: "助手" }}
+    />
+  );
+}
+```
+
+### 默认打开并自定义宽度
+
+```tsx
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotSidebar
+      agentId="my-agent"
+      defaultOpen={true}
+      width={500}
+    />
+  );
+}
+```
+
+### 自定义头部
+
+```tsx
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotSidebar
+      agentId="my-agent"
+      header="bg-indigo-700 text-white"
+    />
+  );
+}
+```
+
+## 行为
+
+- **切换按钮**：渲染一个浮动切换按钮来打开和关闭侧边栏。该按钮内部使用 `CopilotChatToggleButton`。
+- **模态状态**：打开/关闭状态通过聊天配置上下文管理。`defaultOpen` prop 设置初始状态；之后，状态变化来自用户交互（切换按钮、头部关闭按钮）。
+- **布局**：侧边栏内部使用 `CopilotSidebarView`，它提供侧边栏特定的欢迎屏幕布局，顶部是建议，中间是欢迎消息，底部固定是输入。
+- **固定定位**：侧边栏在视口一侧渲染为固定面板，根据 CSS 推开或覆盖内容。
+- **代理连接**：所有代理连接（消息、运行状态、建议）由父级 `CopilotChat` 逻辑处理。
+
+## 相关
+
+- [`CopilotChat`](/reference/v2/components/CopilotChat) -- 内部使用的基础聊天组件
+- [`CopilotPopup`](/reference/v2/components/CopilotPopup) -- 弹窗变体
+- [`CopilotChatView`](/reference/v2/components/CopilotChatView) -- 内部使用的布局组件

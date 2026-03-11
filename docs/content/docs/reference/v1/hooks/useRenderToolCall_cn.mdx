@@ -1,0 +1,128 @@
+---
+title: "useRenderToolCall"
+description: "useRenderToolCall Hook 支持在前端渲染后端工具调用。"
+---
+
+<Callout type="warning">
+  `useRenderToolCall` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+</Callout>
+
+`useRenderToolCall` 纯粹是一个渲染 Hook —— 它显示工具调用的自定义 UI，而不执行
+任何逻辑。这通常用于在聊天界面中可视化后端工具执行，向用户展示 AI 在幕后正在做什么。
+
+此 Hook 没有处理函数。你只需提供一个渲染函数，该函数接收有关工具调用的信息（参数、状态、结果）并以你想要的方式显示它。你可以针对特定的工具名称或使用星号（`*`）来捕获和渲染所有工具调用。
+
+## 用法
+
+### 渲染特定后端工具
+
+```tsx
+import { useRenderToolCall } from "@copilotkit/react-core";
+
+useRenderToolCall({
+  name: "analyzeData",
+  description: "显示数据分析结果",
+  parameters: [
+    {
+      name: "datasetName",
+      type: "string",
+      description: "正在分析的数据集名称",
+      required: true,
+    },
+    {
+      name: "metrics",
+      type: "string[]",
+      description: "正在计算的指标",
+      required: true,
+    },
+  ],
+  render: ({ args, status, result }) => {
+    if (status === "inProgress") {
+      return (
+        <div className="p-4 border rounded animate-pulse">
+          <h3>正在分析 {args.datasetName}...</h3>
+          <p>正在计算：{args.metrics?.join(", ")}</p>
+        </div>
+      );
+    }
+
+    if (status === "complete" && result) {
+      return (
+        <div className="p-4 border rounded bg-green-50">
+          <h3>分析完成：{args.datasetName}</h3>
+          <pre className="mt-2 p-2 bg-gray-100 rounded">
+            {JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      );
+    }
+
+    return null;
+  },
+});
+```
+
+## 从 useCopilotAction 迁移
+
+如果你正在从仅具有 `render` 函数的 `useCopilotAction` 迁移：
+
+```tsx
+// 使用 useCopilotAction 之前
+useCopilotAction({
+  name: "showResult",
+  render: ({ args }) => <ResultCard {...args} />,
+});
+
+// 使用 useRenderToolCall 之后
+useRenderToolCall({
+  name: "showResult",
+  render: ({ args }) => <ResultCard {...args} />,
+});
+```
+
+迁移很简单 - 只需更改 Hook 名称。渲染 props 保持不变。
+
+## 参数
+
+<PropertyReference name="name" type="string" required >
+要渲染的工具名称。使用 `"*"` 捕获所有工具调用。
+</PropertyReference>
+
+<PropertyReference name="description" type="string"  >
+此渲染器作用的描述。主要用于文档目的。
+</PropertyReference>
+
+<PropertyReference name="parameters" type="T"  >
+可选的参数定义数组。如果提供，可为渲染函数中的 args 添加类型安全。每个参数对象应具有：
+- `name`（字符串）：参数名称
+- `type`（字符串）：参数类型（例如 "string"、"number"、"boolean"、"string[]"、"object"）
+- `description`（字符串）：参数用途的描述
+- `required`（布尔值）：参数是否必需
+- `properties`（数组，可选）：对于对象类型，使用相同的模式定义嵌套属性
+
+简单示例：`[{ name: "datasetName", type: "string", description: "数据集名称", required: true }]`
+
+嵌套示例：
+```typescript
+[
+  {
+    name: "analysisConfig",
+    type: "object",
+    description: "分析配置",
+    required: true,
+    properties: [
+      { name: "method", type: "string", description: "要使用的分析方法", required: true },
+      { name: "threshold", type: "number", description: "阈值", required: false }
+    ]
+  }
+]
+```
+</PropertyReference>
+
+<PropertyReference name="render" type="FrontendAction<T>['render']"  >
+渲染工具调用 UI 的 React 组件。该组件接收 `status`、`args`、`result`、`name` 和 `description` 的 props。
+</PropertyReference>
+
+<PropertyReference name="available" type="'disabled' | 'enabled'"  >
+渲染器是否可用。设置为 "disabled" 以阻止渲染。
+</PropertyReference>

@@ -1,0 +1,157 @@
+---
+title: "CopilotChat"
+description: "将代理连接到聊天视图的高级聊天组件"
+---
+
+## 概述
+
+`CopilotChat` 是一个高级聊天容器，它将代理连接到 `CopilotChatView`，同时提供配置上下文。它通过 `useAgent` 获取代理，在挂载 CopilotKit 代理时触发初始的 `runAgent`，管理待处理状态，并在提交后自动清除输入。通过直接传递 `CopilotChatView` props 来覆盖任何内部插槽。
+
+`CopilotChat` 自动管理消息、运行状态和建议——你只需要指定要连接哪个代理，并可选地自定义标签或插槽覆盖。
+
+## 导入
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## Props
+
+### 自有 Props
+
+<PropertyReference name="agentId" type="string">
+  要使用的代理 ID。必须与 `CopilotKitProvider` 中配置的代理匹配。省略时默认为 provider 级别的默认代理。
+</PropertyReference>
+
+<PropertyReference name="threadId" type="string">
+  对话线程的 ID。传递特定的线程 ID 以恢复现有对话，或让代理创建一个新对话。
+</PropertyReference>
+
+<PropertyReference name="labels" type="Partial<CopilotChatLabels>">
+  聊天内部渲染的所有文本字符串（输入占位符、工具栏按钮、免责声明文本等）的部分标签覆盖。任何你省略的标签都会回退到内置默认值。
+</PropertyReference>
+
+<PropertyReference name="chatView" type="SlotValue<typeof CopilotChatView>">
+  内部 `CopilotChatView` 组件的插槽覆盖。接受替换组件、合并到默认组件的 `className` 字符串，或扩展默认组件的部分 props 对象。
+</PropertyReference>
+
+<PropertyReference name="onError" type="(event: { error: Error; code: CopilotKitCoreErrorCode; context: Record<string, any> }) => void | Promise<void>">
+  限定于此聊天代理的错误处理程序。与 provider 级别的 `onError` 一起触发（不会抑制它）。仅接收 `context.agentId` 与此聊天的代理匹配的错误，以及没有 `agentId` 上下文的错误。
+
+  ```tsx
+  <CopilotChat
+    agentId="my-agent"
+    onError={(event) => {
+      if (event.code === "agent_connect_failed") {
+        showToast("无法连接到代理。请重试。");
+      }
+    }}
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="isModalDefaultOpen" type="boolean">
+  在 `CopilotPopup` 或 `CopilotSidebar` 中使用时，控制模态框是否以打开状态开始。存储在聊天配置上下文中，以便子组件可以读取它。
+</PropertyReference>
+
+### 继承的 CopilotChatView Props
+
+`CopilotChat` 接受来自 [`CopilotChatViewProps`](/reference/v2/components/CopilotChatView) 的所有 props，**除了**由代理连接内部管理的 `messages`、`isRunning`、`suggestions`、`suggestionLoadingIndexes` 和 `onSelectSuggestion`。
+
+这意味着你可以将插槽覆盖（如 `messageView`、`input`、`scrollView`、`inputContainer`、`feather`、`disclaimer`、`suggestionView` 和 `welcomeScreen`）直接传递给 `CopilotChat`。
+
+<PropertyReference name="autoScroll" type="boolean" default="true">
+  当新消息到达时，聊天是否自动滚动到底部。
+</PropertyReference>
+
+<PropertyReference name="inputProps" type="Partial<Omit<CopilotChatInputProps, 'children'>>">
+  转发到内部 `CopilotChatInput` 组件的额外 props。使用它来配置自动聚焦、自定义提交处理程序、转录回调或工具菜单。
+</PropertyReference>
+
+<PropertyReference name="welcomeScreen" type='SlotValue<React.FC<WelcomeScreenProps>> | boolean'>
+  控制没有消息时显示的欢迎屏幕。传递 `true` 使用默认值，`false` 禁用，`className` 样式化默认值，或替换组件。
+</PropertyReference>
+
+## 插槽系统
+
+所有从 `CopilotChatView` 继承的插槽 prop 遵循相同的覆盖模式。每个插槽接受以下三种值类型之一：
+
+| 值 | 行为 |
+|-------|----------|
+| **组件** | 完全替换默认组件。接收与默认值相同的 props。 |
+| **`className` 字符串** | 通过 `twMerge` 合并到默认组件的类列表中。 |
+| **部分 props 对象** | 作为额外或覆盖的 props 展开到默认组件中。 |
+
+此外，可以使用 `children` 渲染 prop 来接收所有组合的插槽元素，并将它们排列在自定义布局中。
+
+## 用法
+
+### 基本用法
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotChat
+      agentId="my-agent"
+      labels={{ chatInputPlaceholder: "问我任何问题..." }}
+    />
+  );
+}
+```
+
+### 自定义欢迎屏幕
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotChat
+      agentId="my-agent"
+      welcomeScreen={({ input, suggestionView }) => (
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <h2>欢迎使用助手</h2>
+          {suggestionView}
+          {input}
+        </div>
+      )}
+    />
+  );
+}
+```
+
+### 覆盖聊天视图插槽
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function App() {
+  return (
+    <CopilotChat
+      agentId="my-agent"
+      chatView="bg-gray-50 rounded-xl shadow-lg"
+    />
+  );
+}
+```
+
+## 行为
+
+- **代理连接**：挂载时，`CopilotChat` 使用提供的 `agentId` 调用 `useAgent`，并将代理的 `messages`、`isRunning` 和建议状态绑定到 `CopilotChatView`。
+- **初始运行**：如果代理尚未运行，`CopilotChat` 会自动触发 `runAgent`，以便代理可以发送初始问候或设置状态。
+- **自动清除输入**：提交消息后，输入字段会自动清除。
+- **配置上下文**：将子组件包装在 `CopilotChatConfigurationProvider` 中，使 `labels`、`agentId`、`threadId` 和模态状态通过 `useCopilotChatConfiguration` 对所有后代组件可用。
+- **建议管理**：订阅代理的建议系统，并将建议、加载状态和选择回调传递给 `CopilotChatView`。
+
+## 相关
+
+- [`CopilotChatView`](/reference/v2/components/CopilotChatView) -- 内部使用的布局组件
+- [`CopilotPopup`](/reference/v2/components/CopilotPopup) -- `CopilotChat` 的弹窗变体
+- [`CopilotSidebar`](/reference/v2/components/CopilotSidebar) -- `CopilotChat` 的侧边栏变体
+- [`useAgent`](/reference/v2/hooks/useAgent) -- 内部用于访问代理的 hook

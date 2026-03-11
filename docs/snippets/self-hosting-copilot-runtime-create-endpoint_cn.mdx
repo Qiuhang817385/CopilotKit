@@ -1,0 +1,281 @@
+import {
+  MultiProviderContent,
+  If,
+} from "@/components/react/multi-provider-content/multi-provider-content";
+import { quickStartProviders } from "@/components/react/multi-provider-content/utils";
+import { IoLogoVercel, IoLogoNodejs } from "react-icons/io5";
+import { SiNestjs } from "react-icons/si";
+import { RiNextjsLine } from "react-icons/ri";
+
+<MultiProviderContent providersConfig={quickStartProviders}>
+<Callout type="info">
+  如果您计划使用单个 LangGraph 代理作为代理后端（agent-lock 模式），您的 LLM 适配器仅用于建议等周边功能。
+
+如果您还不确定，请忽略此说明。
+
+</Callout>
+
+    <If conditions={[{ key: 'id', value: 'langchain' }]}>
+        <Callout type="info">
+            此处展示的 LangChain 适配器使用 OpenAI，但可以与任何 LLM 配合使用！
+        </Callout>
+    </If>
+
+    <If conditions={[{ key: 'id', value: 'empty' }]}>
+        <Callout type="error">
+            请注意，空适配器仅在与 CoAgents 的 agent lock 模式结合使用时才有效！
+
+            此外，请记住 `useCopilotChatSuggestions`、`CopilotTextarea` 和 `CopilotTask` 将无法工作，因为这些功能需要 LLM。
+        </Callout>
+    </If>
+
+    <If conditions={[{ key: 'packageName', value: true }]}>
+        ### 安装提供商包
+
+        ```npm
+        npm install {{packageName}}
+        ```
+    </If>
+
+    <If conditions={[{ key: 'envVarName', value: true }]}>
+        ### 添加您的 API 密钥
+
+        接下来，将您的 API 密钥添加到项目根目录的 `.env` 文件中（除非您希望直接将其提供给客户端）：
+
+        ```plaintext title=".env"
+        {{envVarName}}=your_api_key_here
+        ```
+    </If>
+
+     <If conditions={[{ key: 'id', value: "bedrock" }]}>
+        ### 添加您的 API 密钥
+
+        接下来，将您的 API 密钥添加到项目根目录的 `.env` 文件中（除非您希望直接将其提供给客户端）：
+
+        ```plaintext title=".env"
+        {{envVarSecret}}=your_secret_key_here
+        {{envVarAccess}}=your_access_key_here
+        {{envVarToken}}=your_session_token_here
+        ```
+    </If>
+
+    <If conditions={[{ key: 'id', value: 'openai' }, { key: 'id', value: 'openai-assistants' }]}>
+        <Callout type="warn">
+            请注意，下面的代码使用 GPT-4o，这需要付费的 OpenAI API 密钥。**如果您使用的是免费的 OpenAI API 密钥**，请将模型更改为其他选项，例如 `gpt-3.5-turbo`。
+        </Callout>
+    </If>
+
+    ### 设置运行时端点
+
+    <Callout type="warn">
+        ### 无服务器函数超时
+
+        部署到无服务器平台（Vercel、AWS Lambda 等）时，请注意默认的函数超时时间可能对于 CopilotKit 的流式响应来说太短：
+
+        - Vercel 默认值：10秒（Hobby）、15秒（Pro）
+        - AWS Lambda 默认值：3秒
+
+        **解决方案选项：**
+        1. 增加函数超时：
+            ```json
+            // vercel.json
+            {
+              "functions": {
+                "api/copilotkit/**/*": {
+                  "maxDuration": 60
+                }
+              }
+            }
+            ```
+        2. 使用 [Copilot Cloud](https://cloud.copilotkit.ai/) 完全避免超时问题
+    </Callout>
+
+    <Tabs groupId="endpoint-type" items={[
+        { value: 'Next.js App Router', icon: <RiNextjsLine className="text-xl" /> },
+        { value: 'Next.js Pages Router', icon: <RiNextjsLine className="text-xl" /> },
+        { value: 'Node.js Express', icon: <IoLogoNodejs className="text-xl" /> },
+        { value: 'Node.js HTTP', icon: <IoLogoNodejs className="text-xl" /> },
+        { value: 'NestJS', icon: <SiNestjs className="text-xl" /> }
+    ]}>
+
+        {/* Next.js App Router */}
+        <Tab value="Next.js App Router">
+            创建一个新路由来处理 `/api/copilotkit` 端点。
+
+            ```ts title="app/api/copilotkit/route.ts"
+            import {
+              CopilotRuntime,
+              {{adapterImport}},
+              copilotRuntimeNextJSAppRouterEndpoint,
+            } from '@copilotkit/runtime';
+            {{extraImports}}
+            import { NextRequest } from 'next/server';
+
+            {{clientSetup}}
+            {{adapterSetup}}
+            const runtime = new CopilotRuntime();
+
+            export const POST = async (req: NextRequest) => {
+              const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                runtime,
+                serviceAdapter,
+                endpoint: '/api/copilotkit',
+              });
+
+              return handleRequest(req);
+            };
+            ```
+
+            您的 Copilot 运行时端点应该在 `http://localhost:3000/api/copilotkit` 可用。
+        </Tab>
+
+        {/* Next.js Pages Router */}
+        <Tab value="Next.js Pages Router">
+            创建一个新路由来处理 `/api/copilotkit` 端点：
+
+            ```ts title="pages/api/copilotkit.ts"
+            import { NextApiRequest, NextApiResponse } from 'next';
+            import {
+              CopilotRuntime,
+              {{adapterImport}},
+              copilotRuntimeNextJSPagesRouterEndpoint,
+            } from '@copilotkit/runtime';
+            {{extraImports}}
+
+            {{clientSetup}}
+            {{adapterSetup}}
+
+            const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+              const runtime = new CopilotRuntime();
+
+              const handleRequest = copilotRuntimeNextJSPagesRouterEndpoint({
+                endpoint: '/api/copilotkit',
+                runtime,
+                serviceAdapter,
+              });
+
+              return await handleRequest(req, res);
+            };
+
+            export default handler;
+            ```
+
+            您的 Copilot 运行时端点应该在 `http://localhost:3000/api/copilotkit` 可用。
+        </Tab>
+
+        {/* Node.js Express */}
+        <Tab value="Node.js Express">
+            创建一个新的 Express.js 应用并设置 Copilot 运行时处理程序：
+
+            ```ts title="server.ts"
+            import express from 'express';
+            import {
+              CopilotRuntime,
+              {{adapterImport}},
+              copilotRuntimeNodeHttpEndpoint,
+            } from '@copilotkit/runtime';
+            {{extraImports}}
+
+            const app = express();
+            {{clientSetup}}
+            {{adapterSetup}}
+
+            app.use('/copilotkit', (req, res, next) => {
+              (async () => {
+                const runtime = new CopilotRuntime();
+                const handler = copilotRuntimeNodeHttpEndpoint({
+                  endpoint: '/copilotkit',
+                  runtime,
+                  serviceAdapter,
+                });
+
+                return handler(req, res);
+              })().catch(next);
+            });
+
+            app.listen(4000, () => {
+              console.log('Listening at http://localhost:4000/copilotkit');
+            });
+            ```
+
+            您的 Copilot 运行时端点应该在 `http://localhost:4000/copilotkit` 可用。
+
+            <Callout type="warn">
+                请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+            </Callout>
+        </Tab>
+
+        {/* Node.js HTTP */}
+        <Tab value="Node.js HTTP">
+            设置一个简单的 Node.js HTTP 服务器并使用 Copilot 运行时处理请求：
+
+            ```ts title="server.ts"
+            import { createServer } from 'node:http';
+            import {
+              CopilotRuntime,
+              {{adapterImport}},
+              copilotRuntimeNodeHttpEndpoint,
+            } from '@copilotkit/runtime';
+            {{extraImports}}
+
+            {{clientSetup}}
+            {{adapterSetup}}
+
+            const server = createServer((req, res) => {
+              const runtime = new CopilotRuntime();
+              const handler = copilotRuntimeNodeHttpEndpoint({
+                endpoint: '/copilotkit',
+                runtime,
+                serviceAdapter,
+              });
+
+              return handler(req, res);
+            });
+
+            server.listen(4000, () => {
+              console.log('Listening at http://localhost:4000/copilotkit');
+            });
+            ```
+
+            您的 Copilot 运行时端点应该在 `http://localhost:4000/copilotkit` 可用。
+
+            <Callout type="warn">
+                请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+            </Callout>
+        </Tab>
+
+        {/* NestJS */}
+        <Tab value="NestJS">
+            在 NestJS 中设置一个控制器来处理 Copilot 运行时端点：
+
+            ```ts title="copilotkit.controller.ts"
+            import { All, Controller, Req, Res } from '@nestjs/common';
+            import { CopilotRuntime, copilotRuntimeNestEndpoint, {{adapterImport}} } from '@copilotkit/runtime';
+            import { Request, Response } from 'express';
+
+            @Controller()
+            export class CopilotKitController {
+              @All('/copilotkit')
+              copilotkit(@Req() req: Request, @Res() res: Response) {
+                {{adapterSetup}}
+                const runtime = new CopilotRuntime();
+
+                const handler = copilotRuntimeNestEndpoint({
+                  runtime,
+                  serviceAdapter,
+                  endpoint: '/copilotkit',
+                });
+                return handler(req, res);
+              }
+            }
+            ```
+
+            您的 Copilot 运行时端点应该在 `http://localhost:3000/copilotkit` 可用。
+
+            <Callout type="warn">
+                请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+            </Callout>
+        </Tab>
+    </Tabs>
+
+</MultiProviderContent>

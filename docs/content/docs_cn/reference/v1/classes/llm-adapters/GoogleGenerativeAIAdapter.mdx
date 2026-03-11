@@ -1,0 +1,40 @@
+---
+title: "GoogleGenerativeAIAdapter"
+description: "适用于 Google Generative AI（例如 Gemini）的 Copilot Runtime 适配器。"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行：
+  * packages/v1/runtime/src/service-adapters/google/google-genai-adapter.ts
+  */
+}
+适用于 Google Generative AI（例如 Gemini）的 Copilot Runtime 适配器。
+ 
+## 示例
+ 
+```ts
+import { CopilotRuntime, GoogleGenerativeAIAdapter } from "@copilotkit/runtime";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+ 
+const genAI = new GoogleGenerativeAI(process.env["GOOGLE_API_KEY"]);
+ 
+const copilotKit = new CopilotRuntime();
+ 
+return new GoogleGenerativeAIAdapter({ model: "gemini-2.5-flash", apiVersion: "v1" });
+```
+
+## 构造函数参数
+
+<PropertyReference name="model" type="string"  > 
+要使用的自定义 Google Generative AI 模型。
+</PropertyReference>
+
+<PropertyReference name="apiVersion" type="'v1' | 'v1beta'"  > 
+要使用的 API 版本（例如 "v1" 或 "v1beta"）。默认为 "v1"。
+</PropertyReference>
+
+<PropertyReference name="apiKey" type="string"  > 
+要使用的 API 密钥。
+</PropertyReference>

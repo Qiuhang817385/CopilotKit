@@ -1,0 +1,230 @@
+---
+title: "CopilotKit v1.50"
+icon: "lucide/Rocket"
+description: "全新的接口、精简的内部结构，且无破坏性变更"
+hideTOC: true
+---
+import { Badge } from "@/components/ui/badge";
+import { V150SignupLink } from "@/components/react/v150-signup-link";
+
+CopilotKit v1.50 现已可用。本页概述了新功能、即将推出的功能以及保持不变的功能。
+
+# 开始使用
+
+设置您的 CopilotKit 版本：
+```npm
+npm install @copilotkit/react-core@latest @copilotkit/react-ui@latest @copilotkit/runtime@latest
+```
+---
+# 概览
+
+CopilotKit v1.50 是一次重大更新。它包含许多备受期待的新功能、底层改进和简化，以及对现有核心元素的广泛改进：
+
+| 功能 | 描述 |
+| --- | --- |
+| [**useAgent**](#useagent) | useCoAgent 的超集，提供更多控制，包括：共享状态、时间旅行、多 Agent 执行和 Agent 相互感知 |
+| [**线程和持久化**](#线程--持久化) | 多个长期运行且可恢复的 Agent 对话 |
+| [**新设计系统**](#新设计系统) | 更深入的 UX 定制 |
+| [**直连 LLM 改进**](#直连-llm-改进) | 共享状态和对更多 LLM 的支持 |
+| [**Zod 架构支持**](#zod-架构支持) | 类型安全的编译和运行时 |
+| [**简化基础设施**](#简化基础设施) | 移除 GraphQL |
+| [**向后兼容**](#向后兼容) | 所有 CopilotKit v1.10 兼容的应用程序都可以更新到 v1.50，无需更改代码 |
+
+---
+
+# 向后兼容
+
+您正在使用的所有功能都将继续工作。v1.50 与使用 v1.10 的客户端代码完全向后兼容。事实上，作为此预发布阶段的第一步，我们希望您从重新构建开始，如果遇到任何问题请告知我们。
+
+### V2 接口
+
+如上所述，所有 v1（或未版本化）的 Hooks 在 v1.50 中继续工作。要利用新 Hooks，您需要使用标记为 /v2 的 Hooks（如下所示）。
+
+您可以选择使用任何新的开发者接口或继续使用旧接口。允许在以下配置中混合使用：
+
+- 新聊天组件 + 旧 Hooks
+- 旧组件 + 新 Hooks
+- 新 v2 API 暴露在子路径下：
+    
+    ```tsx
+    import { CopilotChat, useAgent } from "@copilotkit/react-core/v2";
+    ```
+    
+---
+
+# `useAgent`
+
+v2 Hook useAgent 是 `useCoAgent` 的适当超集，提供更多控制，包括：
+
+### 共享状态
+    
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2";
+    
+    const { agent } = useAgent({ agentId: "my-agent" });
+    
+    agent.state
+    agent.setState
+    ```
+    
+### 时间旅行
+    
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2";
+    
+    const { agent } = useAgent({ agentId: "my-agent" });
+    
+    agent.setMessages()
+    ```
+    
+### 多 Agent 执行
+    
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2";
+    
+    const { agent: langgraph } = useAgent({ agentId: "langgraph" });
+    const { agent: pydantic } = useAgent({ agentId: "pydantic" });
+    
+    [langgraph, pydantic].forEach((agent) => {
+      agent.addMessage({ id: crypto.randomUUID(), role: "user", content: message });
+      agent.runAgent();
+    });
+    ```
+    
+### Agent 相互感知
+
+您甚至可以让 Agent 相互感知！
+    
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2";
+    
+    const { agent: langgraph } = useAgent({ agentId: "langgraph" });
+    const { agent: pydantic } = useAgent({ agentId: "pydantic" });
+    
+    langgraph.setMessages(pydantic.messages)
+    pydantic.setMessages(langgraph.messages)
+    ```
+    
+
+---
+## 即将推出
+v1.50 现已可用，useAgent 已完全准备就绪。其他功能（如下所列）将在不久的将来陆续添加。
+
+### 线程和持久化
+
+v1.50 提供对线程对话的支持，内置线程存储和连接组件。开箱即提供使用 InMemory 或 SQLite 进行开发的支持。
+
+#### 线程存储
+    - **开发：** 开箱即用的 `InMemory` 或 `SQLite`
+        
+        ```tsx
+        import { CopilotRuntime } from "@copilotkit/runtime";
+        
+        const runtime = new CopilotRuntime({
+          agents: {
+            default: agent,
+          },
+          runner: new InMemoryAgentRunner(), // 新的持久化抽象
+        });
+        ```
+        
+    - **生产**
+        - **即将推出！** 使用 **Copilot Cloud**（托管）或 **Copilot Enterprise**（自托管）将线程持久化到您自己的数据库，获得自动流重新连接、内置产品分析。
+            - **👉 加入 [企业抢先体验](https://go.copilotkit.ai/enterprise-threads-waitlist) 等待名单！**
+        
+#### 线程连接
+    - 加载线程
+        
+        ```tsx
+        import { CopilotChat } from "@copilotkit/react-core/v2"
+        
+        <CopilotChat threadId="xyz" /> // 连接到运行时的 runner
+        ```
+        
+    - 流重新连接
+        
+        ```tsx
+        import { CopilotChat } from "@copilotkit/react-core/v2"
+        
+        <CopilotChat threadId="xyz" /> // 如果页面重新加载将重新连接
+        ```
+        
+
+---
+
+### 新设计系统
+
+您可以继续使用 v1 接口中的设计系统，但 v2 提供了完整的 UI 改造和更深入的定制：
+
+- 新的 `CopilotChat`、`CopilotSidebar`、`CopilotPopup`
+    - 只需从 `@copilotkit/react-core/v2` 导入
+    - 用于灵活覆盖的新插槽系统
+    - 开箱即用的更优 Markdown 渲染
+- 与 Agent 无缝协作的建议 API
+
+---
+
+### Zod 架构支持
+
+许多 CopilotKit Hooks 现在接受 Zod 架构，在编译和运行时强制执行类型安全。
+
+- `useHumanInTheLoop` - 现在接受 Zod 架构
+- `useFrontendTool` - 现在接受 Zod 架构
+- `useRenderToolCall` - 新的开发体验原则
+
+---
+
+### 简化基础设施
+
+早期版本的 CopilotKit 需要安装 GraphQL。新架构已完全移除这一要求。
+
+---
+
+### 直连 LLM 改进
+
+我们的直连 LLM 集成现在支持更多模型并实现共享状态。
+
+#### BasicAgent - 现在支持更广泛的模型
+
+```tsx
+import { BasicAgent } from "@copilotkit/runtime"
+
+const runtime = new CopilotRuntime({
+  agents: {
+    myBasicAgent: new BasicAgent({
+		  model: "openai/gpt-5.2", // 更广泛的模型支持
+		  prompt: "You are a helpful AI assistant.",
+		  temperature: 0.7,
+		});
+  },
+});
+```
+
+#### 共享状态支持
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+const { agent } = useAgent({agentId: "myBasicAgent"});  
+const { state, setState } = agent;
+```
+
+---
+
+# 分享反馈和获取帮助
+
+### 发现问题？我们期待您的反馈
+
+如果您遇到任何意外情况：
+
+→ **请在 CopilotKit [Discord 支持频道](https://go.copilotkit.ai/discord) 提出问题**
+
+您在此阶段的反馈非常宝贵。
+
+### 您的团队需要帮助吗？
+
+如果您在生产产品或业务中使用 CopilotKit，我们很乐意提供帮助。
+
+您可以在此预约与团队交流：
+
+👉 [预约链接](https://calendly.com/d/cnqt-yr9-hxr/talk-to-copilotkit?)

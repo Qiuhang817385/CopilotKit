@@ -1,0 +1,478 @@
+## 概述
+CopilotKit MCP 服务器为 AI 编码代理配备了关于 CopilotKit API、模式和最佳实践的深入知识。当连接到您的
+开发环境时，它使 AI 助手能够：
+- 提供专家指导
+- 生成准确的代码
+- 为您的 AI 代理提供用户界面
+- 帮助您正确实施 CopilotKit 功能
+
+<Callout type="info">
+由 🪄 [Tadata](https://tadata.com) 提供支持 - 用于即时构建和托管 MCP 服务器的平台。
+</Callout>
+
+## Cursor
+[Cursor](https://cursor.sh/) 是一个为提高生产力而构建的 AI 驱动代码编辑器。它具有内置的 AI 辅助功能，并支持 MCP 以通过外部工具扩展 AI 能力。
+
+<Steps>
+  <Step>
+    ### 在 Cursor 中打开 MCP 设置
+    1. 按 `Shift+Command+J` (Mac) 或 `Shift+Ctrl+J` (Windows/Linux) 打开 Cursor 的设置。
+    2. 在左侧边栏类别中查找 "MCP Tools"。
+    3. 点击 "Add Custom MCP"。
+    这将在编辑器中打开 mcp.json 文件，您需要对其进行编辑。
+  </Step>
+  <Step>
+    ### 将 MCP 服务器添加到 Cursor
+    复制 CopilotKit MCP 的配置并将其粘贴到 mcp.json 文件中的 mcpServers 键下。
+
+    <Tabs groupId="transport" items={['HTTP', 'SSE']} default="HTTP">
+      <Tab value="HTTP">
+        ```json
+        {
+          "mcpServers": {
+            "CopilotKit MCP": {
+              "command": "npx",
+              "args": [
+                "mcp-remote",
+                "https://mcp.copilotkit.ai"
+              ]
+            }
+          }
+        }
+        ```
+      </Tab>
+      <Tab value="SSE">
+        ```json
+        {
+          "mcpServers": {
+            "CopilotKit MCP": {
+              "url": "https://mcp.copilotkit.ai/sse"
+            }
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Claude Web
+
+[Claude](https://claude.ai/) 是 Anthropic 的 AI 助手，可通过 Web 界面访问。它支持 MCP 集成，称为连接器，用于连接外部工具和服务。
+
+<Steps>
+  <Step>
+    导航到 Claude 中的 [Connectors](https://claude.ai/settings/connectors) 设置页面。
+    1. 点击聊天框左下角的用户，然后从出现的菜单选项中选择 "Settings"。
+    2. 在设置页面左侧的菜单中，选择 "Connectors"
+  </Step>
+  <Step>
+    点击 "Add custom connector"
+  </Step>
+  <Step>
+    1. 在名称字段中，为 CopilotKit 连接器输入一个易记的名称，例如 `CopilotKit`
+    2. 在 URL 字段中，输入以下内容：
+    ```
+    https://mcp.copilotkit.ai/sse
+    ```
+  </Step>
+  <Step>
+    点击 "Add"
+  </Step>
+</Steps>
+
+## Claude Desktop
+
+[Claude Desktop](https://claude.ai/download) 是 Claude 的桌面应用程序版本，提供相同的 AI 功能以及本地系统集成和 MCP 支持。
+
+<div className="-mt-2 text-sm text-muted-foreground">
+  这些步骤与上面的 Claude Web 相同。唯一的区别是下面的 Connectors 链接会导航到 Claude 桌面应用程序中的 Connectors 设置，而不是 Claude Web 应用程序。
+</div>
+
+<Steps>
+  <Step>
+    导航到 Claude Desktop 中的 [Connectors](claude://claude.ai/settings/connectors) 设置页面。
+    1. 点击聊天框左下角的用户，然后从出现的菜单选项中选择 "Settings"。
+    2. 在设置页面左侧的菜单中，选择 "Connectors"
+  </Step>
+  <Step>
+    点击 "Add custom connector"
+  </Step>
+  <Step>
+    1. 在名称字段中，为 CopilotKit 连接器输入一个易记的名称，例如 `CopilotKit`
+    2. 在 URL 字段中，输入以下内容：
+    ```
+    https://mcp.copilotkit.ai/sse
+    ```
+  </Step>
+  <Step>
+    点击 "Add"
+  </Step>
+</Steps>
+
+## Claude Code
+
+[Claude Code](https://docs.claude.com/en/docs/claude-code) 是 Anthropic 的官方 Claude CLI。它支持 MCP 集成以连接外部工具和服务，通过专业知识增强 AI 能力。
+
+<Steps>
+  <Step>
+    ### 将 MCP 服务器添加到 Claude Code
+    使用 Claude Code CLI 添加 CopilotKit MCP 服务器：
+
+    ```bash
+    claude mcp add --transport sse copilotkit-mcp https://mcp.copilotkit.ai/sse
+    ```
+
+    **预期输出：**
+    ```
+    Added SSE MCP server copilotkit-mcp with URL: https://mcp.copilotkit.ai/sse to local config
+    File modified: /home/[username]/.claude.json [project: /path/to/your/project]
+    ```
+  </Step>
+  <Step>
+    ### 验证连接
+    检查服务器是否正确连接：
+
+    ```bash
+    claude mcp list
+    ```
+
+    **预期输出：**
+    ```
+    Checking MCP server health...
+
+    copilotkit-mcp: https://mcp.copilotkit.ai/sse (SSE) - ✓ 已连接
+    ```
+
+    <div className="mt-4 p-4 rounded-lg bg-muted">
+      <div className="font-medium text-sm mb-2">💡 服务器名称要求</div>
+      <div className="text-sm text-muted-foreground">
+        服务器名称只能包含字母、数字、连字符和下划线。避免在服务器名称中使用空格。
+      </div>
+    </div>
+  </Step>
+  <Step>
+    ### 在 Claude Code 中使用 MCP 工具
+    配置完成后，CopilotKit MCP 服务器工具会在您与 Claude Code 交互以进行 CopilotKit 相关开发任务时自动可用。AI 会在与您的查询相关时智能地使用这些工具。
+
+    **MCP 服务器提供的内容：**
+    - CopilotKit 开发的专家指导
+    - CopilotKit 功能的准确代码生成
+    最佳实践和实施模式
+    - 对 CopilotKit API 的深入理解
+
+    **管理命令：**
+    ```bash
+    # 查看服务器详细信息
+    claude mcp get copilotkit-mcp
+
+    # 如果需要，移除服务器
+    claude mcp remove copilotkit-mcp -s local
+    ```
+  </Step>
+</Steps>
+
+## Windsurf
+
+[Windsurf](https://codeium.com/windsurf) 是 Codeium 的代理式 IDE，将 AI 驱动的编码辅助与传统开发工具相结合。它具有 Cascade AI 助手与 MCP 集成。
+
+<Steps>
+  <Step>
+    ### 访问 Windsurf MCP 设置
+    1. 打开 Windsurf 设置（点击右下角的设置按钮）
+    2. 导航到 "Cascade" 部分
+    3. 查找 "Model Context Protocol" 或 "MCP" 设置
+    4. 如果尚未启用，请启用 MCP 支持
+  </Step>
+  <Step>
+    ### 将 MCP 服务器添加到 Windsurf
+    您可以通过几种方式添加 CopilotKit MCP：
+
+    <Tabs groupId="windsurf-setup" items={['使用内置服务器浏览器', '手动配置']} default="使用内置服务器浏览器">
+      <Tab value="使用内置服务器浏览器">
+        1. 在 Cascade 部分，点击 "Add Server"
+        2. 选择 "Add custom server"
+        3. 选择传输类型：
+           - **SSE/HTTP** 用于远程服务器
+           - **stdio** 用于基于命令行的本地服务器
+      </Tab>
+      <Tab value="手动配置">
+        将服务器配置添加到您的 mcp_config.json 文件：
+
+        <Tabs groupId="windsurf-transport" items={['HTTP 传输', 'SSE 传输', 'stdio 传输 (本地)']} default="HTTP 传输">
+          <Tab value="HTTP 传输">
+            ```json
+            {
+              "mcpServers": {
+                "CopilotKit MCP": {
+                  "url": "https://mcp.copilotkit.ai",
+                  "disabled": false,
+                  "timeout": 30
+                }
+              }
+            }
+            ```
+          </Tab>
+          <Tab value="SSE 传输">
+            ```json
+            {
+              "mcpServers": {
+                "CopilotKit MCP": {
+                  "url": "https://mcp.copilotkit.ai/sse",
+                  "disabled": false,
+                  "timeout": 30
+                }
+              }
+            }
+            ```
+          </Tab>
+          <Tab value="stdio 传输 (本地)">
+            ```json
+            {
+              "mcpServers": {
+                "CopilotKit MCP": {
+                  "command": "npx",
+                  "args": ["mcp-remote", "https://mcp.copilotkit.ai"]
+                }
+              }
+            }
+            ```
+          </Tab>
+        </Tabs>
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 配置文件位置
+    MCP 配置通常存储在：
+
+    <Tabs groupId="windsurf-os" items={['macOS', 'Windows', 'Linux']} default="macOS">
+      <Tab value="macOS">
+        ```
+        ~/.codeium/windsurf/mcp_config.json
+        ```
+      </Tab>
+      <Tab value="Windows">
+        ```
+        %APPDATA%\.codeium\windsurf\mcp_config.json
+        ```
+      </Tab>
+      <Tab value="Linux">
+        ```
+        ~/.config/codeium/windsurf/mcp_config.json
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 在 Windsurf 中使用 MCP 工具
+    配置完成后，CopilotKit MCP 工具将在 Windsurf 的 Cascade AI 助手中可用：
+
+    - 打开 Cascade 面板（AI 聊天界面）
+    - MCP 工具会自动对 AI 可用
+    - 您可以在对话中使用 `@CopilotKit MCP` 引用特定工具
+    - Windsurf 会根据您的请求智能地选择使用哪些工具
+
+    ### 管理您的 MCP 服务器
+    在 Windsurf MCP 设置中，您可以：
+    - 启用/禁用单个服务器
+    - 查看服务器状态和连接健康状况
+    - 配置工具权限和自动批准设置
+    - 监控服务器日志以进行调试
+    - 如果服务器变得无响应，则重新启动服务器
+
+    AI 将 CopilotKit MCP 功能无缝集成到您的开发工作流程中！
+  </Step>
+</Steps>
+
+## Cline
+
+[Cline](https://github.com/cline/cline) 是一个 VS Code 扩展，提供自主 AI 编码辅助。它可以使用 MCP 工具执行复杂任务以与外部系统交互。
+
+<Steps>
+  <Step>
+    ### 打开 Cline MCP 设置
+    1. 在 VS Code 中打开 Cline 扩展面板
+    2. 点击 Cline 面板右上角的菜单 (⋮)
+    3. 从下拉菜单中选择 "MCP Servers"
+    
+    这将打开 MCP Servers 界面，您可以在其中管理服务器连接。
+  </Step>
+  <Step>
+    ### 将 MCP 服务器添加到 Cline
+    在 MCP Servers 界面中，您有三个主要选项：
+
+    <Tabs groupId="cline-setup" items={['远程服务器设置', '配置文件设置']} default="远程服务器设置">
+      <Tab value="远程服务器设置">
+        1. 点击 "Remote Servers" 选项卡
+        2. 输入服务器名称（例如，"CopilotKit MCP"）
+        3. 输入服务器 URL：
+        ```
+        https://mcp.copilotkit.ai/sse
+        ```
+        4. 点击 "Add Server" 进行连接
+      </Tab>
+      <Tab value="配置文件设置">
+        或者，您可以通过高级设置进行配置：
+        1. 在 "Installed" 选项卡中，点击 "Configure MCP Servers"
+        2. 将以下配置添加到您的设置文件：
+        ```json
+        {
+          "mcpServers": {
+            "CopilotKit MCP": {
+              "url": "https://mcp.copilotkit.ai/sse",
+              "disabled": false,
+              "timeout": 30
+            }
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 在 Cline 中使用 MCP 工具
+    连接后，Cline 可以在您与 AI 助手交互时自动使用 CopilotKit MCP 提供的工具。MCP 工具无需手动选择即可使用 - Cline 的 AI 会根据您的请求智能地选择使用哪些工具。
+
+    **服务器状态指示器：**
+    - 绿点：已连接并准备使用
+    - 黄点：连接进行中
+    - 红点：连接错误
+
+    您可以从 MCP Servers 界面的 "Installed" 选项卡管理服务器设置、重新启动连接或禁用服务器。
+  </Step>
+</Steps>
+
+## GitHub Copilot
+
+[GitHub Copilot](https://github.com/features/copilot) 是 Microsoft 集成到 VS Code 和其他编辑器中的 AI 结对程序员。它支持 MCP 以通过外部工具和服务扩展其功能。
+
+<Steps>
+  <Step>
+    ### 在 VS Code 中启用 MCP 支持
+    1. 打开 VS Code 设置（Mac 上为 `Cmd+,`，Windows/Linux 上为 `Ctrl+,`）
+    2. 在设置搜索栏中搜索 "MCP"
+    3. 启用 `chat.mcp.enabled` 设置
+  </Step>
+  <Step>
+    ### 将 MCP 服务器添加到 GitHub Copilot
+    您可以通过几种方式为 GitHub Copilot 配置 MCP 服务器：
+
+    <Tabs groupId="copilot-config" items={['工作区配置（推荐）', '用户设置配置', '命令面板']} default="工作区配置（推荐）">
+      <Tab value="工作区配置（推荐）">
+        在项目根目录中创建一个 `.vscode/mcp.json` 文件：
+        ```json
+        {
+          "servers": {
+            "CopilotKit MCP": {
+              "url": "https://mcp.copilotkit.ai/sse"
+            }
+          }
+        }
+        ```
+      </Tab>
+      <Tab value="用户设置配置">
+        添加到您的 VS Code `settings.json`：
+        ```json
+        {
+          "mcp": {
+            "servers": {
+              "CopilotKit MCP": {
+                "url": "https://mcp.copilotkit.ai/sse"
+              }
+            }
+          }
+        }
+        ```
+      </Tab>
+      <Tab value="命令面板">
+        1. 打开命令面板（`Cmd+Shift+P` 或 `Ctrl+Shift+P`）
+        2. 输入 "MCP: Add Server" 并选择该命令
+        3. 选择 "HTTP (sse)" 作为服务器类型
+        4. 输入服务器 URL：`https://mcp.copilotkit.ai/sse`
+        5. 提供服务器的名称：`CopilotKit MCP`
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 将 MCP 工具与 GitHub Copilot 一起使用
+    1. 在 VS Code 中打开 Copilot Chat（点击活动栏中的 Copilot 图标）
+    2. 从聊天下拉菜单中切换到 Agent 模式
+    3. 点击工具 (🔧) 按钮查看可用的 MCP 工具
+    4. 您的 CopilotKit MCP 工具将被列出并可以自动使用
+
+    GitHub Copilot 会在与您的查询相关时智能地使用 MCP 工具。您也可以使用 `#` 后跟工具名称直接引用工具。
+  </Step>
+  <Step>
+    ### 管理 MCP 服务器
+    使用 "MCP: List Servers" 命令查看和管理您配置的服务器：
+
+    - 启动/停止/重新启动服务器
+    - 查看服务器日志以进行调试
+    - 浏览可用的工具和资源
+  </Step>
+</Steps>
+
+## 其他
+
+对于上面未列出的 MCP 兼容应用程序，请使用这些通用集成模式。MCP（模型上下文协议）是一个开放标准，允许 AI 应用程序连接外部工具和数据源。
+
+### 连接方法
+
+大多数 MCP 兼容应用程序支持以下一种或两种连接方法：
+
+<Tabs groupId="universal-transport" items={['SSE', 'stdio']} default="SSE">
+  <Tab value="SSE">
+    对于基于 Web 或远程的集成：
+    ```
+    https://mcp.copilotkit.ai/sse
+    ```
+  </Tab>
+  <Tab value="stdio">
+    对于本地命令行集成：
+    ```json
+    {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.copilotkit.ai"]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### 集成步骤
+
+1. **查找 MCP 设置** - 在您的应用程序设置中查找 "MCP"、"Model Context Protocol" 或 "Tools"
+2. **添加服务器** - 使用 SSE URL：`https://mcp.copilotkit.ai/sse`
+3. **测试连接** - 重新启动您的应用程序并验证服务器是否出现在可用工具中
+
+### 常见配置模式
+
+<Tabs groupId="config-patterns" items={['JSON 配置文件', '应用程序设置']} default="JSON 配置文件">
+  <Tab value="JSON 配置文件">
+    许多应用程序使用配置文件（位置因应用程序而异）：
+    ```json
+    {
+      "servers": {
+        "CopilotKit MCP": {
+          "url": "https://mcp.copilotkit.ai/sse"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab value="应用程序设置">
+    某些应用程序将 MCP 集成到其主设置中：
+    ```json
+    {
+      "mcp": {
+        "enabled": true,
+        "servers": {
+          "CopilotKit MCP": {
+            "url": "https://mcp.copilotkit.ai/sse"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>

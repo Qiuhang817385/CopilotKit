@@ -1,0 +1,48 @@
+---
+title: "完全无头 UI"
+description: "使用无头 UI 从头开始完全自定义您的 Copilot 界面"
+icon: "lucide/Settings"
+---
+import HeadlessUI from "@/snippets/shared/guides/custom-look-and-feel/headless-ui.mdx";
+
+<HeadlessUI components={props.components} />
+
+### 使用无头 UI 实现人机协同
+
+对于自定义 UI 的人机协同交互，使用 `useHumanInTheLoop` 创建审批工作流：
+
+```tsx title="src/app/components/chat.tsx"
+import { useHumanInTheLoop, useCopilotChatHeadless_c } from "@copilotkit/react-core/v2";
+
+export const Chat = () => {
+  const { messages, sendMessage } = useCopilotChatHeadless_c();
+
+  useHumanInTheLoop({
+    name: "approvalRequired",
+    description: "请求用户批准操作",
+    parameters: [
+      { name: "operation", type: "string", description: "要批准的操作", required: true }
+    ],
+    render: ({ args, respond }) => {
+      if (!respond) return null;
+      
+      return (
+        <div>
+          <p>需要审批</p>
+          <p>操作：{args.operation}</p>
+          <button onClick={() => respond("APPROVED")}>批准</button>
+          <button onClick={() => respond("REJECTED")}>拒绝</button>
+        </div>
+      );
+    },
+  });
+
+  return (
+    <div>
+      {/* 您的自定义聊天 UI */}
+    </div>
+  )
+};
+```
+
+有关审批工作流的更多详情，请参阅[人机协同](/microsoft-agent-framework/human-in-the-loop)。

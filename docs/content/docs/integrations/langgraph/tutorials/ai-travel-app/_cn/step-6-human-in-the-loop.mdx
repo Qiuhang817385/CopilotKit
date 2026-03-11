@@ -1,0 +1,269 @@
+---
+title: "第 6 步：人机协同"
+---
+
+现在是时候向应用程序添加人机协同功能了。这将允许用户批准、拒绝或修改智能体想要执行的变更操作。为了简单起见，在此步骤中我们将只实现批准和拒绝操作。
+
+我们的计划是向应用程序添加一个"断点"。这是一个 LangGraph 概念，它将强制智能体暂停并等待人工批准后再继续执行。
+
+<Callout>
+你可以[在这里](https://docs.langchain.com/oss/python/langgraph/interrupts#debugging-with-interrupts)了解更多关于断点的信息。
+</Callout>
+
+然后，断点将被传达给我们的前端，我们将使用它来渲染并获取用户的决策。最后，用户的决策将被传达回智能体，执行将继续。
+
+总而言之，这个过程看起来像这样：
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-hitl-infographic.png" alt="人机协同" />
+</Frame>
+
+如果你想在继续之前了解更多关于人机协同的信息，请查看我们的[人机协同概念指南](/langgraph/human-in-the-loop)。
+
+否则，让我们开始吧！
+
+<Steps>
+<Step>
+## 向 `trips_node` 添加断点
+
+这个 LangGraph 的实现方式允许轻松集成人机协同。本质上，我们有一个 `trips_node`，它充当 `perform_trips_node` 的代理。这意味着我们可以通过向 `trips_node` 添加断点来阻止进入 `perform_trips_node`。这将强制智能体暂停并等待人工批准操作后才能继续执行。
+
+要向智能体添加断点，我们将编辑 `agent/travel/agent.py` 文件中的图定义。
+
+在文件的最底部，将以下行添加到 `compile` 函数：
+```python title="agent/travel/agent.py"
+# ...
+
+graph = graph_builder.compile(
+    checkpointer=MemorySaver(),
+    interrupt_after=["trips_node"], # [!code ++]
+)
+```
+
+这将强制智能体在 `trips_node` 处暂停执行，并等待人工批准操作后再继续。
+</Step>
+<Step>
+## 更新 perform_trips_node 节点以正确处理用户的决策
+
+在此步骤之前，进入 `perform_trips_node` 是标准的。我们会接收请求的工具调用，调用适当的工具，编辑消息状态以反映工具调用结果，然后继续到下一个节点。
+
+然而，由于我们向 `trips_node` 添加了断点，这将不再起作用。在后续步骤中，我们将利用此断点向用户渲染 UI 以进行批准或拒绝。他们的决策将通过消息状态传达回来。
+
+在此步骤中，我们将从消息状态中检索该决策并相应地采取行动。
+
+首先，让我们获取工具调用消息和正在请求的工具调用。
+
+```python title="agent/travel/trips.py"
+# ...
+
+async def perform_trips_node(state: AgentState, config: RunnableConfig):
+    """执行行程操作"""
+    ai_message = state["messages"][-1] # [!code --]
+    ai_message = cast(AIMessage, state["messages"][-2]) # [!code ++]
+    tool_message = cast(ToolMessage, state["messages"][-1]) # [!code ++]
+
+    # ...
+```
+
+现在，让我们添加一个条件，检查用户的决策并相应地采取行动。
+
+```python title="agent/travel/trips.py"
+from copilotkit.langchain import copilotkit_emit_message # [!code ++]
+
+# ...
+async def perform_trips_node(state: AgentState, config: RunnableConfig):
+    """执行行程操作"""
+    ai_message = cast(AIMessage, state["messages"][-2])
+    tool_message = cast(ToolMessage, state["messages"][-1])
+
+    # [!code ++:8]
+    if tool_message.content == "CANCEL":
+      await copilotkit_emit_message(config, "已取消行程操作。")
+      return state
+    
+    # 处理 AI 消息不是 AIMessage 或没有工具调用的边缘情况，应该永远不会发生。
+    if not isinstance(ai_message, AIMessage) or not ai_message.tool_calls:
+        return state
+    
+    # ...
+```
+
+在这种情况下，我们正在检查用户是否决定取消操作。如果是，我们向 UI 发出一条消息并返回状态。返回的任何其他决策都将导致执行请求的操作。
+
+</Step>
+<Step>
+## 发出工具调用
+
+为了让前端接收断点并获取用户的决策，我们需要发出智能体正在请求的工具调用。为此，我们将编辑 `chat.py` 文件中的 `chat_node`。
+```python title="agent/travel/chat.py"
+# ...
+from copilotkit.langchain import copilotkit_customize_config # [!code ++]
+async def chat_node(state: AgentState, config: RunnableConfig):
+    """处理聊天操作"""
+    # [!code ++:5]
+    config = copilotkit_customize_config(
+        config,
+        emit_tool_calls=["add_trips", "update_trips", "delete_trips"],
+    )
+    # ...
+```
+<Callout>
+我们不想在这里简单地设置为 True，因为这样做会发出所有工具调用。通过指定这些，我们是将工具处理交给 CopilotKit。如果，例如，`search_for_places` 在这里被调用，那么它会破坏工具调用的状态。
+</Callout>
+至此，我们在智能体上的工作已经完成，我们准备更新前端以正确获取和传达用户的决策。
+
+</Step>
+<Step>
+
+## 渲染工具调用并获取用户的决策
+
+现在我们需要更新前端以渲染工具调用并将用户的决策发回给智能体。为此，我们将为每个带有 `renderAndWait` 选项的工具调用添加 `useCopilotAction` 钩子。
+
+```typescript title="ui/lib/hooks/use-trips.tsx"
+// ...
+import { AddTrips, EditTrips, DeleteTrips } from "@/components/humanInTheLoop"; // [!code ++]
+import { useAgent, useCoAgentStateRender } from "@copilotkit/react-core/v2"; // [!code --]
+import { useAgent, useCoAgentStateRender, useFrontendTool } from "@copilotkit/react-core/v2"; // [!code ++]
+import { z } from "zod"; // [!code ++]
+// ...
+
+export const TripsProvider = ({ children }: { children: ReactNode }) => {
+  // ...
+
+  useCoAgentStateRender<AgentState>({
+    name: "travel",
+    render: ({ state }) => {
+      return <SearchProgress progress={state.search_progress} />
+    },
+  });
+
+  // [!code ++:30]
+  useFrontendTool({
+    name: "add_trips",
+    description: "添加一些行程",
+    parameters: z.object({
+      trips: z.array(z.object({}).passthrough()).describe("要添加的行程"),
+    }),
+    renderAndWait: AddTrips,
+  });
+
+  useFrontendTool({
+    name: "update_trips",
+    description: "更新一些行程",
+    parameters: z.object({
+      trips: z.array(z.object({}).passthrough()).describe("要更新的行程"),
+    }),
+    renderAndWait: EditTrips,
+  });
+
+  useFrontendTool({
+    name: "delete_trips",
+    description: "删除一些行程",
+    parameters: z.object({
+      trip_ids: z.array(z.string()).describe("要删除的行程 ID"),
+    }),
+    renderAndWait: (props) => DeleteTrips({ ...props, trips: state.trips }),
+  });
+
+  // ...
+```
+
+至此，我们的前端现在可以渲染工具调用并获取用户的决策了。有一件事我们略过了，那就是所有导入的 `humanInTheLoop` 组件。它们是为了本教程的便利而提供的，但我们应该注意一件非常重要的事情——它们如何将用户的决策发送回智能体。
+
+</Step>
+<Step>
+## （可选）了解 `humanInTheLoop` 组件
+
+让我们以 `DeleteTrips` 组件为例，但相同的逻辑适用于 `AddTrips` 和 `EditTrips` 组件。
+
+```tsx title="ui/lib/components/humanInTheLoop/DeleteTrips.tsx"
+import { Trip } from "@/lib/types";
+import { PlaceCard } from "@/components/PlaceCard";
+import { X, Trash } from "lucide-react";
+import { ActionButtons } from "./ActionButtons"; // [!code highlight]
+import { RenderFunctionStatus } from "@copilotkit/react-core/v2";
+
+export type DeleteTripsProps = {
+  args: any;
+  status: RenderFunctionStatus;
+  handler: any;
+  trips: Trip[];
+};
+
+export const DeleteTrips = ({ args, status, handler, trips }: DeleteTripsProps) => {
+  const tripsToDelete = trips.filter((trip: Trip) => args?.trip_ids?.includes(trip.id));
+
+  return (
+    <div className="space-y-4 w-full bg-secondary p-6 rounded-lg">
+    <h1 className="text-sm">以下行程将被删除：</h1>
+      {status !== "complete" && tripsToDelete?.map((trip: Trip) => (
+        <div key={trip.id} className="flex flex-col gap-4">
+          <>
+            <hr className="my-2" />
+            <div className="flex flex-col gap-4">
+            <h2 className="text-lg font-bold">{trip.name}</h2>
+            {trip.places?.map((place) => (
+              <PlaceCard key={place.id} place={place} />
+            ))}
+            </div>
+          </>
+        </div>
+      ))}
+      { status !== "complete" && (
+        // [!code highlight:6]
+        <ActionButtons
+          status={status} 
+          handler={handler} 
+          approve={<><Trash className="w-4 h-4 mr-2" /> 删除</>} 
+          reject={<><X className="w-4 h-4 mr-2" /> 取消</>} 
+        />
+      )}
+    </div>
+  );
+};
+```
+
+如你所见，这是一个相当标准的组件，渲染将要删除的行程。重要的部分是 `ActionButtons` 组件。让我们看看它。
+
+```tsx title="ui/lib/components/humanInTheLoop/ActionButtons.tsx"
+import { RenderFunctionStatus } from "@copilotkit/react-core/v2";
+import { Button } from "../ui/button";
+
+export type ActionButtonsProps = {
+    status: RenderFunctionStatus;
+    handler: any;
+    approve: React.ReactNode;
+    reject: React.ReactNode;
+}
+
+export const ActionButtons = ({ status, handler, approve, reject }: ActionButtonsProps) => (
+  <div className="flex gap-4 justify-between">
+    <Button 
+      className="w-full"
+      variant="outline"
+      disabled={status === "complete" || status === "inProgress"} 
+      onClick={() => handler?.("CANCEL")} // [!code highlight]
+    >
+      {reject}
+    </Button>
+    <Button 
+      className="w-full"
+      disabled={status === "complete" || status === "inProgress"} 
+      onClick={() => handler?.("SEND")} // [!code highlight]
+    >
+      {approve}
+    </Button>
+  </div>
+);
+```
+
+这里重要的部分是 `onClick` 处理程序将用户的决策发回给智能体。如果用户点击 `删除` 按钮，则调用 `handler?.("SEND")`。如果用户点击 `取消` 按钮，则调用 `handler?.("CANCEL")`。这就是智能体接收用户决策的方式。
+
+<Callout>
+如果你想实现一个更复杂的 UI，允许人工在将工具调用参数发回给智能体之前对其进行编辑，你可以通过在 `onClick` 处理程序和智能体对工具调用的处理中添加额外的逻辑来实现。
+</Callout>
+
+</Step>
+</Steps>
+
+至此，我们已经完成了人机协同实现！尝试让智能体添加、编辑或删除一些行程，看看它的实际效果。

@@ -1,0 +1,120 @@
+## 概述
+
+CopilotKit V2 将前端整合到单个包中。钩子和 UI 组件现在都从 `@copilotkit/react-core/v2` 导出。您的后端不需要任何更改。
+
+**正在变更的内容：**
+
+| 之前 | 之后 |
+|--------|-------|
+| `@copilotkit/react-core` | `@copilotkit/react-core/v2` |
+| `@copilotkit/react-ui` | `@copilotkit/react-core/v2` |
+| `@copilotkit/react-ui/styles.css` | `@copilotkit/react-core/v2/styles.css` |
+
+**不会变更的内容：**
+- 后端包（`@copilotkit/runtime` 等）—— 无需更改
+- 您的 `CopilotRuntime` 配置 —— 保持不变
+- 智能体定义和后端设置 —— 保持不变
+
+## 迁移步骤
+
+<Steps>
+<Step>
+### 更新 `@copilotkit/react-core` 导入
+
+将 `@copilotkit/react-core` 的导入替换为 `@copilotkit/react-core/v2`。
+
+#### 之前
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+import { useCopilotReadable, useCopilotAction } from "@copilotkit/react-core";
+```
+
+#### 之后
+```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core/v2";
+```
+
+</Step>
+<Step>
+### 替换 `@copilotkit/react-ui` 导入
+
+UI 组件如 `CopilotChat`、`CopilotSidebar` 和 `CopilotPopup` 现在从 `@copilotkit/react-core/v2` 导出。
+
+#### 之前
+```tsx
+import { CopilotPopup } from "@copilotkit/react-ui";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import { CopilotChat } from "@copilotkit/react-ui";
+```
+
+#### 之后
+```tsx
+import { CopilotPopup } from "@copilotkit/react-core/v2";
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+```
+
+</Step>
+<Step>
+### 更新您的样式导入
+
+#### 之前
+```tsx
+import "@copilotkit/react-ui/styles.css";
+```
+
+#### 之后
+```tsx
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+</Step>
+<Step>
+### 升级 `@ag-ui/client`（如果直接使用）
+
+如果您直接从 `@ag-ui/client` 导入，请升级到最新版本：
+
+```bash
+npm install @ag-ui/client@latest
+```
+
+注意：如果您只使用 CopilotKit 的 React 包，`@ag-ui/client` 类型已经从 `@copilotkit/react-core/v2` 重新导出，您不需要单独安装。
+
+</Step>
+</Steps>
+
+## 完整示例
+
+### 之前
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotPopup } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
+
+export function App() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      <YourApp />
+      <CopilotPopup />
+    </CopilotKit>
+  );
+}
+```
+
+### 之后
+
+```tsx
+import { CopilotKitProvider, CopilotPopup } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+export function App() {
+  return (
+    <CopilotKitProvider runtimeUrl="/api/copilotkit">
+      <YourApp />
+      <CopilotPopup />
+    </CopilotKitProvider>
+  );
+}
+```

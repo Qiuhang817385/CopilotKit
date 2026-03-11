@@ -1,0 +1,185 @@
+---
+title: 快速开始
+description: 设置 Agent Spec + AG-UI 并连接 CopilotKit UI。包含各适配器的安装步骤和最小化端点配置。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+## 前置要求
+
+- Node.js 20+
+- Python 3.10–3.13
+
+## 1) 安装 Agent Spec AG-UI 适配器（后端）
+
+Agent Spec 的 AG-UI 集成位于 `ag-ui/integrations/agent-spec/python`。安装方法如下：
+
+```bash
+# 克隆适配器并进入 Python 包目录
+git clone https://github.com/ag-ui-protocol/ag-ui.git
+cd ag-ui/integrations/agent-spec/python
+```
+
+由于此集成包使用 `uv` 作为包管理器，您可以轻松安装：
+
+```bash
+uv sync
+```
+
+Agent Spec 是一种声明智能体和工作流结构的规范语言。Agent Spec 智能体可以在各种智能体框架上运行。目前我们支持 LangGraph 和 WayFlow（Oracle 的参考智能体框架，原生支持 Agent Spec）。
+根据您想要执行 Agent Spec 智能体的框架，有以下不同的安装选项：
+
+```bash
+uv sync --extra langgraph                         # 用于 LangGraph
+uv sync --extra wayflow                           # 用于 WayFlow
+uv sync --extra langgraph --extra wayflow         # 同时用于两者
+```
+
+或者，您可以使用 `pip`：
+
+```bash
+pip install -e .[wayflow]
+pip install -e .[langgraph]
+pip install -e .[wayflow,langgraph]
+```
+
+注意：这些命令将从源代码安装 [`pyagentspec`](https://github.com/oracle/agent-spec) 和 [`wayflowcore`](https://github.com/oracle/wayflow) 包（即从各自的 GitHub 仓库）。
+或者，您可以单独从 PyPI 安装这些包：
+
+```bash
+pip install pyagentspec[langgraph]
+pip install wayflowcore
+```
+
+环境变量：
+
+```bash
+export OPENAI_API_KEY=...
+export OPENAI_MODEL=gpt-5.2
+```
+
+请注意，这些环境变量可以指向任何兼容 OpenAI 的 LLM 提供商（例如本地 vLLM 服务器、Together AI），但变量名必须是 `OPENAI_API_KEY` 和 `OPENAI_MODEL`。
+
+参考：Agent Spec 文档 AG-UI 教程：https://oracle.github.io/agent-spec/26.1.0/howtoguides/howto_ag_ui.html
+
+## 2) 搭建 UI
+
+从我们的入门模板开始：
+
+```bash
+npx copilotkit@latest create
+```
+
+或使用完整的入门仓库模板：https://github.com/CopilotKit/with-agent-spec。它包含一个 Agent Spec 智能体的示例定义[此处](https://github.com/CopilotKit/with-agent-spec/blob/main/agent/src/agentspec_agent.py)。
+
+注意，`npx` 命令会自动安装 https://github.com/ag-ui-protocol/ag-ui/tree/main/integrations/agent-spec/python 的 AG-UI Agent Spec 集成，它会安装 `pyagentspec` 和上述的可选运行时适配器依赖。
+
+### 最小化入门 Agent Spec 智能体定义
+
+```python agentspec_agent.py
+from pyagentspec.agent import Agent
+from pyagentspec.llms import OpenAiCompatibleConfig
+from pyagentspec.serialization import AgentSpecSerializer
+
+agentspec_agent = Agent(
+    name="AgentSpecAgent",
+    description="A starter Agent that can call tools.",
+    system_prompt="You are a helpful assistant, named Specky, that speaks a lot.",
+    llm_config=OpenAiCompatibleConfig(
+        name="my-llm",
+        model_id="gpt-5.2",
+        url="https://api.openai.com/v1",
+    ),
+)
+
+agent_spec_config = AgentSpecSerializer().to_json(agentspec_agent)
+```
+
+## 3) 添加最小化 FastAPI 端点（后端）
+
+创建一个 FastAPI 应用，加载您的 Agent Spec 文件并暴露 AG-UI FastAPI 端点。将 `runtime` 替换为匹配您的适配器（`langgraph` 或 `wayflow`）。
+
+```python src/main.py
+from fastapi import FastAPI
+from ag_ui_agentspec.agent import AgentSpecAgent
+from ag_ui_agentspec.endpoint import add_agentspec_fastapi_endpoint
+
+agent_spec_config = <loaded json/yaml string of your Agent Spec agent>
+runtime = "langgraph"  # 或 "wayflow"
+
+app = FastAPI()
+agent = AgentSpecAgent(agent_spec_config=agent_spec_config, runtime=runtime)
+add_agentspec_fastapi_endpoint(app, agentspec_agent=agent, path="/")
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+这里我们使用集成包中的 `add_agentspec_fastapi_endpoint` 工具。它设置了端点以及 Agent Spec 追踪事件到 AG-UI 事件的连接。
+
+要运行后端智能体：
+
+```bash
+uv run src/main.py
+```
+
+## 4) 将 UI 连接到前端服务器
+
+确保前端 UI 服务器知道后端智能体运行的主机/端口。在本教程中，我们使用 http://localhost:8000/ 作为主机/端口。
+
+## 5) 运行 Next.js
+
+从[我们的入门仓库](https://github.com/sonleoracle/with-agent-spec/)的根目录运行：
+
+```bash
+pnpm dev
+# 或 npm run dev / yarn dev / bun dev
+```
+
+注意，此命令还会在 `agent/src` 中启动智能体后端。现在打开 http://localhost:3000 并开始与您的智能体聊天。
+
+## 工具和工具注册表
+
+如果您的 Agent Spec 包含在与智能体相同环境中执行的端侧工具，在加载 `AgentSpecAgent` 时通过名称将它们映射到 Python 可调用对象的字典 `tool_registry` 中。
+
+```python title="按名称绑定后端工具"
+from __future__ import annotations
+from fastapi import FastAPI
+from ag_ui_agentspec.agent import AgentSpecAgent
+from ag_ui_agentspec.endpoint import add_agentspec_fastapi_endpoint
+
+def get_weather(city: str) -> Dict[str, Any]:
+    return {"city": city, "temp_c": 22}
+
+tool_registry = {"get_weather": get_weather}
+
+app = FastAPI()
+agent = AgentSpecAgent(
+    agent_spec_config=<json/yaml string of your Agent Spec Agent>,
+    runtime="langgraph",  # 或 "wayflow"
+    tool_registry=tool_registry,
+)
+add_agentspec_fastapi_endpoint(app, agentspec_agent=agent, path="/")
+```
+
+前端工具（对应于 Agent Spec 的 `ClientTool`）在浏览器中运行，不需要添加到工具注册表 —— 详情请参见[生成式 UI 前端工具](/agent-spec/frontend-tools)。
+
+## 底层原理
+
+Agent Spec 和 `pyagentspec` SDK 帮助您以可读且可移植的配置对象/JSON 文件定义智能体和工作流。
+不同的适配器 LangGraph 和 WayFlow 将您的 Agent Spec 配置加载到特定框架的对象中并执行它们。换句话说，Agent Spec 是"编译器"，而框架是"运行时"。
+在此转换过程中，适配器配置加载的对象，使其发出 Agent Spec 追踪事件。这些在不同运行时之间是标准化的。
+最后，AG-UI Agent Spec 集成监听 Agent Spec 追踪事件并将它们导出为 AG-UI 事件。这些包括智能体执行、工具调用、智能体发送的消息等。
+换句话说，如果智能体在执行期间发出事件（这取决于运行时），将创建相应的 AG-UI 事件。
+在前端，CopilotKit 将 AG-UI 事件转换并渲染到 UI 中。
+
+## 下一步
+
+跟随各适配器教程：[LangGraph 集成](/agent-spec/langgraph) 和 [WayFlow 集成](/agent-spec/wayflow)。
+
+## 了解更多
+
+- AG-UI 文档：https://docs.ag-ui.com/introduction
+- Agent Spec 文档：https://oracle.github.io/agent-spec/development/docs_home.html
+- Agent Spec x AG-UI 教程：https://oracle.github.io/agent-spec/26.1.0/howtoguides/howto_ag_ui.html
+- Agent Spec 追踪：https://oracle.github.io/agent-spec/development/agentspec/tracing.html

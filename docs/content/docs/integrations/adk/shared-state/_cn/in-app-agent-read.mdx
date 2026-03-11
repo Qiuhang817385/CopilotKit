@@ -1,0 +1,181 @@
+---
+title: 读取智能体状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时智能体状态。
+---
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state) 中读取共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 以及原生应用程序 UX 中使用实时智能体状态。
+
+## 什么时候使用它？
+
+当您想要向用户提供有关智能体状态的反馈时，可以使用此功能。随着智能体的
+状态更新，您可以在应用程序中原生地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+
+    创建具有有状态结构的 ADK 智能体。这里有一个完整的示例，跟踪语言：
+
+    ```python title="agent.py"
+    from typing import Dict
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+    from google.adk.agents import LlmAgent
+    from google.adk.tools import ToolContext
+
+
+    class AgentState(BaseModel):
+        """智能体的状态。"""
+        language: str = "english"
+
+
+    def set_language(tool_context: ToolContext, new_language: str) -> Dict[str, str]:
+        """设置用户的语言偏好。
+
+        Args:
+            tool_context (ToolContext): 用于访问状态的工具上下文。
+            new_language (str): 要保存在状态中的语言。
+
+        Returns:
+            Dict[str, str]: 表示成功状态和消息的字典。
+        """
+        tool_context.state["language"] = new_language
+        return {"status": "success", "message": f"语言已设置为 {new_language}"}
+
+
+    agent = LlmAgent(
+        name="my_agent",
+        model="gemini-2.5-flash",
+        instruction="""
+        你是一个有用的助手。帮助用户回答他们的问题。
+        请在回复用户时使用状态中指定的语言。
+        你可以使用 set_language 工具设置状态中的语言。
+        """,
+        tools=[set_language],
+    )
+
+    adk_agent = ADKAgent(
+        adk_agent=agent,
+        app_name="demo_app",
+        user_id="demo_user",
+        session_timeout_seconds=3600,
+        use_in_memory_services=True,
+    )
+
+    app = FastAPI()
+    add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    一旦您的智能体连接并运行，剩下的就是调用 `useAgent` hook，传递智能体的名称，并
+    可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+        initialState: { language: "english" }  // 可选提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当智能体的状态变化时会自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+    随着智能体状态更新，您的 `state` 变量也会自动更新！在这种情况下，您会看到
+    语言设置为 "english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染智能体状态
+
+您还可以在聊天 UI 中渲染智能体的状态。这对于以更上下文相关的方式告知用户智能体的状态非常有用。为此，您可以使用带有 `render` 函数的 `useAgent` hook。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义智能体状态类型，应与智能体的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "my_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="warn" title="重要">
+  `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+</Callout>
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当智能体的状态变化时会自动更新。
+</Callout>

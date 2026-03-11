@@ -1,0 +1,130 @@
+---
+title: 前端工具
+icon: "lucide/Wrench"
+description: 创建前端工具并在您的 LangGraph 代理中使用它们。
+hideTOC: true
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import FrontEndToolsImpl from "@/snippets/integrations/langgraph/frontend-tools.mdx"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-actions-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+前端工具使您能够定义客户端函数，让您的 LangGraph 代理可以调用，执行完全在用户的浏览器中进行。当您的代理调用前端工具时，
+逻辑在客户端运行，让您可以直接访问前端环境。
+
+这可以用于让您的代理控制 UI、用于生成式 UI 或用于人机协作交互。
+
+在本指南中，我们介绍了驱动和与 UI 交互的前端工具的使用。
+
+## 什么时候应该使用这个功能？
+当您需要让您的代理与客户端原语交互时，请使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookie
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的代理
+       <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建一个前端工具
+
+        首先，您需要使用 [useFrontendTool](/reference/v2/hooks/useFrontendTool) 钩子创建一个前端工具。这里有一个简单的工具可以让您开始，
+        它向用户问好。
+
+        ```tsx title="page.tsx"
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          // [!code highlight:12]
+          useFrontendTool({
+            name: "sayHello",
+            description: "向用户问好",
+            parameters: z.object({
+              name: z.string().describe("要问候的用户的名字"),
+            }),
+            handler: async ({ name }) => {
+              alert(`你好，${name}！`);
+              return `已向 ${name} 问好！`;
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ### 安装 CopilotKit SDK
+
+        现在，我们需要修改代理以访问这些前端工具。在您的终端中，导航到您的代理文件夹并从那里继续！
+
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 继承自 CopilotKitState
+
+        要访问 CopilotKit 提供的前端工具，您可以在代理的状态定义中继承 CopilotKitState：
+
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from copilotkit import CopilotKitState # [!code highlight]
+
+                class YourAgentState(CopilotKitState): # [!code highlight]
+                    your_additional_properties: str
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript title="agent-js/src/agent.ts"
+                import { Annotation } from "@langchain/langgraph";
+                import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+                export const YourAgentStateAnnotation = Annotation.Root({
+                    yourAdditionalProperty: Annotation<string>,
+                    ...CopilotKitStateAnnotation.spec, // [!code highlight]
+                });
+                export type YourAgentState = typeof YourAgentStateAnnotation.State;
+                ```
+            </Tab>
+        </Tabs>
+
+        通过这样做，您的代理状态将包含 `copilotkit` 属性，其中包含可以访问和调用的前端工具。
+    </Step>
+    <Step>
+        ### 访问前端工具
+
+        一旦您的代理状态包含 `copilotkit` 属性，您就可以访问前端工具并在代理的逻辑中利用它们。
+
+        以下是如何从您的代理调用前端工具：
+
+        <FrontEndToolsImpl components={props.components} />
+
+        这些工具由 CopilotKit 自动填充，并且与 LangChain 的工具调用定义兼容，使您可以轻松地将它们集成到代理的工作流中。
+    </Step>
+    <Step>
+        ### 试试看！
+        您现在赋予了您的代理直接调用您定义的任何前端工具的能力。这些工具将对代理可用，可以根据需要使用它们。
+
+        <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/frontend-actions-demo.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+    </Step>
+</Steps>

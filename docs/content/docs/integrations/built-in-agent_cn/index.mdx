@@ -1,0 +1,37 @@
+---
+title: "概览"
+description: "使用 CopilotKit 的内置代理与任何模型配合使用。"
+---
+
+import { Sparkles, Wrench, Server, Plug, ArrowLeftRight, Cpu, BookA, Cog } from "lucide-react";
+
+**内置代理**是 CopilotKit 最简单的代理选项，即您"开箱即用"所获得的。它直接连接到 LLM，完全支持工具、生成式 UI、共享状态和所有 CopilotKit 功能——无需外部代理框架。
+
+它原生支持来自 OpenAI、Anthropic、Google 和 AI-SDK 定义的大多数流行模型。
+
+## 何时使用内置代理
+
+- **快速设置** — 无需配置或部署外部代理框架
+- **聊天 + 工具** — 您的用例主要是带有前端和服务器工具的对话式应用
+- **直接模型访问** — 您想直接使用 OpenAI、Anthropic、Google 或 AI-SDK 模型
+
+<Callout type="info">
+如果您需要对代理循环有更多控制，请考虑使用[代理框架](/#explore-by-ai-backend)。
+</Callout>
+
+## 功能
+
+<Cards>
+  <Card title="生成式 UI" href="/built-in-agent/generative-ui/tool-rendering" description="在聊天中渲染丰富的 React 组件。" icon={<Sparkles className="text-primary" />} />
+  <Card title="前端工具" href="/built-in-agent/frontend-tools" description="让代理使用前端工具与您的 UI 交互。" icon={<Wrench className="text-primary" />} />
+  <Card title="服务器工具" href="/built-in-agent/server-tools" description="使用 Zod 模式定义代理可以调用的后端工具。" icon={<Server className="text-primary" />} />
+  <Card title="MCP 服务器" href="/built-in-agent/mcp-servers" description="连接 MCP 服务器以扩展工具功能。" icon={<Plug className="text-primary" />} />
+  <Card title="共享状态" href="/built-in-agent/shared-state" description="在您的应用和代理之间进行双向状态共享。" icon={<ArrowLeftRight className="text-primary" />} />
+  <Card title="模型选择" href="/built-in-agent/model-selection" description="从 OpenAI、Anthropic 和 Google 模型中选择——或自带模型。" icon={<Cpu className="text-primary" />} />
+  <Card title="代理上下文" href="/built-in-agent/agent-app-context" description="自动与代理共享应用特定的上下文。" icon={<BookA className="text-primary" />} />
+  <Card title="高级配置" href="/built-in-agent/advanced-configuration" description="微调温度、工具选择、多步调用等。" icon={<Cog className="text-primary" />} />
+</Cards>
+
+## 开始使用
+
+前往[快速入门](/built-in-agent/quickstart)，在几分钟内设置一个可运行的内置代理。

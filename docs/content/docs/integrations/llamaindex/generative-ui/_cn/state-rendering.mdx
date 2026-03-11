@@ -1,0 +1,256 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染智能体的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+使用 AG-UI 工作流路由器的 LlamaIndex 智能体是有状态的。这意味着随着您的智能体在其工作流中进展，状态对象会在整个会话中保持。CopilotKit 允许您使用自定义 UI 组件在应用中渲染此状态，我们称之为**智能体生成式 UI**。
+
+## 什么时候应该使用这个？
+
+当用户和智能体一起解决问题时，在 UI 中渲染智能体的状态非常有用。一个很好的例子是用户和智能体一起解决问题的场景。智能体可以在其状态中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 设置带状态的智能体
+
+    使用 `initial_state` 创建带有有状态结构的 LlamaIndex 智能体。以下是一个跟踪搜索的完整示例：
+
+    ```python title="agent.py"
+    import asyncio
+    from typing import Annotated
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.core.workflow import Context
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+    from llama_index.protocols.ag_ui.events import StateSnapshotWorkflowEvent
+
+    async def addSearch(
+        ctx: Context,
+        query: Annotated[str, "要添加的搜索查询。"]
+    ) -> str:
+        """将搜索添加到智能体的搜索列表中。"""
+        async with ctx.store.edit_state() as global_state:
+            state = global_state.get("state", {})
+            if state is None:
+                state = {}
+
+            if "searches" not in state:
+                state["searches"] = []
+
+            # 添加新搜索
+            new_search = {"query": query, "done": False}
+            state["searches"].append(new_search)
+
+            # 将状态快照发送到前端
+            ctx.write_event_to_stream(
+                StateSnapshotWorkflowEvent(
+                    snapshot=state
+                )
+            )
+
+            global_state["state"] = state
+
+        return f"已添加搜索: {query}"
+
+    async def runSearches(ctx: Context) -> str:
+        """运行所有已添加的搜索。"""
+        async with ctx.store.edit_state() as global_state:
+            state = global_state.get("state", {})
+            if state is None:
+                state = {}
+
+            if "searches" not in state:
+                state["searches"] = []
+
+            # 将每个搜索更新为完成
+            for search in state["searches"]:
+                if not search.get("done", False):
+                    await asyncio.sleep(1)  # 模拟搜索执行
+                    search["done"] = True
+
+                    # 当每个搜索完成时发送状态更新
+                    ctx.write_event_to_stream(
+                        StateSnapshotWorkflowEvent(
+                            snapshot=state
+                        )
+                    )
+
+            global_state["state"] = state
+
+        return "所有搜索已完成！"
+
+    # 初始化 LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # 创建 AG-UI 工作流路由器
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        你是一个用于存储搜索的有用助手。
+
+        重要提示：
+        - 使用 addSearch 工具将搜索添加到智能体的状态
+        - 使用 addSearch 工具后，你必须始终使用 runSearches 工具来运行搜索
+        - 对于给定的查询，仅使用一次 addSearch 工具
+
+        添加搜索时，更新状态以跟踪：
+        - query: 搜索查询
+        - done: 搜索是否完成（最初为 false，运行后为 true）
+        """,
+        backend_tools=[addSearch, runSearches],
+        initial_state={
+            "searches": []
+        },
+    )
+
+    # 创建 FastAPI 应用
+    app = FastAPI(
+        title="LlamaIndex 智能体",
+        description="与 CopilotKit 集成的 LlamaIndex 智能体",
+        version="1.0.0"
+    )
+
+    # 包含路由器
+    app.include_router(agentic_chat_router)
+
+    # 健康检查端点
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染智能体的状态
+    现在我们可以使用带有 `render` 函数的 `useAgent` 在**聊天中**渲染智能体的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义智能体的状态，应与您的 LlamaIndex 智能体的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略了样式
+      useAgent({
+        agentId: "my_agent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速开始中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+    您还可以在**聊天外**渲染智能体的状态。当您想在聊天以外的任何地方渲染智能体的状态时，这很有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义智能体的状态，应与您的 LlamaIndex 智能体的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速开始中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+
+    您现在已经创建了一个将在聊天中渲染智能体状态的组件。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

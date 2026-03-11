@@ -1,0 +1,338 @@
+---
+title: 常见 LangGraph 问题
+description: 使用 LangGraph 时可能遇到的常见问题。
+icon: "lucide/LifeBuoy"
+---
+
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
+欢迎使用 CoAgents 故障排除指南！如果您在使用工具调用时遇到困难，那么您来对地方了。
+
+<Callout>
+    有未列出的问题？在 [GitHub](https://github.com/CopilotKit/CopilotKit/issues) 上提交工单或在 [Discord](https://discord.com/invite/6dffbvGU3D) 上联系我们，
+    我们很乐意提供帮助。
+
+    我们也非常鼓励任何希望添加自己的故障排除问题的开源贡献者通过 [GitHub 拉取请求](https://github.com/CopilotKit/CopilotKit/blob/main/CONTRIBUTING.md) 提交。
+
+</Callout>
+
+## 我的工具调用没有被流式传输
+
+这可能是由于几个不同的原因。
+
+首先，我们强烈建议您查看我们的 [人机协同](/langgraph/human-in-the-loop) 指南，了解如何在 LangGraph 智能体中流式传输工具调用的更深入示例。您还可以查看我们的 [旅行教程](/langgraph/tutorials/ai-travel-app/step-6-human-in-the-loop)，它讨论了如何在更复杂的示例中流式传输工具调用。
+
+如果您已经完成这些步骤，您可以检查以下内容：
+
+<Accordions>
+    <Accordion title="您使用的是 llm.invoke() 而不是 llm.ainvoke()">
+        <p>
+            当您调用 LangGraph 智能体时，您可以同步或异步调用。如果您同步调用，
+            工具调用将不会逐步流式传输，只会流式传输最终结果。如果您异步调用，
+            工具调用将逐步流式传输。
+
+            ```python
+            config = copilotkit_customize_config(config, emit_tool_calls=["say_hello_to"])
+            response = await llm_with_tools.ainvoke(
+                [ SystemMessage(content=system_message), *state["messages"] ],
+                config=config
+            )
+            ```
+        </p>
+    </Accordion>
+
+</Accordions>
+
+## 错误：`'AzureOpenAI' object has no attribute 'bind_tools'`
+
+此错误通常是由于从 LangGraph 使用了错误的导入造成的。不要将 `AzureOpenAI` 导入为 `AzureChatOpenAI`，您的问题就会解决。
+
+```python
+from langchain_openai import AzureOpenAI # [!code --]
+from langchain_openai import AzureChatOpenAI # [!code ++]
+```
+
+## 我收到 "agent not found" 错误
+
+如果您看到这个错误，这意味着 CopilotKit 找不到您尝试使用的 LangGraph 智能体。以下是修复方法：
+
+<Accordions>
+    <Accordion title="验证您的智能体锁定模式配置">
+        如果您使用智能体锁定模式，
+        请检查 `langgraph.json` 中定义的智能体是否与 CopilotKit provider 中定义的一致：
+
+        ```json title="langgraph.json"
+        {
+            "python_version": "3.12",
+            "dockerfile_lines": [],
+            "dependencies": ["."],
+            "graphs": {
+                "my_agent": "./src/agent.py:graph"// 在这种情况下，"my_agent" 是您使用的智能体 // [!code highlight]
+            },
+            "env": ".env"
+        }
+        ```
+
+        ```tsx title="layout.tsx"
+        {/* [!code highlight:1] */}
+        <CopilotKit agent="my_agent">
+            {/* 您的应用程序组件 */}
+        </CopilotKit>
+        ```
+
+        常见问题：
+        - 智能体名称拼写错误
+        - 大小写不匹配
+        - `langgraph.json` 中缺少条目
+    </Accordion>
+    <Accordion title="检查您在 LangGraph 平台端点上的智能体注册">
+        使用 LangGraph 平台端点时，请确保您的智能体已正确指定并遵循 `langgraph.json` 中的定义：
+
+        ```json title="langgraph.json"
+        {
+            "python_version": "3.12",
+            "dockerfile_lines": [],
+            "dependencies": ["."],
+            "graphs": {
+                "my_agent": "./src/agent.py:graph"// 在这种情况下，"my_agent" 是您使用的智能体 // [!code highlight]
+            },
+            "env": ".env"
+        }
+        ```
+
+        ```typescript title="/copilotkit/api/route.ts"
+        const runtime = new CopilotRuntime({
+          // ... CopilotRuntime 定义的其余部分
+          // [!code highlight:7]
+          agents: {
+            'my_agent': new LangGraphAgent({
+              deploymentUrl: '<your-api-url>',
+              graphId: 'my_agent',
+              langsmithApiKey: '<your-langsmith-api-key>' // 可选
+            }),
+          },
+        });
+        ```
+    </Accordion>
+    <Accordion title="检查 useCoAgent 中的智能体名称">
+        确保 `langgraph.json` 中定义的智能体与您在 `useCoAgent` 钩子中使用的一致：
+
+        ```json title="langgraph.json"
+        {
+            "python_version": "3.12",
+            "dockerfile_lines": [],
+            "dependencies": ["."],
+            "graphs": {
+                "my_agent": "./src/agent.py:graph"// 在这种情况下，"my_agent" 是您使用的智能体 // [!code highlight]
+            },
+            "env": ".env"
+        }
+        ```
+
+        ```tsx title="MyComponent.tsx"
+        // 您的 React 组件
+        useAgent({
+            agentId: "my_agent", // [!code focus]
+        });
+        ```
+    </Accordion>
+    <Accordion title="检查 useCoAgentStateRender 中的智能体名称">
+        确保 `langgraph.json` 中定义的智能体与您在 `useAgent` 钩子中使用的一致：
+
+        ```json title="langgraph.json"
+        {
+            "python_version": "3.12",
+            "dockerfile_lines": [],
+            "dependencies": ["."],
+            "graphs": {
+                "my_agent": "./src/agent.py:graph"// 在这种情况下，"my_agent" 是您使用的智能体 // [!code highlight]
+            },
+            "env": ".env"
+        }
+        ```
+
+        ```tsx title="MyComponent.tsx"
+        // 您的 React 组件
+        useCoAgentStateRender({
+            name: "my_agent", // [!code focus] 必须完全匹配
+        });
+        ```
+    </Accordion>
+
+</Accordions>
+
+## 隧道创建连接问题
+
+如果您注意到隧道创建过程无限旋转，您的路由器或 ISP 可能正在阻止与 CopilotKit 隧道服务的连接。
+
+<Accordions>
+    <Accordion title="路由器或 ISP 阻止隧道连接">
+        要验证与隧道服务的连接，请尝试以下命令：
+
+        ```bash
+        ping tunnels.devcopilotkit.com
+        curl -I https://tunnels.devcopilotkit.com
+        telnet tunnels.devcopilotkit.com 443
+        ```
+
+        如果这些失败，您的路由器安全功能或 ISP 可能正在阻止连接。常见解决方案：
+        - 检查路由器安全设置
+        - 考虑与您的 ISP 核实是否有任何连接限制
+        - 尝试使用移动热点
+    </Accordion>
+
+</Accordions>
+
+## 我收到 "Failed to find or contact remote endpoint at url, Make sure the API is running and that it's indeed a LangGraph platform url" 错误
+
+如果您看到这个错误，这意味着 LangGraph 平台客户端无法连接到您的端点。
+
+<Accordions>
+    <Accordion title="验证端点是否可访问">
+        检查在远程端点 URL 上运行的后端 API 的日志。确保它已启动并准备好接收请求
+    </Accordion>
+    <Accordion title="验证使用 LangGraph 部署工具运行 LangGraph 平台端点">
+        验证后端 API 是否正在使用 `langgraph dev`、`langgraph up`、LangGraph 云 URL 或 LangGraph 提供的等效方法运行
+    </Accordion>
+    <Accordion title="验证远程端点与端点定义类型匹配">
+        如果您使用 FastAPI 运行远程端点，即使它使用 LangGraph 作为智能体，也不被视为 LangGraph 平台端点。
+        您可能需要更改此端点的 `remoteEndpoints` 定义以匹配预期的格式。
+
+        将端点定义从：
+        ```
+        new CopilotRuntime({
+          remoteEndpoints: [
+            langGraphPlatformEndpoint({
+            deploymentUrl: "https://your-fastapi-endpoint:port",
+            langsmithApiKey: '<langsmith API key>' // 可选
+            agents: [], // 您之前的智能体定义
+          ],
+        });
+
+        // 或
+
+        new CopilotRuntime({
+          agents: {
+            'agent-name': new LangGraphAgent({
+              deploymentUrl: "https://your-fastapi-endpoint:port",
+              langsmithApiKey: '<langsmith API key>', // 可选
+              graphId: 'langgraph.json graph id', // 您之前的 graphId 定义
+            }),
+          }
+        });
+        ```
+
+        更改为：
+        ```
+        new CopilotRuntime({
+            agents: {
+                'agent-name': new LangGraphHttpAgent({
+                    url: 'https://your-fastapi-endpoint:port/your-agent-uri'
+                }),
+            }
+        });
+        ```
+    </Accordion>
+</Accordions>
+
+## 我在使用 FastAPI 与 LangGraph 时收到 "No checkpointer set" 错误
+
+如果您遇到此错误，这意味着您在编译的图中缺少检查点器。
+您可以访问 [LangGraph 持久化指南](https://docs.langchain.com/oss/python/langgraph/persistence#checkpoints) 了解什么是检查点器以及如何添加它。
+
+## 我看到消息被流式传输然后消失
+
+LangGraph 智能体是有状态的。当遍历图时，状态在每个节点结束时保存。CopilotKit 使用智能体的状态作为前端聊天中显示内容的来源。然而，由于状态仅在节点结束时发出，CopilotKit 允许您在节点*中间*流式传输预测状态更新。默认情况下，CopilotKit 会将主动生成的消息和工具调用流式传输到发起交互的前端聊天。**如果此预测状态在节点结束时没有持久化，它将在前端聊天中消失**。
+
+在这种情况下，最可能的情况是 `messages` 属性在节点中间被更新，但这些编辑没有在节点结束时持久化。
+
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/message-state-diagram.png" />
+
+<Accordions>
+    <Accordion title="我希望这些消息被持久化">
+        要解决此问题，您可以简单地在节点结束时返回新消息来持久化它们。
+
+         <Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} persist>
+            <Tab value="Python">
+                ```python
+                from copilotkit.langgraph import copilotkit_customize_config
+
+                async def chat_node(state: AgentState, config: RunnableConfig):
+                    # 1) 使用 CopilotKit 修改后的配置调用模型
+                    model = ChatOpenAI(model="gpt-5.2")
+                    response = await model.ainvoke(state["messages"], modifiedConfig)
+
+                    # 2) 确保返回新消息
+                    return {
+                        messages: response,
+                    }
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript
+                import { copilotkitCustomizeConfig } from '@copilotkit/sdk-js/langgraph';
+
+                async function chatNode(state: AgentState, config: RunnableConfig): Promise<AgentState> {
+                    // 1) 使用 CopilotKit 修改后的配置调用模型
+                    const model = new ChatOpenAI({ temperature: 0, model: "gpt-5.2" });
+                    const response = await model.invoke(state.messages, modifiedConfig);
+
+                    // 2) 确保返回新消息
+                    return {
+                        messages: response,
+                    }
+                }
+                ```
+            </Tab>
+        </Tabs>
+    </Accordion>
+    <Accordion title="我根本不希望这些消息被流式传输">
+        在这种情况下，您可以参考我们关于 [禁用流式传输](/langgraph/advanced/disabling-state-streaming) 的文档。更具体地说，
+        您可以在任何不希望消息被流式传输的地方使用 copilotkit 配置来禁用消息发出。
+
+        <Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} persist>
+            <Tab value="Python">
+                ```python
+                from copilotkit.langgraph import copilotkit_customize_config
+
+                async def chat_node(state: AgentState, config: RunnableConfig):
+                    # 1) 配置 CopilotKit 不发出消息
+                    modifiedConfig = copilotkit_customize_config(
+                        config,
+                        emit_messages=False, # 如果您想禁用消息流式传输
+                    )
+
+                    # 2) 使用 CopilotKit 修改后的配置调用模型
+                    model = ChatOpenAI(model="gpt-5.2")
+                    response = await model.ainvoke(state["messages"], modifiedConfig)
+
+                    # 3) 不返回新响应以向用户隐藏它
+                    return state
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript
+                import { copilotkitCustomizeConfig } from '@copilotkit/sdk-js/langgraph';
+
+                async function chatNode(state: AgentState, config: RunnableConfig): Promise<AgentState> {
+                    // 1) 配置 CopilotKit 不发出消息
+                    const modifiedConfig = copilotkitCustomizeConfig(config, {
+                        emitMessages: false, // 如果您想禁用消息流式传输
+                    });
+
+                    // 2) 使用 CopilotKit 修改后的配置调用模型
+                    const model = new ChatOpenAI({ temperature: 0, model: "gpt-5.2" });
+                    const response = await model.invoke(state.messages, modifiedConfig);
+
+                    // 3) 不返回新响应以向用户隐藏它
+                    return state;
+                }
+                ```
+            </Tab>
+        </Tabs>
+
+        <Callout title="运行子图或 langchain？">
+            只需确保将我们在上面定义的修改后的配置作为您的子图或 langchain 的 `RunnableConfig` 传递！
+        </Callout>
+    </Accordion>
+</Accordions>

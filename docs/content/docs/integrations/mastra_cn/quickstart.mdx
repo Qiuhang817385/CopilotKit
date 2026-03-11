@@ -1,0 +1,357 @@
+---
+title: 快速开始
+description: 在 10 分钟内将您的 Mastra 代理转变为代理原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { CoAgentsDiagram } from "@/components/react/coagents/coagents-diagram.tsx";
+import { FaPython, FaJs, FaCloud } from "react-icons/fa";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotKitCloudCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+import CloudCopilotKitProvider from "@/snippets/coagents/cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/coagents/self-host-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeStarter from "@/snippets/self-hosting-copilot-runtime-starter.mdx";
+import SelfHostingRemoteEndpoints from "@/snippets/self-hosting-remote-endpoints.mdx";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+  ServerIcon,
+} from "lucide-react";
+import CopilotUI from "@/snippets/copilot-ui.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- OpenAI API 密钥
+- Node.js 20+
+- 您喜欢的包管理器
+
+## 入门
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的起点</p>
+                <p className="text-base">
+                    您可以从我们的入门模板开始，或者将 CopilotKit 集成到您现有的 Mastra 代理中。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从零开始"
+            description="使用我们现成的入门应用程序快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                首先，我们将使用 CLI 为我们创建一个新项目。
+
+                ```bash
+                npx copilotkit@latest create -f mastra
+                ```
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                ```npm
+                npm install
+                ```
+            </Step>
+            <Step>
+                ### 配置您的环境
+
+                创建一个 `.env` 文件并添加您的 OpenAI API 密钥：
+
+                ```plaintext title=".env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  入门模板默认配置为使用 OpenAI 的 GPT-4o，但您可以修改它以使用 Mastra 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+
+                这将同时启动 UI 和代理服务器。
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="bring-your-own"
+            title="使用现有代理"
+            description="我已经有一个 Mastra 代理，想要添加 CopilotKit。"
+        >
+            <Step>
+                ### 初始化您的 Mastra 项目
+
+                如果您还没有 Mastra 项目设置，请创建一个：
+
+                ```bash
+                npx create-mastra@latest my-agent
+                cd my-agent
+                ```
+            </Step>
+            <Step>
+                ### 创建您的 Mastra 代理
+
+                在您的 Mastra 项目中创建一个新的代理文件：
+
+                ```ts title="src/mastra/agents/index.ts"
+                import { openai } from "@ai-sdk/openai";
+                import { Agent } from "@mastra/core/agent";
+
+                export const myAgent = new Agent({
+                  name: "My Agent",
+                  instructions: "You are a helpful assistant!",
+                  model: openai("gpt-5.2"),
+                });
+                ```
+
+                然后从您的 Mastra 实例导出它：
+
+                ```ts title="src/mastra/index.ts"
+                import { Mastra } from "@mastra/core";
+                import { myAgent } from "./agents";
+
+                export const mastra = new Mastra({
+                  agents: { myAgent },
+                });
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  此示例使用 OpenAI 的 GPT-4o，但您可以修改它以使用 Mastra 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 配置您的环境
+
+                将您的 OpenAI API 密钥设置为环境变量：
+
+                ```bash
+                export OPENAI_API_KEY=your_openai_api_key
+                ```
+            </Step>
+            <Step>
+                ### 创建您的前端
+
+                CopilotKit 适用于任何基于 React 的前端。在此示例中，我们将使用 Next.js。
+
+                ```bash
+                npx create-next-app@latest my-copilot-app
+                cd my-copilot-app
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit 包
+
+                ```npm
+                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/mastra @ag-ui/core @ag-ui/client @mastra/client-js @ai-sdk/openai
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot Runtime
+
+                创建一个 API 路由，将 CopilotKit 连接到您的 Mastra 代理：
+
+                ```ts title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                import { NextRequest } from "next/server";
+                import { MastraAgent } from "@ag-ui/mastra"
+                import { mastra } from "@/mastra"; // 指向您的 Mastra 实例的路径
+
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                const runtime = new CopilotRuntime({
+                  agents: MastraAgent.getLocalAgents({ mastra }),
+                });
+
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+                ```
+            </Step>
+            <Step>
+                ### 配置 CopilotKit Provider
+
+                使用 CopilotKit Provider 包装您的应用程序：
+
+                ```tsx title="app/layout.tsx"
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css";
+
+                // ...
+
+                export default function RootLayout({ children }: {children: React.ReactNode}) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit" agent="myAgent">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+              ### 添加聊天界面
+
+              将 CopilotSidebar 组件添加到您的页面：
+
+              ```tsx title="app/page.tsx"
+              import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
+
+              export default function Page() {
+                return (
+                  <main>
+                    <h1>Your App</h1>
+                    {/* [!code highlight:1] */}
+                    <CopilotSidebar />
+                  </main>
+                );
+              }
+              ```
+            </Step>
+            <Step>
+                ### 启动您的 UI
+
+                启动开发服务器：
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 开始聊天！
+
+        您的 AI 代理现在可以使用了！尝试问它一些问题：
+
+        ```
+        What tools do you have access to?
+        ```
+
+        ```
+        What do you think about React?
+        ```
+
+        ```
+        Show me some cool things you can do!
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                - 如果您遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                - 确保您的 Mastra 代理在端口 4111 上运行
+                - 检查您的 OpenAI API 密钥是否正确设置在 `.env` 文件中
+            </Accordion>
+        </Accordions>
+    </Step>
+</Steps>
+
+## 下一步是什么？
+
+现在您已经有了基本的代理设置，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="实现人机交互"
+    description="允许您的用户和代理在任务上协作。"
+    href="/mastra/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="添加一些生成式 UI"
+    description="在 UI 中渲染代理的进度和输出。"
+    href="/mastra/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="赋予代理调用前端工具的能力，直接更新您的应用程序。"
+    href="/mastra/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

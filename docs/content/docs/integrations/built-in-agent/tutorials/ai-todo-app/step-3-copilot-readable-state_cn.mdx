@@ -1,0 +1,57 @@
+---
+title: "步骤 3：Copilot 可读状态"
+---
+
+至此，我们已经在应用中有了一个聊天弹窗，并且可以直接与 Copilot 对话。这很棒，但我们的 Copilot 对我们的应用一无所知。在这一步中，我们将向 Copilot 提供待办事项的状态。
+
+在这一步中，你将学习如何向 Copilot 提供知识。在我们的案例中，我们希望 Copilot 了解应用中的任务。
+
+## 我们应用的状态
+
+让我们快速回顾一下应用状态是如何工作的。打开 [`lib/hooks/use-tasks.tsx`](https://github.com/CopilotKit/example-todos-app/blob/base-start-here/lib/hooks/use-tasks.tsx) 文件。
+
+一眼看去，我们可以看到该文件暴露了一个 Provider（`TasksProvider`），它定义了一些有用的东西：
+
+- 任务的状态（`tasks`）
+- 添加任务的函数（`addTask`）
+- 更新任务的函数（`updateTask`）
+- 删除任务的函数（`deleteTask`）
+
+所有这些都可以通过 `useTasks` Hook 来使用，我们在应用的其他部分使用它（可以查看 `TasksList`、`AddTask` 和 `Task` 组件）。
+
+这类似于大多数 React 应用，其中前端状态（无论是某个功能还是整个应用的状态）都由 Context 或状态管理库来管理。
+
+## `useCopilotReadable` Hook
+
+我们的目标是让我们的 Copilot 感知到这个状态，以便它能提供更准确和有用的回复。我们可以使用 [`useCopilotReadable`](/reference/v1/hooks/useCopilotReadable) Hook 轻松实现这一点。
+
+```tsx title="lib/hooks/use-tasks.tsx" {3,8-11}
+// ... 文件的其他部分
+
+import { useCopilotReadable } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+export const TasksProvider = ({ children }: { children: ReactNode }) => {
+  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
+
+  // [!code highlight:4]
+  useCopilotReadable({
+    description: "The state of the todo list",
+    value: JSON.stringify(tasks)
+  });
+
+  // ... 文件的其他部分
+}
+```
+
+在这个例子中，我们使用 `useCopilotReadable` Hook 向 Copilot 提供任务的状态。
+
+- 对于 `description` 属性，我们提供了一个简洁的描述，告诉 Copilot 这段可读数据的含义。
+- 对于 `value` 属性，我们将整个状态作为 JSON 字符串传递。
+
+## 试试看！
+
+现在，试试看！向你的 Copilot 询问关于待办事项列表状态的问题。例如：
+
+> 我还有哪些任务需要完成？
+
+很神奇，对吧？✨ 在下一步中，你将学习如何让 Copilot 根据应用的状态执行操作。

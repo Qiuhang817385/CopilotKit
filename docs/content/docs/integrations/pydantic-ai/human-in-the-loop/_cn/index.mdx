@@ -1,0 +1,62 @@
+---
+title: Human in the Loop (HITL)
+icon: "lucide/User"
+description: 让您的代理和用户协作处理复杂任务。
+---
+
+import { CTACards } from "@/components/react/cta-cards";
+import { Pause } from "lucide-react";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+{/* TODO: Add Example */}
+{/* <Callout>
+此视频展示了我们使用 HITL 获取用户反馈的 [AI 旅行应用](/langgraph/tutorials/ai-travel-app) 示例。
+
+</Callout> */}
+
+## 什么是 Human-in-the-Loop (HITL)？
+
+Human-in-the-loop (HITL) 允许代理在执行期间请求人工输入或批准，使 AI 系统更加可靠和可信。这种模式在构建需要处理复杂决策或需要人工判断的操作的 AI 应用程序时至关重要。
+
+<Frame className="my-0">
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-hitl-infographic.png"
+    alt="Agentic Copilot Human in the Loop"
+    className="mt-4 mb-0 shadow-md"
+  />
+</Frame>
+
+## 什么时候应该使用这个？
+
+HITL 将 AI 的效率与人工判断相结合，创建一个既强大又可靠的系统。主要优势包括：
+
+- **质量控制**：在关键决策点进行人工监督
+- **边缘情况**：优雅地处理低置信度情况
+- **专家输入**：在需要时利用人类专业知识
+- **可靠性**：更强大的实际使用系统
+
+## 如何使用？
+
+阅读有关 Pydantic AI Agents 中 HITL 方法的更多信息。
+
+<CTACards
+  columns={1}
+  cards={[
+    {
+      iconKey: "share2",
+      title: "基于流",
+      description:
+        "利用 Pydantic AI Agents 创建 Human-in-the-Loop 工作流。",
+href: "/pydantic-ai/human-in-the-loop/agent",
+    },
+  }]}
+/>

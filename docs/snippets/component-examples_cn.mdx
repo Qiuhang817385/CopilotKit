@@ -1,0 +1,108 @@
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId="component" items={["CopilotChat", "CopilotSidebar", "CopilotPopup", "无头 UI"]}>
+  <Tab value="CopilotPopup">
+
+    `CopilotPopup` 是 `CopilotChat` 的一个便捷包装器，位于视图层次结构中与您的主内容相同的级别。它提供了一个**可以打开和关闭的浮动聊天界面**。
+
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/popup-example.gif" alt="弹出窗口示例" className="w-full rounded-lg my-4" />
+
+    ```tsx
+    // [!code word:CopilotPopup]
+    import { CopilotPopup } from "@copilotkit/react-core/v2";
+
+    export function YourApp() {
+      return (
+        <>
+          <YourMainContent />
+          <CopilotPopup
+            labels={{
+              modalHeaderTitle: "弹出助手",
+              welcomeMessageText: "需要帮助吗？",
+            }}
+          />
+        </>
+      );
+    }
+    ```
+
+  </Tab>
+  <Tab value="CopilotSidebar">
+    `CopilotSidebar` 是 `CopilotChat` 的一个便捷包装器，它在视图层次结构中包装您的主内容。它提供了一个**可折叠和展开的侧边栏**聊天界面。
+
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/sidebar-example.gif" alt="侧边栏示例" className="w-full rounded-lg my-4" />
+
+    ```tsx
+    // [!code word:CopilotSidebar]
+    import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+    export function YourApp() {
+      return (
+        <CopilotSidebar
+          defaultOpen={true}
+          labels={{
+            modalHeaderTitle: "侧边栏助手",
+            welcomeMessageText: "今天我能帮您什么？",
+          }}
+        >
+          <YourMainContent />
+        </CopilotSidebar>
+      );
+    }
+    ```
+
+  </Tab>
+  <Tab value="CopilotChat">
+    `CopilotChat` 是一个灵活的聊天界面组件，可以**放置在应用程序的任何位置**，并且可以根据需要调整大小。
+
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/copilotchat-example.gif" alt="CopilotChat 示例" className="w-full rounded-lg my-4" />
+
+    ```tsx
+    // [!code word:CopilotChat]
+    import { CopilotChat } from "@copilotkit/react-core/v2";
+
+    export function YourComponent() {
+      return (
+        <CopilotChat
+          labels={{
+            modalHeaderTitle: "您的助手",
+            welcomeMessageText: "嗨！今天我能帮您什么？",
+          }}
+        />
+      );
+    }
+    ```
+
+  </Tab>
+  <Tab value="无头 UI">
+    内置的 Copilot UI 可以通过多种方式进行自定义——既可以通过 CSS，也可以通过使用组件替换的插槽系统。
+
+    CopilotKit 还通过 `useAgent` 和 `useCopilotKit` 钩子提供**完全自定义的无头 UI**。使用内置 UI 构建的所有内容（以及更多）都可以通过无头 UI 实现，提供深度的可定制性。
+
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2";
+    import { useCopilotKit } from "@copilotkit/react-core/v2";
+    import { randomUUID } from "@copilotkit/shared/v2";
+
+    export function CustomChatInterface() {
+      const { agent } = useAgent();
+      const { copilotkit } = useCopilotKit();
+
+      const sendMessage = async (content: string) => {
+        agent.addMessage({
+          id: randomUUID(),
+          role: "user",
+          content,
+        });
+        await copilotkit.runAgent({ agent });
+      };
+
+      return (
+        <div>
+          {/* 在此处实现您的自定义聊天 UI */}
+        </div>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>

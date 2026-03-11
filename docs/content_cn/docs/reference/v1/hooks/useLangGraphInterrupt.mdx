@@ -1,0 +1,76 @@
+---
+title: "useLangGraphInterrupt"
+description: "useLangGraphInterrupt Hook 允许设置在 LangGraph 的 Interrupt 事件上显示的生成式 UI。"
+---
+
+<br />
+<video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/interrupt-flow.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+
+<Callout type="warning">
+  `useLangGraphInterrupt` 仍然受支持，但我们建议从 v1 API 迁移到 v2 API 的 [`useHumanInTheLoop`](/reference/v2/hooks/useHumanInTheLoop)。
+</Callout>
+
+`useLangGraphInterrupt` 是一个 React Hook，您可以在应用程序中使用它来提供自定义 UI，以便在使用 LangGraph 的 `interrupt` 时进行渲染。
+一旦发出 Interrupt 事件，该 Hook 就会执行，允许您通过您选择的用户体验接收用户输入。
+
+## 用法
+
+### 简单用法
+
+```tsx title="app/page.tsx"
+import { useLangGraphInterrupt } from "@copilotkit/react-core"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:15]
+  // 样式省略以简洁起见
+  useLangGraphInterrupt<string>({
+    render: ({ event, resolve }) => (
+      <div>
+        <p>{event.value}</p>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          resolve((e.target as HTMLFormElement).response.value);
+        }}>
+          <input type="text" name="response" placeholder="输入您的回复" />
+          <button type="submit">提交</button>
+        </form>
+      </div>
+    )
+  });
+  // ...
+
+  return <div>{/* ... */}</div>
+}
+```
+
+## 参数
+
+<PropertyReference name="action" type="Action" required>
+  当发出 Interrupt 事件时要执行的操作。`handler` 或 `render` 必须至少定义一个作为参数
+
+    <PropertyReference name="name" type="string" required>
+      操作的名称。
+    </PropertyReference>
+
+    <PropertyReference name="handler" type="(args: LangGraphInterruptRenderProps<T>) => any | Promise<any>">
+      一个处理程序，用于以编程方式解决 Interrupt，或执行将结果传递给 `render` 方法的操作
+    </PropertyReference>
+
+    <PropertyReference name="render" type="(props: LangGraphInterruptRenderProps<T>) => string | React.ReactElement">
+        Render 允许您定义在发出 Interrupt 事件时要渲染的自定义组件或字符串。
+    </PropertyReference>
+
+    <PropertyReference name="enabled" type="(args: { eventValue: TEventValue; agentMetadata: AgentSession }) => boolean">
+        返回布尔值的方法，指示是否应运行中断操作。在使用多个中断时非常有用
+    </PropertyReference>
+
+    <PropertyReference name="agentId" type="string">
+        可选的 Agent ID，用于将此中断限定到特定 Agent。默认为 CopilotKit 聊天配置中配置的 Agent。
+    </PropertyReference>
+</PropertyReference>
+
+<PropertyReference name="dependencies" type="any[]">
+  可选的依赖项数组。
+</PropertyReference>

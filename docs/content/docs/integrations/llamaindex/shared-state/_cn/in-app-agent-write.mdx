@@ -1,0 +1,181 @@
+---
+title: 写入 Agent 状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入 Agent 的状态。
+---
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-write-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state) 中写入共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地从原生应用程序写入 Agent 的状态，允许您从 UI 更新 Agent 的工作内存。
+
+## 什么时候应该使用它？
+
+当您想要向 Agent 的工作内存提供用户输入或控制时，可以使用此功能。随着应用程序状态的变化，您可以更新 Agent 状态以反映这些变化。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+
+    使用 `initial_state` 创建具有状态结构的 LlamaIndex Agent。以下是一个跟踪语言的完整示例：
+
+    ```python title="agent.py"
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+    # Initialize the LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # Create the AG-UI workflow router
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        You are a helpful assistant for tracking the language.
+
+        IMPORTANT:
+        - ALWAYS use the lower case for the language
+        - ALWAYS respond in the current language from the state
+        """,
+        initial_state={
+            "language": "english"
+        },
+    )
+
+    # Create FastAPI app
+    app = FastAPI(
+        title="LlamaIndex Agent",
+        description="A LlamaIndex agent integrated with CopilotKit",
+        version="1.0.0"
+    )
+
+    # Include the router
+    app.include_router(agentic_chat_router)
+
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    在您的 Agent 连接并运行后，剩下要做的就是调用 `useAgent` Hook，传递 Agent 的名称，并使用 `agent.setState` 更新 Agent 状态。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // Define the agent state type, should match the actual state of your agent
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    // Example usage in a pseudo React component
+    function YourMainContent() {
+      const { agent } = useAgent({ // [!code highlight]
+        agentId: "my_agent",
+        initialState: { language: "english" }  // optionally provide an initial state
+      });
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state?.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // style excluded for brevity
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:2] */}
+          <p>Language: {agent.state?.language}</p>
+          <button onClick={toggleLanguage}>Toggle Language</button>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.setState` 函数将更新状态并在状态变化时触发重新渲染。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+    您现在可以使用 `agent.setState` 更新 Agent 状态并使用 `agent.state` 读取它。尝试切换语言按钮并与您的 Agent 交谈。您会看到语言变化以匹配 Agent 的状态。
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用关于更改内容的提示重新运行 Agent
+
+新的 Agent 状态将在下次 Agent 运行时使用。
+如果您想手动重新运行它，请使用 `copilotkit.runAgent()`。
+
+Agent 将使用最新的更新状态重新运行。您还可以在重新运行之前添加提示消息。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "my_agent",
+  });
+  const { copilotkit } = useCopilotKit(); // [!code highlight]
+
+  // setup to be called when some event in the app occurs
+  const toggleLanguage = async () => {
+    const newLanguage = agent.state?.language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // add a hint message and re-run the agent
+    // [!code highlight:7]
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `the language has been updated to ${newLanguage}`,
+    });
+    await copilotkit.runAgent({ agent });
+  };
+
+  return (
+    // ...
+  );
+}
+```

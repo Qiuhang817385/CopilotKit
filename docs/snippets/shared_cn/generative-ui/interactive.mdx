@@ -1,0 +1,60 @@
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl={`https://feature-viewer.copilotkit.ai/${props.framework || "langgraph"}/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false`}
+  codeUrl={`https://feature-viewer.copilotkit.ai/${props.framework || "langgraph"}/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs`}
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义代理可以调用的客户端函数，执行完全在用户的浏览器中进行。当您的代理调用前端工具时，逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于 UI 控制、生成式 UI 或人机交互。在本指南中，我们涵盖了使用前端工具进行人机交互。
+
+## 何时使用此功能？
+
+当您需要您的代理与客户端原语交互时使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 创建前端人机交互工具
+
+前端工具可以以多种方式利用。其中之一是拥有一个人机交互流程，其中工具的响应由用户的决定控制。
+
+在此示例中，我们将模拟执行命令的"批准"流程。使用 `useHumanInTheLoop` 钩子创建一个提示用户批准的工具。
+
+```tsx title="page.tsx"
+import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+import { z } from "zod";
+
+export function Page() {
+  // ...
+
+  // [!code highlight:16]
+  useHumanInTheLoop({
+    name: "humanApprovedCommand",
+    description: "询问人工批准运行命令。",
+    parameters: z.object({ command: z.string().describe("要运行的命令") }),
+    render: ({ args, respond, status }) => {
+      if (status !== "executing") return <></>;
+      return (
+        <div>
+          <pre>{args.command}</pre>
+          {/* [!code highlight:2] */}
+          <button onClick={() => respond?.(`告诉用户命令已运行`)}>批准</button>
+          <button onClick={() => respond?.(`告诉用户命令未运行`)}>拒绝</button>
+        </div>
+      );
+    },
+  });
+
+  // ...
+}
+```

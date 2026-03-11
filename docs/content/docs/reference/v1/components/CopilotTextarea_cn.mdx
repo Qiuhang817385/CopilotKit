@@ -1,0 +1,197 @@
+---
+title: "CopilotTextarea"
+description: "适用于你应用的 AI 驱动文本区域组件，可作为任何文本区域的直接替代品。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-textarea/src/components/copilot-textarea/copilot-textarea.tsx
+  */
+}
+
+<Callout type="info">
+  `CopilotTextarea` 没有直接的 v2 等效组件。它在 v1 中仍然可用。
+</Callout>
+
+<br/>
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/CopilotTextarea.gif" width="500" />
+
+`<CopilotTextarea>` 是一个 React 组件，可作为标准 `<textarea>` 的直接替代品，
+ 提供由 AI 驱动的增强自动完成功能。它具有上下文感知能力，可与
+[`useCopilotReadable`](/reference/v1/hooks/useCopilotReadable) Hook 无缝集成，根据应用上下文提供智能建议。
+
+此外，它还提供了一个悬停编辑器窗口（默认通过 Mac 上的 `Cmd + K` 和 Windows 上的 `Ctrl + K` 使用），允许用户
+建议对文本进行更改，例如提供摘要或改写文本。
+
+## 示例
+
+```tsx
+import { CopilotTextarea } from '@copilotkit/react-textarea';
+import "@copilotkit/react-textarea/styles.css";
+
+<CopilotTextarea
+  autosuggestionsConfig={{
+    textareaPurpose:
+     "电子邮件正文",
+    chatApiConfigs: {},
+  }}
+/>
+```
+
+## 用法
+
+### 安装依赖
+
+此组件是 [@copilotkit/react-textarea](https://npmjs.com/package/@copilotkit/react-textarea) 包的一部分。
+
+```shell npm2yarn \"@copilotkit/react-textarea"\
+npm install @copilotkit/react-core @copilotkit/react-textarea
+```
+
+### 使用
+
+在 React 应用中使用 CopilotTextarea 组件类似于使用标准的 `<textarea />`，
+并带有用于 AI 驱动功能的额外配置。
+
+例如：
+
+```tsx
+import { useState } from "react";
+import { CopilotTextarea } from "@copilotkit/react-textarea";
+import "@copilotkit/react-textarea/styles.css";
+
+export function ExampleComponent() {
+  const [text, setText] = useState("");
+
+  return (
+    <CopilotTextarea
+      className="custom-textarea-class"
+      value={text}
+      onValueChange={(value: string) => setText(value)}
+      placeholder="在此输入文本..."
+      autosuggestionsConfig={{
+        textareaPurpose: "提供文本区域的上下文或用途。",
+        chatApiConfigs: {
+          suggestionsApiConfig: {
+            maxTokens: 20,
+            stop: [".", "?", "!"],
+          },
+        },
+      }}
+    />
+  );
+}
+```
+
+### 外观与风格
+
+默认情况下，CopilotKit 组件没有任何样式。你可以在项目的根目录导入 CopilotKit 的样式表：
+```tsx title="YourRootComponent.tsx"
+...
+import "@copilotkit/react-textarea/styles.css"; // [!code highlight]
+
+export function YourRootComponent() {
+  return (
+    <CopilotKit>
+      ...
+    </CopilotKit>
+  );
+}
+```
+有关如何自定义样式的更多信息，请查看 [自定义外观与风格](/custom-look-and-feel/slots) 指南。
+
+## 属性
+
+<PropertyReference name="disableBranding" type="boolean"  >
+是否禁用 CopilotKit 品牌标识。默认为 `false`。
+</PropertyReference>
+
+<PropertyReference name="placeholderStyle" type="React.CSSProperties"  >
+指定应用于占位符文本的 CSS 样式。
+</PropertyReference>
+
+<PropertyReference name="suggestionsStyle" type="React.CSSProperties"  >
+指定应用于建议列表的 CSS 样式。
+</PropertyReference>
+
+<PropertyReference name="hoverMenuClassname" type="string"  >
+应用于编辑器弹出窗口的类名。
+</PropertyReference>
+
+<PropertyReference name="value" type="string"  >
+文本区域的初始值。可通过 `onValueChange` 进行控制。
+</PropertyReference>
+
+<PropertyReference name="onValueChange" type="(value: string) => void"  >
+文本区域值更改时调用的回调函数。
+</PropertyReference>
+
+<PropertyReference name="onChange" type="(event: React.ChangeEvent<HTMLTextAreaElement>) => void"  >
+在文本区域元素上触发 `change` 事件时调用的回调函数。
+</PropertyReference>
+
+<PropertyReference name="shortcut" type="string"  >
+用于打开编辑器弹出窗口的快捷键。默认为 `"Cmd-k"`。
+</PropertyReference>
+
+<PropertyReference name="autosuggestionsConfig" type="AutosuggestionsConfigUserSpecified" required >
+自动建议功能的配置设置。
+  完整参考，请 [查看 GitHub 上的接口](https://github.com/CopilotKit/CopilotKit/blob/main/packages/v1/react-textarea/src/types/base/base-copilot-textarea-props.tsx#L8)。
+
+  <PropertyReference name="textareaPurpose" type="string" required={true} >
+    纯文本形式的文本区域用途。
+
+    示例："电子邮件回复正文"
+  </PropertyReference>
+
+  <PropertyReference name="chatApiConfigs" type="ChatApiConfigs" >
+    聊天 API 配置。
+
+    <strong>注意：</strong> 你必须至少指定 `suggestionsApiConfig` 或 `insertionApiConfig` 之一。
+
+    <PropertyReference name="suggestionsApiConfig" type="SuggestionsApiConfig">
+        完整参考，请 [点击此处](https://github.com/CopilotKit/CopilotKit/blob/main/packages/v1/react-textarea/src/types/autosuggestions-config/suggestions-api-config.tsx#L4)。
+    </PropertyReference>
+    <PropertyReference name="insertionApiConfig" type="InsertionApiConfig">
+        完整参考，请 [点击此处](https://github.com/CopilotKit/CopilotKit/blob/main/packages/v1/react-textarea/src/types/autosuggestions-config/insertions-api-config.tsx#L4)。
+    </PropertyReference>
+  </PropertyReference>
+
+  <PropertyReference name="disabled" type="boolean" >
+    文本区域是否禁用。
+  </PropertyReference>
+
+  <PropertyReference name="disableBranding" type="boolean" >
+    是否禁用 CopilotKit 品牌标识。
+  </PropertyReference>
+
+  <PropertyReference name="placeholderStyle" type="React.CSSProperties" >
+    指定应用于占位符文本的 CSS 样式。
+  </PropertyReference>
+
+  <PropertyReference name="suggestionsStyle" type="React.CSSProperties" >
+    指定应用于建议列表的 CSS 样式。
+  </PropertyReference>
+
+  <PropertyReference name="hoverMenuClassname" type="string" >
+    应用于编辑器弹出窗口的类名。
+  </PropertyReference>
+
+  <PropertyReference name="value" type="string" >
+    文本区域的初始值。可通过 `onValueChange` 进行控制。
+  </PropertyReference>
+
+  <PropertyReference name="onValueChange" type="(value: string) => void" >
+    文本区域值更改时调用的回调函数。
+  </PropertyReference>
+
+  <PropertyReference name="onChange" type="(event: React.ChangeEvent<HTMLTextAreaElement>) => void" >
+    在文本区域元素上触发 `change` 事件时调用的回调函数。
+  </PropertyReference>
+
+  <PropertyReference name="shortcut" type="string" >
+    用于打开编辑器弹出窗口的快捷键。默认为 `"Cmd-k"`。
+  </PropertyReference>
+</PropertyReference>

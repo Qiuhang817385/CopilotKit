@@ -1,0 +1,392 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染代理的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+
+{/* TODO: 将以下链接替换为 Microsoft Agent Framework 链接，一旦 Microsoft Agent Framework 正式添加到功能查看器中 */}
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+Microsoft Agent Framework 代理可以在其执行过程中维护状态。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为**代理式生成式 UI (Agentic Generative UI)**。当您的代理处理请求时，状态更新可以流式传输到前端。
+
+## 什么时候应该使用这个？
+
+在 UI 中渲染代理的状态在以下情况下很有用：当您想向用户提供有关会话整体状态的反馈时。一个很好的例子是用户和代理一起解决问题的场景。代理可以将其草稿存储在状态中，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+
+  <Step>
+    ### 定义您的代理状态
+
+    定义一个表示您想要流式传输到前端的数据的状态快照类。此类应该是 JSON 可序列化的，并且只包含与 UI 相关的属性。
+
+    <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+      <Tab value=".NET">
+        ```csharp title="Program.cs"
+        using System.Text.Json.Serialization;
+
+        public class SearchInfo
+        {
+            [JsonPropertyName("query")]
+            public string Query { get; set; } = string.Empty;
+
+            [JsonPropertyName("done")]
+            public bool Done { get; set; }
+        }
+
+        public class AgentStateSnapshot
+        {
+            [JsonPropertyName("searches")]
+            public List<SearchInfo> Searches { get; set; } = new();
+        }
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```python title="agent/src/agent.py (节选)"
+        from typing import Annotated, Dict
+        from pydantic import BaseModel, Field
+
+        class SearchItem(BaseModel):
+            query: str
+            done: bool
+
+        # AG-UI 用于验证并将状态转发到前端的 JSON 模式
+        STATE_SCHEMA: Dict[str, object] = {
+            "searches": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "done": {"type": "boolean"},
+                    },
+                    "required": ["query", "done"],
+                    "additionalProperties": False,
+                },
+                "description": "搜索列表及每个搜索是否完成。",
+            }
+        }
+        ```
+      </Tab>
+    </Tabs>
+
+    在前端，定义匹配的 TypeScript 类型：
+
+    ```tsx title="app/page.tsx"
+    type SearchInfo = {
+      query: string;
+      done: boolean;
+    };
+
+    type AgentState = {
+      searches: SearchInfo[];
+    };
+    ```
+  </Step>
+  <Step>
+    ### 从您的代理流式传输状态
+
+    要将状态更新流式传输到前端，请将您的代理包装在一个 `DelegatingAIAgent` 中，该代理拦截流式响应并将状态快照作为 `DataContent` 发出。
+
+    以下是状态流式传输代理包装器的示例：
+
+    <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+      <Tab value=".NET">
+        ```csharp title="Program.cs"
+        using System.Runtime.CompilerServices;
+        using System.Text.Json;
+        using Azure.AI.OpenAI;
+        using Azure.Identity;
+        using Microsoft.Agents.AI;
+        using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+        using Microsoft.AspNetCore.Builder;
+        using Microsoft.AspNetCore.Http.Json;
+        using Microsoft.Extensions.AI;
+        using Microsoft.Extensions.DependencyInjection;
+        using Microsoft.Extensions.Options;
+
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddAGUI();
+        var app = builder.Build();
+
+        string endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]!;
+        string deployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT_NAME"]!;
+
+        // 获取 JSON 序列化器选项
+        var jsonOptions = app.Services.GetRequiredService<IOptions<JsonOptions>>();
+
+        // 创建基础代理
+        AIAgent baseAgent = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+            .GetChatClient(deployment)
+            .CreateAIAgent(
+                name: "ResearchAssistant",
+                instructions: "You are a research assistant that tracks your progress.");
+
+        // 用状态流式传输代理包装
+        AIAgent agent = new StateStreamingAgent(baseAgent, jsonOptions.Value.SerializerOptions);
+
+        // 映射 AG-UI 端点
+        app.MapAGUI("/", agent);
+        await app.RunAsync();
+
+        // 流式传输状态更新的代理包装器
+        internal sealed class StateStreamingAgent : DelegatingAIAgent
+        {
+            private readonly JsonSerializerOptions _jsonSerializerOptions;
+
+            public StateStreamingAgent(AIAgent innerAgent, JsonSerializerOptions jsonSerializerOptions)
+                : base(innerAgent)
+            {
+                this._jsonSerializerOptions = jsonSerializerOptions;
+            }
+
+            public override async IAsyncEnumerable<AgentRunResponseUpdate> RunStreamingAsync(
+                IEnumerable<ChatMessage> messages,
+                AgentThread? thread = null,
+                AgentRunOptions? options = null,
+                [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                // 从选项中获取当前状态（如果提供）
+                JsonElement currentState = default;
+                if (options is ChatClientAgentRunOptions { ChatOptions.AdditionalProperties: { } properties } &&
+                    properties.TryGetValue("ag_ui_state", out object? stateObj) && stateObj is JsonElement state)
+                {
+                    currentState = state;
+                }
+
+                // 使用 JSON 模式创建结构化状态输出的选项
+                ChatClientAgentRunOptions stateOptions = new ChatClientAgentRunOptions
+                {
+                    ChatOptions = new ChatOptions
+                    {
+                        ResponseFormat = ChatResponseFormat.ForJsonSchema<AgentStateSnapshot>(
+                            schemaName: "AgentStateSnapshot",
+                            schemaDescription: "Research progress state")
+                    }
+                };
+
+                // 添加包含当前状态的系统消息
+                var stateMessage = new ChatMessage(ChatRole.System,
+                    $"Current state: {(currentState.ValueKind != JsonValueKind.Undefined ? currentState.GetRawText() : "{}")}");
+                var messagesWithState = messages.Append(stateMessage);
+
+                // 收集所有更新
+                var allUpdates = new List<AgentRunResponseUpdate>();
+                await foreach (var update in this.InnerAgent.RunStreamingAsync(messagesWithState, thread, stateOptions, cancellationToken))
+                {
+                    allUpdates.Add(update);
+                    // 立即流式传输非文本更新
+                    if (update.Contents.Any(c => c is not TextContent))
+                    {
+                        yield return update;
+                    }
+                }
+
+                // 从响应中反序列化状态快照
+                var response = allUpdates.ToAgentRunResponse();
+                if (response.TryDeserialize(this._jsonSerializerOptions, out JsonElement stateSnapshot))
+                {
+                    byte[] stateBytes = JsonSerializer.SerializeToUtf8Bytes(
+                        stateSnapshot,
+                        this._jsonSerializerOptions.GetTypeInfo(typeof(JsonElement)));
+
+                    // 将状态快照作为 DataContent 发出
+                    yield return new AgentRunResponseUpdate
+                    {
+                        Contents = [new DataContent(stateBytes, "application/json")]
+                    };
+                }
+
+                // 流式传输文本摘要
+                var summaryMessage = new ChatMessage(ChatRole.System, "Provide a brief summary of your progress.");
+                await foreach (var update in this.InnerAgent.RunStreamingAsync(
+                    messages.Concat(response.Messages).Append(summaryMessage), thread, options, cancellationToken))
+                {
+                    yield return update;
+                }
+            }
+        }
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```python title="agent/src/agent.py"
+        from typing import Annotated, Dict
+        from agent_framework import ChatAgent, ChatClientProtocol, ai_function
+        from agent_framework.ag_ui import AgentFrameworkAgent
+        from pydantic import BaseModel, Field
+
+        class SearchItem(BaseModel):
+            query: str
+            done: bool
+
+        STATE_SCHEMA: Dict[str, object] = {
+            "searches": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "done": {"type": "boolean"},
+                    },
+                    "required": ["query", "done"],
+                    "additionalProperties": False,
+                },
+                "description": "搜索列表及每个搜索是否完成。",
+            }
+        }
+
+        PREDICT_STATE_CONFIG: Dict[str, Dict[str, str]] = {
+            "searches": {
+                "tool": "update_searches",
+                "tool_argument": "searches",
+            }
+        }
+
+        @ai_function(
+            name="update_searches",
+            description=(
+                "用提供的值替换整个搜索列表。"
+                "始终包含您想要保留的完整列表。"
+                "每个搜索应包含：{ query: string, done: boolean }。"
+            ),
+        )
+        def update_searches(
+            searches: Annotated[list[SearchItem], Field(description=("用户搜索的完整真实来源。保持顺序并在每次调用时包含完整列表。"))],
+        ) -> str:
+            return f"搜索已更新。正在跟踪 {len(searches)} 个项目。"
+
+        def create_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAgent:
+            base_agent = ChatAgent(
+                name="search_agent",
+                instructions=(
+                    "You help users create and run searches.\\n\\n"
+                    "状态同步规则：\\n"
+                    "- 维护一个搜索列表：每个项目包含 { query, done }。\\n"
+                    "- 添加新搜索时，调用 `update_searches` 并传入完整列表，包括带有 done=true 的新项目。\\n"
+                    "- 列表中的所有搜索都应有 done=true，除非明确正在进行中。\\n"
+                    "- 永远不要发送部分更新——每次调用都包含完整列表。\\n"
+                ),
+                chat_client=chat_client,
+                tools=[update_searches],
+            )
+
+            return AgentFrameworkAgent(
+                agent=base_agent,
+                name="CopilotKitMicrosoftAgentFrameworkAgent",
+                description="维护搜索列表并将状态流式传输到 UI。",
+                state_schema=STATE_SCHEMA,
+                predict_state_config=PREDICT_STATE_CONFIG,
+                require_confirmation=False,
+            )
+        ```
+      </Tab>
+    </Tabs>
+
+    <Callout type="info">
+      `DelegatingAIAgent` 包装器拦截流式响应，使用 JSON 模式响应格式生成结构化状态，并将其作为 `DataContent` 发出，AG-UI 协议将其转发到前端。
+    </Callout>
+
+    <Callout type="tip">
+      有关状态流式传输的完整、可用于生产的实现，请参阅 Agent Framework 仓库中的 [SharedStateAgent 示例](https://github.com/microsoft/agent-framework/blob/main/dotnet/samples/AGUIClientServer/AGUIDojoServer/SharedStateAgent.cs)。
+    </Callout>
+  </Step>
+  <Step>
+    ### 在聊天中渲染代理的状态
+    现在我们可以使用带有 `render` 函数的 `useAgent` 来在**聊天中**渲染我们代理的状态。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2";
+
+    // 为了类型安全，定义与代理状态快照匹配的状态类型
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略了样式
+      useAgent({
+        agentId: "sample_agent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+  </Step>
+  <Step>
+    ### 在聊天外部渲染状态
+    您也可以在**聊天外部**渲染代理的状态。当您想在聊天以外的任何地方渲染代理的状态时，这很有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义与代理状态快照匹配的状态类型
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+  </Step>
+  <Step>
+    ### 试试看！
+
+    您现在已经创建了一个将在聊天中渲染代理状态的组件。
+  </Step>
+</Steps>

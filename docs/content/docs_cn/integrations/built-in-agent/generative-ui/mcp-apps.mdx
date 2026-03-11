@@ -1,0 +1,116 @@
+---
+title: "MCP 应用"
+icon: "lucide/Monitor"
+description: "直接在聊天界面中渲染来自 MCP 服务器的交互式 UI 组件。"
+---
+
+## 这是什么？
+
+MCP 应用是暴露带有相关 UI 资源的工具的 MCP 服务器。当 Agent 调用这些工具之一时，CopilotKit 会自动获取并在聊天中渲染 UI 组件 —— 无需额外的前端代码。
+
+主要优势：
+- **零前端代码** —— UI 组件由 MCP 服务器提供
+- **完全交互** —— 组件可以使用 HTML、CSS 和 JavaScript
+- **安全沙盒** —— 内容在隔离的 iframe 中运行
+- **线程持久化** —— MCP 应用存储在对话历史记录中，并在重新连接时恢复
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 安装中间件
+
+    ```bash
+    npm install @ag-ui/mcp-apps-middleware
+    ```
+  </Step>
+  <Step>
+    ### 将 MCP 应用中间件添加到您的 Agent
+
+    使用 `.use()` 将 `MCPAppsMiddleware` 附加到您的 `BuiltInAgent`：
+
+    ```typescript title="app/api/copilotkit/route.ts"
+    import {
+      CopilotRuntime,
+      copilotRuntimeNextJSAppRouterEndpoint,
+    } from "@copilotkit/runtime";
+    import { BuiltInAgent } from "@copilotkit/runtime/v2"; // [!code highlight]
+    import { MCPAppsMiddleware } from "@ag-ui/mcp-apps-middleware"; // [!code highlight]
+    import { NextRequest } from "next/server";
+
+    const agent = new BuiltInAgent({
+      model: "openai:gpt-5.2",
+      prompt: "You are a helpful assistant.",
+    }).use( // [!code highlight:9]
+      new MCPAppsMiddleware({
+        mcpServers: [
+          {
+            type: "http",
+            url: "http://localhost:3108/mcp",
+            serverId: "my-server",
+          },
+        ],
+      }),
+    );
+
+    const runtime = new CopilotRuntime({
+      agents: { default: agent },
+    });
+
+    export const POST = async (req: NextRequest) => {
+      const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+        runtime,
+        endpoint: "/api/copilotkit",
+      });
+
+      return handleRequest(req);
+    };
+    ```
+
+    <Callout type="info" title="服务器 ID">
+      对于生产部署，请始终提供 `serverId`。如果没有它，CopilotKit 会从服务器 URL 生成哈希。如果您的 URL 更改（例如，不同的环境），以前存储在对话历史记录中的 MCP 应用将无法正确加载。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试试看！
+
+    就是这样。当 Agent 使用具有相关 UI 资源的工具时，MCP 应用将自动渲染。无需更改前端。
+  </Step>
+</Steps>
+
+## 传输类型
+
+该中间件支持两种传输类型：
+
+### HTTP 传输
+
+对于使用基于 HTTP 通信的 MCP 服务器：
+
+```typescript
+{
+  type: "http",
+  url: "http://localhost:3101/mcp",
+  serverId: "my-http-server"
+}
+```
+
+### SSE 传输
+
+对于使用服务器发送事件的 MCP 服务器：
+
+```typescript
+{
+  type: "sse",
+  url: "https://mcp.example.com/sse",
+  headers: {
+    "Authorization": "Bearer token"
+  },
+  serverId: "my-sse-server"
+}
+```
+
+## MCP 服务器示例
+
+尝试这些开源 MCP 应用服务器以开始：
+
+https://github.com/modelcontextprotocol/ext-apps

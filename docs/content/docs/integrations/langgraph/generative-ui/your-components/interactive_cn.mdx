@@ -1,0 +1,135 @@
+---
+title: 交互式
+icon: "lucide/Wrench"
+description: 创建组件让您的 Agent 与用户交互。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import FrontEndToolsImpl from "@/snippets/integrations/langgraph/frontend-tools.mdx"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+前端工具让您能够定义客户端函数，供 LangGraph Agent 调用，执行完全在用户的浏览器中进行。当 Agent 调用前端工具时，
+逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于[让您的 Agent 控制 UI](/langgraph/frontend-tools)、[生成式 UI](/langgraph/frontend-tools)，或用于人机协同交互。
+
+在本指南中，我们将介绍前端工具在人机协同中的使用。
+
+## 何时使用？
+当需要 Agent 与客户端原语交互时使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookie
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+      ### 运行并连接您的 Agent
+      <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式利用。其中一种方式是实现人机协同流程，工具响应由用户决策决定。
+
+        在本示例中，我们将模拟执行命令的"审批"流程。首先，使用 `useHumanInTheLoop` Hook 创建一个提示用户审批的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+        import { z } from "zod";
+
+        export function Page() {
+          // ...
+
+          // [!code highlight:20]
+          useHumanInTheLoop({
+            name: "humanApprovedCommand",
+            description: "请求人工审批运行命令。",
+            parameters: z.object({
+              command: z.string().describe("要运行的命令"),
+            }),
+            render: ({ args, respond, status }) => {
+              if (status !== "executing") return <></>;
+              return (
+                <div>
+                  <pre>{args.command}</pre>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond?.(`命令已通过`)}>批准</button>
+                  <button onClick={() => respond?.(`命令已拒绝`)}>拒绝</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ### 安装 CopilotKit SDK
+
+        现在，我们需要修改 Agent 以访问这些前端工具。在终端中，导航到 Agent 的文件夹并从那里继续！
+
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 继承自 CopilotKitState
+
+        要访问 CopilotKit 提供的前端工具，可以在 Agent 的状态定义中继承 CopilotKitState：
+
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from copilotkit import CopilotKitState # [!code highlight]
+
+                class YourAgentState(CopilotKitState): # [!code highlight]
+                    your_additional_properties: str
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript title="agent-js/src/agent.ts"
+                import { Annotation } from "@langchain/langgraph";
+                import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+                export const YourAgentStateAnnotation = Annotation.Root({
+                    yourAdditionalProperty: Annotation<string>,
+                    ...CopilotKitStateAnnotation.spec, // [!code highlight]
+                });
+                export type YourAgentState = typeof YourAgentStateAnnotation.State;
+                ```
+            </Tab>
+        </Tabs>
+
+        通过这样做，Agent 的状态将包含 `copilotkit` 属性，其中包含可以访问和调用的前端工具。
+    </Step>
+    <Step>
+        ### 访问前端工具
+
+        一旦 Agent 的状态包含 `copilotkit` 属性，您就可以在 Agent 逻辑中访问前端工具并利用它们。
+
+        以下是从 Agent 调用前端工具的方式：
+
+        <FrontEndToolsImpl components={props.components} />
+
+        这些工具由 CopilotKit 自动填充，与 LangChain 的工具调用定义兼容，便于集成到 Agent 工作流中。
+    </Step>
+    <Step>
+        ### 试一试！
+        您现在已经赋予 Agent 直接调用您定义的任何前端工具的能力。这些工具将可供 Agent 在需要时使用。
+    </Step>
+</Steps>

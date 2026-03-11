@@ -1,0 +1,381 @@
+---
+title: "CopilotChatInput"
+description: "聊天交互的主要文本输入和控制界面"
+---
+
+## 概述
+
+`CopilotChatInput` 是聊天交互的主要文本输入和控制界面。它提供了一个可多行的文本区域，最多可自动增长到可配置的最大行数（默认为 5 行），用于发送消息的操作按钮、语音转录和文件附件，以及用于声明式命令界面的可选工具菜单。
+
+该组件以三种模式运行：`"input"`（默认文本输入）、`"transcribe"`（用录音机替换文本区域）和 `"processing"`（表示后台处理正在进行中）。当文本跨越多行时，布局会将文本区域堆叠在控制行上方。
+
+## 导入
+
+```tsx
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+## Props
+
+<PropertyReference name="mode" type='"input" | "transcribe" | "processing"' default='"input"'>
+  输入组件的当前运行模式。
+  - `"input"` -- 带文本区域和发送按钮的标准文本输入模式。
+  - `"transcribe"` -- 用录音机组件替换文本区域以进行语音输入。
+  - `"processing"` -- 表示后台处理正在进行中。
+</PropertyReference>
+
+<PropertyReference name="value" type="string">
+  输入的当前文本值。与 `onChange` 一起用于受控模式。
+</PropertyReference>
+
+<PropertyReference name="onChange" type="(value: string) => void">
+  输入文本更改时调用的回调。与 `value` 一起用于受控模式。
+</PropertyReference>
+
+<PropertyReference name="autoFocus" type="boolean">
+  当为 `true` 时，文本区域在挂载时自动获得焦点。
+</PropertyReference>
+
+<PropertyReference name="isRunning" type="boolean" default="false">
+  Agent 是否正在执行。当为 `true` 时，发送按钮可能会被替换为停止按钮，输入可能显示处理状态。
+</PropertyReference>
+
+<PropertyReference name="onSubmitMessage" type="(value: string) => void">
+  用户提交消息（按 Enter 或单击发送按钮）时调用的回调。接收当前文本值。
+</PropertyReference>
+
+<PropertyReference name="onStop" type="() => void">
+  用户在 Agent 执行期间单击停止按钮时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="onStartTranscribe" type="() => void">
+  用户启动语音转录时调用的回调。通常将组件切换到 `"transcribe"` 模式。
+</PropertyReference>
+
+<PropertyReference name="onCancelTranscribe" type="() => void">
+  用户取消正在进行的语音转录时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="onFinishTranscribe" type="() => void">
+  用户完成语音转录（仅文本结果）时调用的回调。
+</PropertyReference>
+
+<PropertyReference name="onFinishTranscribeWithAudio" type="(audioBlob: Blob) => Promise<void>">
+  用户使用录音完成语音转录时调用的回调。接收录制的音频作为 `Blob`。当您需要发送原始音频进行服务器端语音转文本处理时使用此选项。
+</PropertyReference>
+
+<PropertyReference name="onAddFile" type="() => void">
+  用户单击文件附件按钮时调用的回调。未提供时，文件附件按钮隐藏。
+</PropertyReference>
+
+<PropertyReference name="toolsMenu" type="(ToolsMenuItem | '-')[]">
+  工具菜单的声明式配置。每个条目要么是 `ToolsMenuItem` 对象，要么是分隔符字符串 `"-"`。有关项目结构，请参见 [ToolsMenuItem](#toolsmenuitem)。未提供时，工具菜单按钮隐藏。
+</PropertyReference>
+
+<PropertyReference name="children" type="(props: { isMultiline: boolean }) => React.ReactElement">
+  可选的渲染属性函数，接收布局状态。当文本区域内容跨越多行时，`isMultiline` 标志为 `true`，这会触发堆叠布局（文本区域在控制行上方）。
+</PropertyReference>
+
+## 插槽
+
+所有插槽属性都遵循 CopilotKit 插槽系统：每个属性接受替换的 React 组件、通过 `twMerge` 合并到默认组件类中的 `className` 字符串，或扩展默认组件的 partial props 对象。
+
+<PropertyReference name="textArea" type="SlotProp">
+  文本输入区域的插槽。默认为自动增长的文本区域，最多扩展 5 行（可通过 `maxRows` 配置）。
+
+  **作为 className：**
+  ```tsx
+  <CopilotChatInput textArea="font-mono text-sm" />
+  ```
+</PropertyReference>
+
+<PropertyReference name="sendButton" type="SlotProp">
+  发送/提交按钮的插槽。默认为一个箭头图标按钮，提交当前消息。
+
+  **作为替换组件：**
+  ```tsx
+  <CopilotChatInput
+    sendButton={({ onClick }) => (
+      <button onClick={onClick} className="bg-blue-500 text-white px-3 py-1 rounded">
+        发送
+      </button>
+    )}
+  />
+  ```
+</PropertyReference>
+
+<PropertyReference name="startTranscribeButton" type="SlotProp">
+  启动语音转录按钮的插槽。仅在提供 `onStartTranscribe` 时渲染。
+</PropertyReference>
+
+<PropertyReference name="cancelTranscribeButton" type="SlotProp">
+  取消正在进行的语音转录按钮的插槽。仅在 `"transcribe"` 模式期间渲染。
+</PropertyReference>
+
+<PropertyReference name="finishTranscribeButton" type="SlotProp">
+  完成语音转录按钮的插槽。仅在 `"transcribe"` 模式期间渲染。
+</PropertyReference>
+
+<PropertyReference name="addMenuButton" type="SlotProp">
+  文件附件按钮的插槽。仅在提供 `onAddFile` 时渲染。
+</PropertyReference>
+
+<PropertyReference name="audioRecorder" type="SlotProp">
+  `"transcribe"` 模式期间显示的录音机组件的插槽。默认为 [`CopilotChatAudioRecorder`](#copilotchataudiorecorder)。
+</PropertyReference>
+
+## ToolsMenuItem
+
+`ToolsMenuItem` 类型定义了工具菜单中的项目。项目可以直接触发操作或包含嵌套子菜单。
+
+```ts
+type ToolsMenuItem = { label: string } & (
+  | { action: () => void }
+  | { items: (ToolsMenuItem | "-")[] }
+);
+```
+
+<PropertyReference name="label" type="string" required>
+  菜单项的显示文本。
+</PropertyReference>
+
+<PropertyReference name="action" type="() => void">
+  选择项目时调用的回调。与 `items` 互斥。
+</PropertyReference>
+
+<PropertyReference name="items" type="(ToolsMenuItem | '-')[]">
+  嵌套的子菜单项。每个条目要么是另一个 `ToolsMenuItem`，要么是分隔符字符串 `"-"`。与 `action` 互斥。
+</PropertyReference>
+
+### 分隔符
+
+使用字符串 `"-"` 作为数组条目来在项目之间渲染视觉分隔符：
+
+```tsx
+toolsMenu={[
+  { label: "搜索", action: () => search() },
+  "-",
+  { label: "设置", action: () => openSettings() },
+]}
+```
+
+### 嵌套子菜单
+
+带有 `items` 数组的菜单项渲染为可展开的子菜单：
+
+```tsx
+toolsMenu={[
+  {
+    label: "导出",
+    items: [
+      { label: "作为 PDF", action: () => exportPDF() },
+      { label: "作为 CSV", action: () => exportCSV() },
+      "-",
+      { label: "打印", action: () => printDoc() },
+    ],
+  },
+]}
+```
+
+## CopilotChatAudioRecorder
+
+在转录模式下使用的视觉音频波形组件。它显示麦克风输入的实时波形可视化，并通过 `ref` 公开命令式 API。
+
+### 导入
+
+```tsx
+import { CopilotChatAudioRecorder } from "@copilotkit/react-core/v2";
+```
+
+### 命令式 API
+
+该组件通过 React `ref` 公开以下命令式方法：
+
+<PropertyReference name="state" type="string">
+  录音机的当前状态（例如，`"idle"`、`"recording"`、`"stopped"`）。
+</PropertyReference>
+
+<PropertyReference name="start" type="() => void">
+  开始录音并启动波形可视化。
+</PropertyReference>
+
+<PropertyReference name="stop" type="() => void">
+  停止当前录音会话。
+</PropertyReference>
+
+<PropertyReference name="dispose" type="() => void">
+  清理录音机使用的所有资源（媒体流、音频上下文等）。
+</PropertyReference>
+
+### 用法
+
+```tsx
+import { useRef } from "react";
+import { CopilotChatAudioRecorder } from "@copilotkit/react-core/v2";
+
+function CustomRecorder() {
+  const recorderRef = useRef(null);
+
+  return (
+    <div>
+      <CopilotChatAudioRecorder ref={recorderRef} />
+      <button onClick={() => recorderRef.current?.start()}>录音</button>
+      <button onClick={() => recorderRef.current?.stop()}>停止</button>
+    </div>
+  );
+}
+```
+
+## 用法
+
+### 基本聊天输入
+
+```tsx
+import { useState } from "react";
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+
+function ChatInput() {
+  const [value, setValue] = useState("");
+
+  return (
+    <CopilotChatInput
+      value={value}
+      onChange={setValue}
+      onSubmitMessage={(text) => {
+        sendMessage(text);
+        setValue("");
+      }}
+      autoFocus
+    />
+  );
+}
+```
+
+### 带语音转录
+
+```tsx
+import { useState } from "react";
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+
+function VoiceInput() {
+  const [mode, setMode] = useState<"input" | "transcribe">("input");
+  const [value, setValue] = useState("");
+
+  return (
+    <CopilotChatInput
+      mode={mode}
+      value={value}
+      onChange={setValue}
+      onSubmitMessage={(text) => sendMessage(text)}
+      onStartTranscribe={() => setMode("transcribe")}
+      onCancelTranscribe={() => setMode("input")}
+      onFinishTranscribeWithAudio={async (blob) => {
+        const text = await transcribeAudio(blob);
+        setValue(text);
+        setMode("input");
+      }}
+    />
+  );
+}
+```
+
+### 带工具菜单
+
+```tsx
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+
+function InputWithTools() {
+  return (
+    <CopilotChatInput
+      onSubmitMessage={(text) => sendMessage(text)}
+      toolsMenu={[
+        { label: "搜索网页", action: () => triggerSearch() },
+        { label: "分析数据", action: () => triggerAnalysis() },
+        "-",
+        {
+          label: "导出",
+          items: [
+            { label: "作为 PDF", action: () => exportPDF() },
+            { label: "作为 Markdown", action: () => exportMarkdown() },
+          ],
+        },
+      ]}
+    />
+  );
+}
+```
+
+### 执行期间带停止按钮
+
+```tsx
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function ChatInputWithAgent() {
+  const { agent } = useAgent();
+
+  return (
+    <CopilotChatInput
+      isRunning={agent.isRunning}
+      onSubmitMessage={(text) => {
+        agent.addMessage({ role: "user", content: text, id: crypto.randomUUID() });
+        agent.runAgent();
+      }}
+      onStop={() => agent.abortRun()}
+      autoFocus
+    />
+  );
+}
+```
+
+### 带 Children 渲染属性的自定义布局
+
+```tsx
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+
+function AdaptiveInput() {
+  return (
+    <CopilotChatInput onSubmitMessage={(text) => sendMessage(text)}>
+      {({ isMultiline }) => (
+        <div className={isMultiline ? "border-2 border-blue-300 rounded-xl p-2" : ""}>
+          {isMultiline && (
+            <div className="text-xs text-gray-400 mb-1">多行模式</div>
+          )}
+        </div>
+      )}
+    </CopilotChatInput>
+  );
+}
+```
+
+### 设置插槽样式
+
+```tsx
+import { CopilotChatInput } from "@copilotkit/react-core/v2";
+
+function StyledInput() {
+  return (
+    <CopilotChatInput
+      onSubmitMessage={(text) => sendMessage(text)}
+      textArea="font-mono text-sm bg-gray-50 rounded-lg"
+      sendButton="bg-green-500 hover:bg-green-600 text-white rounded-full"
+    />
+  );
+}
+```
+
+## 行为
+
+- **自动增长文本区域**：默认文本区域随着用户输入自动扩展，最多 5 行。达到最大值后，文本区域变为可滚动。
+- **布局堆叠**：当输入文本跨越多行时，布局从内联（文本区域和按钮并排）切换为堆叠（文本区域在包含操作按钮的控制行上方）。
+- **模式切换**：将 `mode` 设置为 `"transcribe"` 会用 `audioRecorder` 插槽组件替换文本区域。转录控制按钮（`cancelTranscribeButton`、`finishTranscribeButton`）替换标准发送按钮。
+- **受控和非受控**：该组件支持受控模式（通过 `value` 和 `onChange`）和非受控模式（内部状态管理）。
+- **工具菜单**：`toolsMenu` 属性启用具有扁平项目、分隔符（`"-"`）和嵌套子菜单支持的声明式菜单。仅在提供 `toolsMenu` 时才渲染菜单按钮。
+- **插槽系统**：每个插槽属性接受三种形式——替换组件、通过 `twMerge` 合并到默认类中的 className 字符串，或扩展默认组件 props 的 partial props 对象。
+
+## 相关
+
+- [`CopilotChatView`](/reference/v2/components/CopilotChatView) -- 组合此组件的更高级聊天视图
+- [`CopilotChatAudioRecorder`](#copilotchataudiorecorder) -- 转录模式期间使用的录音机
+- [`useCopilotChatConfiguration`](/reference/v2/hooks/useCopilotChatConfiguration) -- 本地化输入标签的提供程序

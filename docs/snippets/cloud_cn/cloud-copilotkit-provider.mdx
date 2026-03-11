@@ -1,0 +1,19 @@
+```tsx title="layout.tsx"
+import "./globals.css";
+import { ReactNode } from "react";
+import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+ 
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {/* 使用您从 Copilot Cloud 获取的公共 API 密钥 */}
+        {/* [!code highlight:3] */}
+        <CopilotKit publicApiKey="<your-copilot-cloud-public-api-key>"> 
+          {children}
+        </CopilotKit>
+      </body>
+    </html>
+  );
+}
+```

@@ -1,0 +1,127 @@
+---
+title: "工具渲染"
+icon: "lucide/Server"
+description: 使用自定义 UI 组件渲染代理的工具调用。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="backend-tools-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout>
+  本示例展示了 [实现](#实现) 部分在 <a href="https://feature-viewer.copilotkit.ai/llama-index/feature/agentic_chat" target="_blank">CopilotKit 功能查看器</a> 中的应用。
+</Callout>
+
+## 这是什么？
+
+工具是 LLM 调用预定义（通常是确定性）函数的一种方式。CopilotKit 允许您在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 什么时候应该使用这个功能？
+
+当您的代理调用工具时，如果您想向用户提供关于代理正在做什么的反馈，那么在 UI 中渲染工具是非常有用的。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+<Step>
+### 运行并连接您的代理
+<RunAndConnect components={props.components} />
+</Step>
+<Step>
+### 给您的代理添加一个可调用的工具
+
+添加一个新的工具定义并将其传递给代理：
+
+```python title="agent.py"
+from fastapi import FastAPI
+from llama_index.llms.openai import OpenAI
+from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+def getWeather(location: str) -> str:
+    """获取指定位置的天气。"""
+    return f"{location}的天气晴朗，70华氏度。"
+
+# 初始化 LLM
+llm = OpenAI(model="gpt-5.2")
+
+# 创建 AG-UI 工作流路由器
+agentic_chat_router = get_ag_ui_workflow_router(
+    llm=llm,
+    # 这些工具仅在前端具有渲染函数
+    backend_tools=[getWeather],
+    system_prompt="你是一个有帮助的 AI 助手，可以访问各种工具和功能。",
+)
+
+# 创建 FastAPI 应用
+app = FastAPI(
+    title="LlamaIndex 代理",
+    description="与 CopilotKit 集成的 LlamaIndex 代理",
+    version="1.0.0"
+)
+
+# 包含路由器
+app.include_router(agentic_chat_router)
+
+# 健康检查端点
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "agent": "llamaindex"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
+```
+
+</Step>
+<Step>
+### 在前端渲染工具调用
+此时，您的代理将能够调用 `get_weather` 工具。现在
+我们只需要添加一个 `useRenderTool` 钩子即可在 UI 中渲染工具调用。
+
+<Callout type="info" title="重要">
+  要在 UI 中渲染工具调用，操作的名称必须与工具的名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:12]
+  useRenderTool({
+    name: "getWeather",
+    render: ({status, args}) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "正在调用天气 API..."}
+          {status === "complete" && `已为 ${args.location} 调用天气 API。`}
+        </p>
+      );
+    },
+  });
+  // ...
+};
+```
+
+</Step>
+<Step>
+### 试试看！
+
+尝试让代理获取某个位置的天气。您应该会看到我们添加的自定义 UI 组件渲染工具调用并显示传递给工具的参数。
+
+</Step>
+</Steps>
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

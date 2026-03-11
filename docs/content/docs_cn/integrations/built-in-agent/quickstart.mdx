@@ -1,0 +1,311 @@
+---
+title: 快速开始
+description: 在几分钟内开始使用 CopilotKit 的内置 Agent。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import {
+  WrenchIcon,
+  PlugIcon,
+  CpuIcon,
+  MonitorIcon,
+} from "lucide-react";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 前置要求
+
+在开始之前，您需要准备以下内容：
+
+- OpenAI API 密钥（或 Anthropic/Google — 参见 [模型选择](/built-in-agent/model-selection)）
+- Node.js 20+
+- 您喜欢的包管理器
+
+## 开始使用
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的起点</p>
+                <p className="text-base">
+                    您可以使用我们的入门模板快速开始，或手动设置。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从零开始"
+            description="使用我们现成的入门应用快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                ```bash
+                npx copilotkit@latest create
+                ```
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                ```npm
+                npm install
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                创建一个 `.env` 文件并添加您的 OpenAI API 密钥：
+
+                ```plaintext title=".env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  入门模板默认使用 OpenAI 的 GPT-4o。有关 Anthropic、Google 或自定义模型设置，请参见 [模型选择](/built-in-agent/model-selection)。
+                </Callout>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="manual"
+            title="手动设置"
+            description="我想逐步设置 CopilotKit 的内置 Agent。"
+        >
+            <Step>
+                ### 创建前端
+
+                CopilotKit 适用于任何基于 React 的前端。在本例中，我们将使用 Next.js。
+
+                ```bash
+                npx create-next-app@latest my-copilot-app
+                cd my-copilot-app
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit 包
+
+                ```npm
+                npm install @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                创建一个 `.env` 文件并添加您的 OpenAI API 密钥：
+
+                ```plaintext title=".env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  本示例使用 OpenAI 的 GPT-4o。有关 Anthropic、Google 或自定义模型设置，请参见 [模型选择](/built-in-agent/model-selection)。
+                </Callout>
+            </Step>
+            <Step>
+                ### 设置 Copilot Runtime
+
+                使用 `BuiltInAgent` 和 `CopilotRuntime` 创建 API 路由：
+
+                ```ts title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                  ExperimentalEmptyAdapter,
+                } from "@copilotkit/runtime";
+                import { BuiltInAgent } from "@copilotkit/runtime/v2"; // [!code highlight]
+                import { NextRequest } from "next/server";
+
+                const builtInAgent = new BuiltInAgent({ // [!code highlight:3]
+                  model: "openai:gpt-5.2",
+                });
+
+                const runtime = new CopilotRuntime({
+                  agents: { default: builtInAgent }, // [!code highlight]
+                });
+
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter: new ExperimentalEmptyAdapter(),
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+                ```
+            </Step>
+            <Step>
+                ### 配置 CopilotKit 提供者
+
+                使用 CopilotKit 提供者包裹您的应用：
+
+                ```tsx title="app/layout.tsx"
+                import "./globals.css"; // 如果使用 tailwindcss
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css"; // [!code highlight]
+
+                // ...
+
+                export default function RootLayout({ children }: {children: React.ReactNode}) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+              ### 添加聊天界面
+
+              将 CopilotSidebar 组件添加到您的页面：
+
+              ```tsx title="app/page.tsx"
+              import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+              export default function Page() {
+                return (
+                  <main>
+                    <h1>Your App</h1>
+                    {/* [!code highlight:1] */}
+                    <CopilotSidebar />
+                  </main>
+                );
+              }
+              ```
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 开始聊天！
+
+        您的 AI Agent 现在可以使用了！试着问它一些问题：
+
+        ```
+        Can you tell me a joke?
+        ```
+
+        ```
+        Can you help me understand AI?
+        ```
+
+        ```
+        What do you think about React?
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                - 如果遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                - 检查您的 API 密钥是否正确设置在 `.env` 文件中
+                - 确保运行时端点路径与 CopilotKit 提供者中的 `runtimeUrl` 匹配
+            </Accordion>
+        </Accordions>
+
+    </Step>
+</Steps>
+
+## 接下来做什么？
+
+现在您已经设置了基本的 Agent，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="服务端工具"
+    description="使用自定义工具赋予您的 Agent 后端能力。"
+    href="/built-in-agent/server-tools"
+    icon={<WrenchIcon />}
+  />
+  <Card
+    title="MCP 服务器"
+    description="连接 MCP 服务器以扩展工具支持。"
+    href="/built-in-agent/mcp-servers"
+    icon={<PlugIcon />}
+  />
+  <Card
+    title="模型选择"
+    description="切换到 Anthropic、Google 或自定义模型。"
+    href="/built-in-agent/model-selection"
+    icon={<CpuIcon />}
+  />
+  <Card
+    title="前端工具"
+    description="让 Agent 与您的 UI 交互。"
+    href="/built-in-agent/frontend-tools"
+    icon={<MonitorIcon />}
+  />
+</Cards>

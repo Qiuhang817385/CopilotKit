@@ -1,0 +1,297 @@
+---
+title: "预测性状态更新"
+icon: "lucide/Podcast"
+description: 将进行中的智能体状态更新流式传输到前端。
+---
+import { IframeSwitcher } from "@/components/content"
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { FaWrench } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
+
+{/* TODO: Re-add once the dojo example is updated and works */}
+{/* <IframeSwitcher
+  id="predictive-state-updates-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/predictive_state_updates?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/predictive_state_updates?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/llama-index/feature/predictive_state_updates) 中的预测性状态更新。
+</Callout> */}
+
+## 这是什么？
+
+LlamaIndex 智能体的状态更新是不连续的；仅在明确进行状态更改时更新。
+但即使_单个操作_通常也需要很多秒才能运行，并包含用户感兴趣的子步骤。
+
+**智能体原生应用程序**尽可能持续地向最终用户反映智能体正在做什么。
+
+CopilotKit 通过其**_预测性状态更新_**概念实现这一点。
+
+## 什么时候应该使用这个？
+
+当您想要以下功能时使用预测性状态更新：
+- **保持用户参与**，避免长时间的加载指示器
+- **建立信任**，通过展示智能体正在做什么
+- 启用**智能体引导** - 允许用户在需要时纠正智能体的方向
+
+## 重要说明
+
+当您的智能体完成执行时，**其最终状态成为单一事实来源**。虽然中间状态更新非常适合实时反馈，但您想要持久化的任何更改必须明确包含在最终状态中。否则，它们将在操作完成时被覆盖。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 定义状态
+    我们将在状态中定义一个 `observed_steps` 字段，随着智能体执行任务的不同步骤而更新。
+
+    ```python title="agent.py"
+    from typing import List
+    from llama_index.llms.openai import OpenAI
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+    from fastapi import FastAPI
+
+    # 使用 observed_steps 定义初始状态
+    initial_state = {
+        "observed_steps": []
+    }
+    ```
+  </Step>
+  <Step>
+    ### 发出中间状态
+
+    <TailoredContent
+        id="state-emission"
+        header={
+            <div>
+                <p className="text-xl font-semibold">您希望如何发出状态更新？</p>
+                <p className="text-base">
+                    您可以手动发出状态更新，或配置特定工具调用以发出更新。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="tool-emission"
+            title="基于工具的预测性状态更新"
+            description="配置特定工具调用以自动发出中间状态更新。"
+            icon={<FaWrench />}
+        >
+            对于长时间运行的任务，您可以创建一个更新状态并将其发送到前端的工具。在此示例中，我们将创建一个步骤进度工具，LLM 调用该工具来报告其进度。
+
+            ```python title="agent.py"
+            import asyncio
+            from typing import Annotated, List
+            from pydantic import BaseModel
+            from fastapi import FastAPI
+            from llama_index.core.workflow import Context
+            from llama_index.llms.openai import OpenAI
+            from llama_index.protocols.ag_ui.events import StateSnapshotWorkflowEvent
+            from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+
+            class Step(BaseModel):
+                """任务中的单个步骤。"""
+                description: str
+
+
+            class Task(BaseModel):
+                """包含要执行的步骤列表的任务。"""
+                steps: List[Step]
+
+
+            async def execute_task(ctx: Context, task: Task) -> str:
+                """执行任何任务的步骤列表。当用户要求您完成任何任务时使用此工具。
+                
+                Args:
+                    ctx: 用于访问和更新状态的工作流上下文。
+                    task: 包含要执行的步骤列表的任务。
+                
+                Returns:
+                    str: 确认任务已完成。
+                """
+                task = Task.model_validate(task)
+                
+                async with ctx.store.edit_state() as global_state:
+                    state = global_state.get("state", {})
+                    if state is None:
+                        state = {}
+                    
+                    # 将所有步骤初始化为待处理
+                    state["observed_steps"] = [
+                        {"description": step.description, "status": "pending"}
+                        for step in task.steps
+                    ]
+                    
+                    # 发送初始状态快照
+                    ctx.write_event_to_stream(
+                        StateSnapshotWorkflowEvent(snapshot=state)
+                    )
+                    
+                    # 模拟带延迟的步骤执行
+                    await asyncio.sleep(0.5)
+                    
+                    # 逐一将每个步骤更新为已完成
+                    for i in range(len(state["observed_steps"])):
+                        state["observed_steps"][i]["status"] = "completed"
+                        
+                        # 每步之后发出更新状态
+                        ctx.write_event_to_stream(
+                            StateSnapshotWorkflowEvent(snapshot=state)
+                        )
+                        
+                        # 步骤之间的短暂延迟以获得视觉效果
+                        await asyncio.sleep(0.5)
+                    
+                    global_state["state"] = state
+                
+                return "Task completed successfully!"
+
+
+            # 初始化 LLM
+            llm = OpenAI(model="gpt-5.2")
+
+            # 创建 AG-UI 工作流路由器
+            agentic_chat_router = get_ag_ui_workflow_router(
+                llm=llm,
+                system_prompt=(
+                    "You are a helpful assistant that can help the user with their task. "
+                    "When the user asks you to do any task (like creating a recipe, planning something, etc.), "
+                    "use the execute_task tool with a list of steps. Use your best judgment to describe the steps. "
+                    "Always use the tool for any actionable request."
+                ),
+                backend_tools=[execute_task],
+                initial_state={
+                    "observed_steps": [],
+                },
+            )
+
+            # 创建 FastAPI 应用程序
+            app = FastAPI(
+                title="LlamaIndex Agent",
+                description="A LlamaIndex agent integrated with CopilotKit",
+                version="1.0.0"
+            )
+
+            # 包含路由器
+            app.include_router(agentic_chat_router)
+
+            # 健康检查端点
+            @app.get("/health")
+            async def health_check():
+                return {"status": "healthy", "agent": "llamaindex"}
+
+            if __name__ == "__main__":
+                import uvicorn
+                uvicorn.run(app, host="localhost", port=8000)
+            ```
+
+            <Callout>
+              使用此配置，智能体每次调用 `stepProgress` 工具时都会发出状态更新，让前端实时了解进度。
+            </Callout>
+        </TailoredContentOption>
+    </TailoredContent>
+  </Step>
+  <Step>
+    ### 观察预测
+    这些预测将在智能体运行时发出，允许您在确定最终状态之前跟踪其进度。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2";
+    import { CopilotSidebar } from '@copilotkit/react-ui';
+    import '@copilotkit/react-ui/v2/styles.css';
+
+    interface Step {
+        description: string;
+        status: 'pending' | 'completed';
+    }
+
+    interface AgentState {
+        observed_steps: Step[];
+    }
+
+    export default function Page() {
+        // 获取对预测状态和最终状态的访问
+        const { agent } = useAgent({ agentId: "my_agent" });
+
+        // 添加状态渲染器以在聊天中显示进度
+        useAgent({
+            agentId: "my_agent",
+            render: ({ state, status }) => {
+                if (!state?.observed_steps?.length) return null;
+                return (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 my-2">
+                        <h3 className="font-semibold text-gray-700 mb-2">
+                            {status === 'inProgress' ? '⏳ 进度：' : '✅ 已完成：'}
+                        </h3>
+                        <ul className="space-y-1">
+                            {state.observed_steps.map((step, i) => (
+                                <li key={i} className="flex items-center gap-2">
+                                    <span>
+                                        {step.status === 'completed' ? '✅' : '⏳'}
+                                    </span>
+                                    <span className={step.status === 'completed' ? 'text-green-700' : 'text-gray-600'}>
+                                        {step.description}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            },
+        });
+
+        return (
+            <div>
+                <header>
+                    <h1>智能体进度演示</h1>
+                </header>
+
+                <main>
+                    {/* 显示最终状态的侧面板 */}
+                    <aside>
+                        <h2>智能体状态</h2>
+                        {agent.state?.observed_steps?.length > 0 ? (
+                            <ul>
+                                {agent.state.observed_steps.map((step, i) => (
+                                    <li key={i}>
+                                        <span>{step.status === 'completed' ? '✅' : '⏳'}</span>
+                                        <span>{step.description}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p>
+                                {"还没有步骤。尝试要求构建一个计划，例如\"为___创建一个食谱\"或\"教我如何修理轮胎。\""}
+                            </p>
+                        )}
+                    </aside>
+
+                    {/* 聊天区域 */}
+                    <CopilotSidebar
+                        labels={{
+                            welcomeMessageText: "嗨！要求我完成一项任务，例如\"教我如何修理轮胎。\""
+                        }}
+                    />
+                </main>
+            </div>
+        );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试试看！
+    现在您会注意到，状态预测会在智能体取得进展时发出，让您在确定最终状态之前了解其工作。
+    您可以将此模式应用于智能体中的任何长时间运行的任务。
+  </Step>
+</Steps>

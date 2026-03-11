@@ -1,0 +1,182 @@
+import { CopilotKitCSS, InteractiveCSSInspector } from "@/components/react/copilotkit-css";
+
+CopilotKit 有多种方式来自定义 Copilot UI 组件的颜色和结构。
+- [CSS 变量](#css-variables-最简单)
+- [自定义 CSS](#custom-css)
+- [自定义图标](#custom-icons)
+- [自定义标签](#custom-labels)
+
+如果您想自定义 Copilot UI 的样式和功能，您还可以尝试以下内容：
+- [自定义子组件](/custom-look-and-feel/bring-your-own-components)
+- [完全无头 UI](/custom-look-and-feel/headless-ui)
+
+## CSS 变量（最简单）
+更改 Copilot UI 组件中使用的颜色的最简单方法是覆盖 CopilotKit CSS 变量。
+
+<Callout type="info">
+  将鼠标悬停在下面的交互式 UI 元素上，以查看可用的 CSS 变量。
+</Callout>
+
+<CopilotKitCSS />
+<InteractiveCSSInspector />
+
+找到正确的变量后，您可以导入 `CopilotKitCSSProperties` 并简单地用一个 div 包裹 CopilotKit 并覆盖 CSS 变量。
+
+```tsx
+import { CopilotKitCSSProperties } from "@copilotkit/react-core/v2";
+
+<div
+  // [!code highlight:5]
+  style={
+    {
+      "--copilot-kit-primary-color": "#222222",
+    } as CopilotKitCSSProperties
+  }
+>
+  <CopilotSidebar .../>
+</div>
+```
+
+### 参考
+
+| CSS 变量 | 描述 |
+|-------------|-------------|
+| `--copilot-kit-primary-color` | 主要品牌/操作颜色 - 用于按钮、交互元素 |
+| `--copilot-kit-contrast-color` | 与主要颜色形成对比的颜色 - 用于主要元素上的文本 |
+| `--copilot-kit-background-color` | 主要页面/容器背景颜色 |
+| `--copilot-kit-secondary-color` | 次要背景 - 用于卡片、面板、凸起的表面 |
+| `--copilot-kit-secondary-contrast-color` | 主要内容的主要文本颜色 |
+| `--copilot-kit-separator-color` | 分隔线和容器的边框颜色 |
+| `--copilot-kit-muted-color` | 禁用/非活动状态的柔和颜色 |
+
+## 自定义 CSS
+
+除了自定义颜色之外，CopilotKit CSS 的结构还允许通过 CSS 类轻松自定义。
+
+```css title="globals.css"
+.copilotKitButton {
+  border-radius: 0;
+}
+
+.copilotKitMessages {
+  padding: 2rem;
+}
+
+.copilotKitUserMessage {
+  background: #007AFF;
+}
+```
+
+### 参考
+
+<Callout>
+有关 CopilotKit 中使用的样式和类的完整列表，请点击[此处](https://github.com/CopilotKit/CopilotKit/blob/main/src/v1.x/packages/react-ui/src/css/)。
+</Callout>
+
+| CSS 类 | 描述 |
+|-----------|-------------|
+| `.copilotKitMessages` | 所有聊天消息的主容器，具有滚动行为和间距 |
+| `.copilotKitInput` | 带有打字区域和发送按钮的文本输入容器 |
+| `.copilotKitUserMessage` | 用户消息的样式，包括背景、文本颜色和气泡形状 |
+| `.copilotKitAssistantMessage` | AI 回复的样式，包括背景、文本颜色和气泡形状 |
+| `.copilotKitHeader` | 聊天窗口顶部栏，包含标题和控件 |
+| `.copilotKitButton` | 主要聊天切换按钮，具有悬停和活动状态 |
+| `.copilotKitWindow` | 定义整体聊天窗口尺寸和位置的根容器 |
+| `.copilotKitMarkdown` | 渲染的 Markdown 内容的样式，包括列表、链接和引用 |
+| `.copilotKitCodeBlock` | 带有语法高亮和复制按钮的代码片段容器 |
+| `.copilotKitChat` | 处理定位和尺寸的基本聊天布局容器 |
+| `.copilotKitSidebar` | 侧边栏聊天模式的样式，包括宽度和动画 |
+| `.copilotKitPopup` | 弹出窗口聊天模式的样式，包括位置和动画 |
+| `.copilotKitButtonIcon` | 主聊天切换按钮内的图标样式 |
+| `.copilotKitButtonIconOpen` `.copilotKitButtonIconClose` | 聊天打开/关闭时的图标状态 |
+| `.copilotKitCodeBlockToolbar` | 代码块顶部栏，带有语言和复制控件 |
+| `.copilotKitCodeBlockToolbarLanguage` | 代码块工具栏中的语言标签样式 |
+| `.copilotKitCodeBlockToolbarButtons` | 代码块操作按钮的容器 |
+| `.copilotKitCodeBlockToolbarButton` | 代码块工具栏中的单个按钮样式 |
+| `.copilotKitSidebarContentWrapper` | 侧边栏模式内容的内部容器 |
+| `.copilotKitInputControls` | 输入区域按钮和控件的容器 |
+| `.copilotKitActivityDot1` `.copilotKitActivityDot2` `.copilotKitActivityDot3` | 动画打字指示器点 |
+| `.copilotKitDevConsole` | 开发调试控制台容器 |
+| `.copilotKitDevConsoleWarnOutdated` | 过期开发者控制台的警告样式 |
+| `.copilotKitVersionInfo` | 版本信息显示样式 |
+| `.copilotKitDebugMenuButton` | 调试菜单切换按钮样式 |
+| `.copilotKitDebugMenu` | 调试选项菜单容器 |
+| `.copilotKitDebugMenuItem` | 单个调试菜单选项样式 |
+
+## 自定义字体
+您可以通过更新 CopilotKit 中使用的各种 CSS 类的 `fontFamily` 属性来自定义字体。
+
+```css title="globals.css"
+.copilotKitMessages {
+  font-family: "Arial, sans-serif";
+}
+
+.copilotKitInput {
+  font-family: "Arial, sans-serif";
+}
+```
+
+### 参考
+您可以更新主要内容类以更改各种组件的字体系列。
+
+| CSS 类 | 描述 |
+|-----------|-------------|
+| `.copilotKitMessages` | 所有消息的主容器 |
+| `.copilotKitInput` | 输入字段 |
+| `.copilotKitMessage` | 所有聊天消息的基本样式 |
+| `.copilotKitUserMessage` | 用户消息 |
+| `.copilotKitAssistantMessage` | AI 回复 |
+
+## 自定义图标
+
+您可以通过将 `icons` 属性传递给 `CopilotSidebar`、`CopilotPopup` 或 `CopilotChat` 组件来自定义图标。
+
+```tsx
+<CopilotChat
+  icons={{
+    // 在此处使用您自己的图标 - 任何 React 节点
+    openIcon: <YourOpenIconComponent />,
+    closeIcon: <YourCloseIconComponent />,
+  }}
+/>
+```
+
+### 参考
+
+| 图标 | 描述 |
+|--------------|-------------|
+| `openIcon` | 用于打开聊天按钮的图标 |
+| `closeIcon` | 用于关闭聊天按钮的图标 |
+| `headerCloseIcon` | 用于标题中关闭聊天按钮的图标 |
+| `sendIcon` | 用于发送按钮的图标 |
+| `activityIcon` | 用于活动指示器的图标 |
+| `spinnerIcon` | 用于旋转器的图标 |
+| `stopIcon` | 用于停止按钮的图标 |
+| `regenerateIcon` | 用于重新生成按钮的图标 |
+| `pushToTalkIcon` | 用于按键说话的图标 |
+
+## 自定义标签
+
+要自定义标签，请将 `labels` 属性传递给 `CopilotSidebar`、`CopilotPopup` 或 `CopilotChat` 组件。
+
+```tsx
+<CopilotChat
+  labels={{
+    welcomeMessageText: "您好！今天我能为您提供什么帮助？",
+    modalHeaderTitle: "我的助手",
+    chatInputPlaceholder: "向我询问任何问题！",
+    stopGenerating: "停止",
+    regenerateResponse: "重新生成",
+  }}
+/>
+```
+
+### 参考
+
+| 标签 | 描述 |
+|---------------|-------------|
+| `welcomeMessageText` | 在聊天窗口中显示的初始消息 |
+| `modalHeaderTitle` | 在标题中显示的标题 |
+| `chatInputPlaceholder` | 在输入中显示的占位符 |
+| `stopGenerating` | 在停止按钮上显示的标签 |
+| `regenerateResponse` | 在重新生成按钮上显示的标签 |

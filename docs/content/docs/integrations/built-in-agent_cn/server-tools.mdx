@@ -1,0 +1,152 @@
+---
+title: "服务器工具"
+icon: "lucide/Wrench"
+description: "为您的内置代理定义后端工具。"
+---
+
+## 什么是服务器工具？
+
+服务器工具是在您的后端上运行的函数，内置代理可以调用它们。它们使用带有 Zod 模式的 `defineTool()` 定义，以实现类型安全的参数。
+
+## 何时应该使用此功能？
+
+- 您的代理需要访问数据库、API 或其他后端服务
+- 您需要带有验证的类型安全工具参数
+- 工具逻辑需要服务器端的机密或资源
+
+## 定义工具
+
+```typescript title="src/copilotkit.ts"
+import { BuiltInAgent, defineTool } from "@copilotkit/runtime/v2";
+import { z } from "zod";
+
+const getWeather = defineTool({
+  name: "getWeather",
+  description: "获取城市的当前天气",
+  parameters: z.object({
+    city: z.string().describe("城市名称"),
+  }),
+  execute: async ({ city }) => {
+    // 在此实现您的逻辑
+    return { temperature: 72, condition: "sunny", city };
+  },
+});
+
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  tools: [getWeather],
+});
+```
+
+## 工具响应
+
+工具可以返回任何可 JSON 序列化的值。代理使用响应来继续对话。
+
+## 多个工具
+
+传递一个工具数组——代理根据用户的请求选择调用哪个工具：
+
+```typescript title="src/copilotkit.ts"
+const searchDocs = defineTool({
+  name: "searchDocs",
+  description: "搜索文档以获取相关文章",
+  parameters: z.object({
+    query: z.string().describe("搜索查询"),
+  }),
+  execute: async ({ query }) => {
+    const results = await search(query);
+    return { results, count: results.length };
+  },
+});
+
+const createTicket = defineTool({
+  name: "createTicket",
+  description: "创建支持工单",
+  parameters: z.object({
+    title: z.string().describe("工单标题"),
+    priority: z.enum(["low", "medium", "high"]).describe("工单优先级"),
+    description: z.string().describe("问题的详细描述"),
+  }),
+  execute: async ({ title, priority, description }) => {
+    const ticket = await db.tickets.create({ title, priority, description });
+    return { ticketId: ticket.id, status: "created" };
+  },
+});
+
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  tools: [searchDocs, createTicket], // [!code highlight]
+});
+```
+
+## 复杂的 Zod 模式
+
+使用嵌套对象、数组、枚举和可选字段来实现复杂的工具参数：
+
+```typescript
+const bookFlight = defineTool({
+  name: "bookFlight",
+  description: "搜索并预订航班",
+  parameters: z.object({
+    trip: z.object({
+      origin: z.string().describe("出发机场代码（例如 SFO）"),
+      destination: z.string().describe("目的地机场代码（例如 JFK）"),
+      date: z.string().describe("出发日期，格式为 YYYY-MM-DD"),
+    }),
+    passengers: z.array(
+      z.object({
+        name: z.string(),
+        seatPreference: z.enum(["window", "middle", "aisle"]).optional(),
+      })
+    ).describe("乘客列表"),
+    class: z.enum(["economy", "business", "first"]).default("economy"),
+  }),
+  execute: async ({ trip, passengers, class: seatClass }) => {
+    const flights = await searchFlights(trip, seatClass);
+    return { flights, passengerCount: passengers.length };
+  },
+});
+```
+
+## 错误处理
+
+从您的工具中抛出错误或返回错误对象——代理会看到错误并可以通知用户或尝试不同的方法：
+
+```typescript
+const getUser = defineTool({
+  name: "getUser",
+  description: "通过邮箱查找用户",
+  parameters: z.object({
+    email: z.string().email().describe("用户的邮箱地址"),
+  }),
+  execute: async ({ email }) => {
+    const user = await db.users.findByEmail(email);
+    if (!user) {
+      throw new Error(`未找到邮箱为 ${email} 的用户`); // [!code highlight]
+    }
+    return { id: user.id, name: user.name, role: user.role };
+  },
+});
+```
+
+## 多步工具调用
+
+默认情况下，代理执行单步操作。如果您的代理需要链式调用工具（例如，先搜索，然后创建工单），请设置 `maxSteps`：
+
+```typescript
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  maxSteps: 5, // [!code highlight]
+  tools: [searchDocs, createTicket, getUser],
+});
+```
+
+使用 `maxSteps: 5`，代理可以：
+1. 调用 `searchDocs` 查找相关信息
+2. 处理结果
+3. 使用搜索的详细信息调用 `createTicket`
+4. 继续直到完成（最多 5 次迭代）
+
+<Callout type="info">
+查看[高级配置](/built-in-agent/advanced-configuration)了解更多选项，如 `toolChoice`、`temperature` 和 `providerOptions`。
+</Callout>

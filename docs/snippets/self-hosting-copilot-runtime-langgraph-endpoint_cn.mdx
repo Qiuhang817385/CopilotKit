@@ -1,0 +1,248 @@
+import { MultiProviderContent, If } from "@/components/react/multi-provider-content/multi-provider-content";
+import { quickStartProviders } from "@/components/react/multi-provider-content/utils";
+import { IoLogoVercel, IoLogoNodejs } from "react-icons/io5";
+import { SiNestjs } from "react-icons/si";
+import { RiNextjsLine } from "react-icons/ri";
+
+<Tabs groupId="endpoint-type" items={[
+  { value: 'Next.js App Router', icon: <RiNextjsLine className="text-xl" /> },
+  { value: 'Next.js Pages Router', icon: <RiNextjsLine className="text-xl" /> },
+  { value: 'Node.js Express', icon: <IoLogoNodejs className="text-xl" /> },
+  { value: 'Node.js HTTP', icon: <IoLogoNodejs className="text-xl" /> },
+  { value: 'NestJS', icon: <SiNestjs className="text-xl" /> }
+]}>
+  {/* Next.js App Router */}
+  <Tab value="Next.js App Router">
+    创建一个新路由来处理 `/api/copilotkit` 端点。
+
+    ```ts title="app/api/copilotkit/route.ts"
+    import {
+      CopilotRuntime,
+      OpenAIAdapter,
+      copilotRuntimeNextJSAppRouterEndpoint,
+      LangGraphAgent
+    } from "@copilotkit/runtime";
+    import OpenAI from "openai";
+    import { NextRequest } from "next/server";
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const serviceAdapter = new OpenAIAdapter({ openai } as any);
+
+    const runtime = new CopilotRuntime({
+      agents: {
+        // [!code highlight:5]
+        'my_agent': new LangGraphAgent({
+          deploymentUrl: "your-api-url", // 确保替换为真实的部署 URL
+          langsmithApiKey: process.env.LANGSMITH_API_KEY, // 仅用于 LangGraph Platform 部署
+          graphId: 'my_agent', // 通常与代理名称相同
+        })
+      },
+    });
+
+    export const POST = async (req: NextRequest) => {
+      const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+        runtime,
+        serviceAdapter,
+        endpoint: "/api/copilotkit",
+      });
+
+      return handleRequest(req);
+    };
+    ```
+  </Tab>
+
+    {/* Next.js Pages Router */}
+    <Tab value="Next.js Pages Router">
+        创建一个新路由来处理 `/api/copilotkit` 端点：
+
+        ```ts title="pages/api/copilotkit.ts"
+        import {
+          CopilotRuntime,
+          OpenAIAdapter,
+          copilotRuntimeNextJSPagesRouterEndpoint,
+          LangGraphAgent
+        } from '@copilotkit/runtime';
+        import OpenAI from "openai";
+        import { NextApiRequest, NextApiResponse } from 'next';
+
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const serviceAdapter = new OpenAIAdapter({ openai } as any);
+
+        const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+          const runtime = new CopilotRuntime({
+            agents: {
+              // [!code highlight:5]
+              'my_agent': new LangGraphAgent({
+                deploymentUrl: "your-api-url", // 确保替换为真实的部署 URL
+                langsmithApiKey: process.env.LANGSMITH_API_KEY, // 仅用于 LangGraph Platform 部署
+                graphId: 'my_agent', // 通常与代理名称相同
+              })
+            },
+          });
+
+          const handleRequest = copilotRuntimeNextJSPagesRouterEndpoint({
+            endpoint: '/api/copilotkit',
+            runtime,
+            serviceAdapter,
+          });
+
+          return await handleRequest(req, res);
+        };
+
+        export default handler;
+        ```
+
+        您的 Copilot 运行时端点应该在 `http://localhost:3000/api/copilotkit` 可用。
+    </Tab>
+
+    {/* Node.js Express */}
+    <Tab value="Node.js Express">
+        创建一个新的 Express.js 应用并设置 Copilot 运行时处理程序：
+
+        ```ts title="server.ts"
+        import express from 'express';
+        import {
+          CopilotRuntime,
+          OpenAIAdapter,
+          copilotRuntimeNodeHttpEndpoint,
+          LangGraphAgent
+        } from '@copilotkit/runtime';
+        import OpenAI from "openai";
+
+        const app = express();
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const serviceAdapter = new OpenAIAdapter({ openai } as any);
+
+        app.use('/copilotkit', (req, res, next) => {
+          const runtime = new CopilotRuntime({
+            agents: {
+              // [!code highlight:5]
+              'my_agent': new LangGraphAgent({
+                deploymentUrl: "your-api-url", // 确保替换为真实的部署 URL
+                langsmithApiKey: process.env.LANGSMITH_API_KEY, // 仅用于 LangGraph Platform 部署
+                graphId: 'my_agent', // 通常与代理名称相同
+              })
+            },
+          });
+
+          const handler = copilotRuntimeNodeHttpEndpoint({
+            endpoint: '/copilotkit',
+            runtime,
+            serviceAdapter,
+          });
+
+          return handler(req, res, next);
+        });
+
+        app.listen(4000, () => {
+          console.log('Listening at http://localhost:4000/copilotkit');
+        });
+        ```
+
+        您的 Copilot 运行时端点应该在 `http://localhost:4000/copilotkit` 可用。
+
+        <Callout type="warn">
+            请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+        </Callout>
+    </Tab>
+
+    {/* Node.js HTTP */}
+    <Tab value="Node.js HTTP">
+        设置一个简单的 Node.js HTTP 服务器并使用 Copilot 运行时处理请求：
+
+        ```ts title="server.ts"
+        import { createServer } from 'node:http';
+        import {
+          CopilotRuntime,
+          OpenAIAdapter,
+          copilotRuntimeNodeHttpEndpoint,
+          LangGraphAgent
+        } from '@copilotkit/runtime';
+        import OpenAI from "openai";
+
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const serviceAdapter = new OpenAIAdapter({ openai } as any);
+
+        const server = createServer((req, res) => {
+          const runtime = new CopilotRuntime({
+            agents: {
+              // [!code highlight:5]
+              'my_agent': new LangGraphAgent({
+                deploymentUrl: "your-api-url", // 确保替换为真实的部署 URL
+                langsmithApiKey: process.env.LANGSMITH_API_KEY, // 仅用于 LangGraph Platform 部署
+                graphId: 'my_agent', // 通常与代理名称相同
+              })
+            },
+          });
+
+          const handler = copilotRuntimeNodeHttpEndpoint({
+            endpoint: '/copilotkit',
+            runtime,
+            serviceAdapter,
+          });
+
+          return handler(req, res);
+        });
+
+        server.listen(4000, () => {
+          console.log('Listening at http://localhost:4000/copilotkit');
+        });
+        ```
+
+        您的 Copilot 运行时端点应该在 `http://localhost:4000/copilotkit` 可用。
+
+        <Callout type="warn">
+            请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+        </Callout>
+    </Tab>
+
+    {/* NestJS */}
+    <Tab value="NestJS">
+        在 NestJS 中设置一个控制器来处理 Copilot 运行时端点：
+
+        ```ts title="copilotkit.controller.ts"
+        import { All, Controller, Req, Res } from '@nestjs/common';
+        import { 
+          CopilotRuntime, 
+          copilotRuntimeNestEndpoint, 
+          OpenAIAdapter,
+          LangGraphAgent 
+        } from '@copilotkit/runtime';
+        import { Request, Response } from 'express';
+        import OpenAI from "openai";
+
+        @Controller()
+        export class CopilotKitController {
+          @All('/copilotkit')
+          copilotkit(@Req() req: Request, @Res() res: Response) {
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const serviceAdapter = new OpenAIAdapter({ openai } as any);
+            
+            const runtime = new CopilotRuntime({
+              agents: {
+                // [!code highlight:5]
+                'my_agent': new LangGraphAgent({
+                  deploymentUrl: "your-api-url", // 确保替换为真实的部署 URL
+                  langsmithApiKey: process.env.LANGSMITH_API_KEY, // 仅用于 LangGraph Platform 部署
+                  graphId: 'my_agent', // 通常与代理名称相同
+                })
+              },
+            });
+
+            const handler = copilotRuntimeNestEndpoint({
+              runtime,
+              serviceAdapter,
+              endpoint: '/copilotkit',
+            });
+            return handler(req, res);
+          }
+        }
+        ```
+
+        您的 Copilot 运行时端点应该在 `http://localhost:3000/copilotkit` 可用。
+
+        <Callout type="warn">
+            请记住在客户端代码中将 `runtimeUrl` 指向正确的端点，例如 `http://localhost:PORT/copilotkit`。
+        </Callout>
+    </Tab>
+</Tabs>

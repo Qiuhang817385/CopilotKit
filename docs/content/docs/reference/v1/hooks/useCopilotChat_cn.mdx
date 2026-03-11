@@ -1,0 +1,146 @@
+---
+title: "useCopilotChat"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-core/src/hooks/use-copilot-chat.ts
+  */
+}
+
+<Callout type="warning">
+  `useCopilotChat` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useAgent`](/reference/v2/hooks/useAgent)。
+</Callout>
+
+`useCopilotChat` 是一个用于无头聊天交互的轻量级 React Hook。
+非常适合以编程方式控制预构建的聊天组件。
+
+开源友好 - 无需免费的公共许可证密钥即可工作。
+
+<Callout title="寻找完全无头的 UI？">
+开始使用 [useCopilotChatHeadless_c](https://docs.copilotkit.ai/reference/v1/hooks/useCopilotChatHeadless_c)。
+</Callout>
+
+## 用例
+
+- 程序化消息传递：在不显示聊天 UI 的情况下发送消息
+- 程序化控制：以编程方式控制预构建组件
+- 后台操作：在后台触发 AI 交互
+- 发送即忘：发送消息而无需读取响应
+
+## 用法
+
+```tsx
+import { TextMessage, MessageRole } from "@copilotkit/runtime-client-gql";
+
+const { appendMessage } = useCopilotChat();
+
+// 不带命名冲突的示例用法
+const handleSendMessage = async (content: string) => {
+  await appendMessage(
+    new TextMessage({
+      role: MessageRole.User,
+      content,
+    })
+  );
+};
+```
+
+## 返回值
+Hook 返回以下属性：
+
+<PropertyReference name="visibleMessages" type="DeprecatedGqlMessage[]" deprecated>
+旧非 AG-UI 格式的消息数组，仅用于兼容性
+</PropertyReference>
+
+<PropertyReference name="appendMessage" type="(message: DeprecatedGqlMessage, options?) => Promise<void>" deprecated>
+使用旧格式追加消息，请改用 `sendMessage`
+</PropertyReference>
+
+<PropertyReference name="reloadMessages" type="(messageId: string) => Promise<void>">
+通过 ID 重新生成特定消息的响应
+</PropertyReference>
+
+<PropertyReference name="stopGeneration" type="() => void">
+停止当前消息生成过程
+</PropertyReference>
+
+<PropertyReference name="reset" type="() => void">
+清除所有消息并完全重置聊天状态
+</PropertyReference>
+
+<PropertyReference name="isLoading" type="boolean">
+聊天当前是否正在生成响应
+</PropertyReference>
+
+<PropertyReference name="runChatCompletion" type="() => Promise<Message[]>">
+手动触发聊天完成以进行高级使用
+</PropertyReference>
+
+<PropertyReference name="mcpServers" type="MCPServerConfig[]">
+模型上下文协议服务器配置数组
+</PropertyReference>
+
+<PropertyReference name="setMcpServers" type="(servers: MCPServerConfig[]) => void">
+更新 MCP 服务器配置以增强上下文
+</PropertyReference>
+
+## 参数
+
+<PropertyReference name="id" type="string"  >
+聊天的唯一标识符。如果未提供，将生成一个随机标识符。
+  当提供时，具有相同 `id` 的 `useChat` Hook 将
+  在组件之间共享状态。
+</PropertyReference>
+
+<PropertyReference name="headers" type="Record<string, string> | Headers"  >
+与 API 请求一起发送的 HTTP headers。
+</PropertyReference>
+
+<PropertyReference name="initialMessages" type="Message[]"  >
+用于填充聊天的初始消息。
+</PropertyReference>
+
+<PropertyReference name="makeSystemMessage" type="SystemMessageFunction"  >
+生成系统消息的函数。默认为 `defaultSystemMessage`。
+</PropertyReference>
+
+<PropertyReference name="disableSystemMessage" type="boolean"  >
+禁用 CopilotKit 默认系统消息的包含。当为 true 时，不发送系统消息（这也抑制了来自 <code>makeSystemMessage</code> 的任何自定义消息）。
+</PropertyReference>
+
+<PropertyReference name="suggestions" type="ChatSuggestions"  >
+控制聊天界面中的建议行为。
+
+  `auto`（默认）- 建议自动生成：
+    - 当聊天首次打开时（空状态）
+    - 每次消息交换完成后
+    - 使用 `useCopilotChatSuggestions` hooks 的配置
+
+  `manual` - 建议以编程方式控制：
+    - 使用 `setSuggestions()` 设置自定义建议
+    - 使用 `generateSuggestions()` 触发 AI 生成
+    - 通过 `useCopilotChat` hook 访问
+
+  `SuggestionItem[]` - 静态建议数组：
+    - 始终显示相同的建议
+    - 不涉及 AI 生成
+</PropertyReference>
+
+<PropertyReference name="onInProgress" type="(isLoading: boolean) => void"  >
+
+</PropertyReference>
+
+<PropertyReference name="onSubmitMessage" type="(messageContent: string) => Promise<void> | void"  >
+
+</PropertyReference>
+
+<PropertyReference name="onStopGeneration" type="OnStopGeneration"  >
+
+</PropertyReference>
+
+<PropertyReference name="onReloadMessages" type="OnReloadMessages"  >
+
+</PropertyReference>

@@ -1,0 +1,183 @@
+---
+title: 写入智能体状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入智能体的状态。
+---
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-write-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state) 中的写入共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地从原生应用程序写入智能体的状态，允许您从 UI 更新智能体的工作内存。
+
+## 什么时候应该使用这个？
+
+当您想要为智能体的工作内存提供用户输入或控制时，可以使用此功能。随着应用程序状态的变化，您可以更新智能体状态以反映这些变化。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+
+    使用 `initial_state` 创建具有有状态结构的 LlamaIndex 智能体。这里有一个跟踪语言的完整示例：
+
+    ```python title="agent.py"
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+    # 初始化 LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # 创建 AG-UI 工作流路由器
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        You are a helpful assistant for tracking the language.
+
+        IMPORTANT:
+        - ALWAYS use the lower case for the language
+        - ALWAYS respond in the current language from the state
+        """,
+        initial_state={
+            "language": "english"
+        },
+    )
+
+    # 创建 FastAPI 应用程序
+    app = FastAPI(
+        title="LlamaIndex Agent",
+        description="A LlamaIndex agent integrated with CopilotKit",
+        version="1.0.0"
+    )
+
+    # 包含路由器
+    app.include_router(agentic_chat_router)
+
+    # 健康检查端点
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    随着您的智能体连接并运行，剩下的就是调用 `useAgent` hook，传递智能体的名称，并
+    使用 `agent.setState` 更新智能体状态。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与您的智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    // 伪 React 组件中的示例用法
+    function YourMainContent() {
+      const { agent } = useAgent({ // [!code highlight]
+        agentId: "my_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state?.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:2] */}
+          <p>语言：{agent.state?.language}</p>
+          <button onClick={toggleLanguage}>切换语言</button>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.setState` 函数将更新状态并在状态变化时触发重新渲染。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+    现在您可以使用 `agent.setState` 更新智能体状态并使用 `agent.state` 读取它。尝试切换语言按钮
+    并与您的智能体交谈。您会看到语言变化以匹配智能体的状态。
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用有关更改内容的提示重新运行智能体
+
+新的智能体状态将在智能体下次运行时使用。
+如果您想手动重新运行它，请使用 `copilotkit.runAgent()`。
+
+智能体将使用最新更新的状态重新运行。您还可以在重新运行之前添加提示消息。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "my_agent",
+  });
+  const { copilotkit } = useCopilotKit(); // [!code highlight]
+
+  // 设置在应用程序中发生某些事件时调用
+  const toggleLanguage = async () => {
+    const newLanguage = agent.state?.language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // 添加提示消息并重新运行智能体
+    // [!code highlight:7]
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `the language has been updated to ${newLanguage}`,
+    });
+    await copilotkit.runAgent({ agent });
+  };
+
+  return (
+    // ...
+  );
+}
+```

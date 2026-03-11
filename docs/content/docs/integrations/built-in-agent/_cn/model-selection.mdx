@@ -1,0 +1,130 @@
+---
+title: "模型选择"
+icon: "lucide/Cpu"
+description: "为您的内置代理选择和配置模型。"
+---
+
+内置代理在底层使用 [Vercel AI SDK](https://sdk.vercel.ai)，让您可以访问来自 OpenAI、Anthropic 和 Google 的模型 —— 以及使用任何自定义 AI SDK 模型的能力。
+
+## 支持的模型
+
+使用 `"provider:model"` 格式指定模型（或 `"provider/model"` —— 两者都有效）。
+
+### OpenAI
+
+| 模型 | 标识符 |
+|-------|-----------|
+| GPT-5 | `openai:gpt-5` |
+| GPT-5 Mini | `openai:gpt-5-mini` |
+| GPT-4.1 | `openai:gpt-4.1` |
+| GPT-4.1 Mini | `openai:gpt-4.1-mini` |
+| GPT-4.1 Nano | `openai:gpt-4.1-nano` |
+| GPT-4o | `openai:gpt-5.2` |
+| GPT-4o Mini | `openai:gpt-5.2-mini` |
+| o3 | `openai:o3` |
+| o3-mini | `openai:o3-mini` |
+| o4-mini | `openai:o4-mini` |
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-4.1",
+});
+```
+
+### Anthropic
+
+| 模型 | 标识符 |
+|-------|-----------|
+| Claude Sonnet 4.5 | `anthropic:claude-sonnet-4.5` |
+| Claude Sonnet 4 | `anthropic:claude-sonnet-4` |
+| Claude 3.7 Sonnet | `anthropic:claude-3.7-sonnet` |
+| Claude Opus 4.1 | `anthropic:claude-opus-4.1` |
+| Claude Opus 4 | `anthropic:claude-opus-4` |
+| Claude 3.5 Haiku | `anthropic:claude-3.5-haiku` |
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "anthropic:claude-sonnet-4.5",
+});
+```
+
+### Google
+
+| 模型 | 标识符 |
+|-------|-----------|
+| Gemini 2.5 Pro | `google:gemini-2.5-pro` |
+| Gemini 2.5 Flash | `google:gemini-2.5-flash` |
+| Gemini 2.5 Flash Lite | `google:gemini-2.5-flash-lite` |
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "google:gemini-2.5-pro",
+});
+```
+
+## 环境变量
+
+为您选择的提供商设置 API 密钥：
+
+```bash
+# OpenAI
+OPENAI_API_KEY=sk-...
+
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google
+GOOGLE_API_KEY=...
+```
+
+或者，直接在配置中传递 API 密钥：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-4.1",
+  apiKey: process.env.MY_OPENAI_KEY, // [!code highlight]
+});
+```
+
+## 自定义模型（AI SDK）
+
+对于不在内置列表中的模型，您可以直接传递任何 Vercel AI SDK `LanguageModel` 实例：
+
+```typescript
+import { BuiltInAgent } from "@copilotkit/runtime/v2";
+import { createOpenAI } from "@ai-sdk/openai"; // [!code highlight]
+
+const customProvider = createOpenAI({ // [!code highlight]
+  apiKey: process.env.MY_API_KEY, // [!code highlight]
+  baseURL: "https://my-proxy.example.com/v1", // [!code highlight]
+}); // [!code highlight]
+
+const agent = new BuiltInAgent({
+  model: customProvider("my-fine-tuned-model"), // [!code highlight]
+});
+```
+
+这适用于任何 AI SDK 提供商 —— Azure OpenAI、AWS Bedrock、Ollama 或任何 OpenAI 兼容端点：
+
+```typescript
+import { createAzure } from "@ai-sdk/azure";
+
+const azure = createAzure({
+  resourceName: "my-resource",
+  apiKey: process.env.AZURE_API_KEY,
+});
+
+const agent = new BuiltInAgent({
+  model: azure("my-deployment"),
+});
+```
+
+## 工作原理
+
+在底层，内置代理将模型字符串解析为 AI SDK 提供商实例：
+
+- `"openai:gpt-4.1"` → `@ai-sdk/openai` → `openai("gpt-4.1")`
+- `"anthropic:claude-sonnet-4.5"` → `@ai-sdk/anthropic` → `anthropic("claude-sonnet-4.5")`
+- `"google:gemini-2.5-pro"` → `@ai-sdk/google` → `google("gemini-2.5-pro")`
+
+`"provider:model"` 和 `"provider/model"` 分隔符都受支持，并且工作方式相同。

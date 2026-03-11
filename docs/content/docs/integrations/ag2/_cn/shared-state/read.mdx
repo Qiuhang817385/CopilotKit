@@ -1,0 +1,180 @@
+---
+title: 读取 Agent 状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时 Agent 状态。
+---
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  本视频展示了将[实现](#实现)部分应用于 `npx copilotkit@latest init` 的结果。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 中使用实时 Agent 状态，也可以在原生应用程序 UX 中使用。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 什么时候应该使用它？
+
+当您想向用户提供有关 Agent 状态的反馈时可以使用此功能。随着 Agent
+状态更新，您可以在应用程序中原生反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    启动您的 AG2 后端并将您的 CopilotKit 前端连接到 AG-UI `/chat` 端点。
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+
+    使用 `ContextVariables` 创建您的 AG2 后端，并在状态变化时发出 `StateSnapshotEvent`：
+
+    ```python title="agent.py"
+    from typing import Annotated
+
+    from ag_ui.core import EventType, StateSnapshotEvent
+    from fastapi import FastAPI, Header
+    from fastapi.responses import StreamingResponse
+    from autogen import ContextVariables, ConversableAgent, LLMConfig
+    from autogen.ag_ui import AGUIStream, RunAgentInput
+
+    def read_state(context: ContextVariables) -> dict:
+        return context.get("agent_state", {"language": "english"})
+
+    def write_state(context: ContextVariables, state: dict) -> StateSnapshotEvent:
+        context["agent_state"] = state
+        return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=state)
+
+    agent = ConversableAgent(
+        name="assistant",
+        system_message=(
+            "你是一个用于跟踪语言的有用助手。"
+            "始终使用当前语言回复。"
+        ),
+        llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+    )
+
+    @agent.register_for_llm(description="更新共享状态中的语言。")
+    def set_language(
+        context: ContextVariables,
+        language: Annotated[str, "语言，如 english 或 spanish"],
+    ) -> StateSnapshotEvent:
+        return write_state(context, {"language": language.lower()})
+
+    agent.register_for_execution(name="set_language")(set_language)
+
+    stream = AGUIStream(agent)
+    app = FastAPI()
+
+    @app.post("/chat")
+    async def run_agent(
+        message: RunAgentInput,
+        accept: str | None = Header(None),
+    ):
+        return StreamingResponse(
+            stream.dispatch(message, accept=accept),
+            media_type=accept or "text/event-stream",
+        )
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    您的 Agent 已连接并运行，剩下的就是调用 [useAgent](/reference/v1/hooks/useAgent) Hook，传递 Agent 的 ID，并
+    可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义 Agent 状态类型，应与您的 Agent 实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "my_agent", // 必须与 CopilotRuntime 中的 Agent 名称匹配
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {agent.state.language}</p>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `agentId` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当 Agent 状态变化时会自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试
+    随着 Agent 状态更新，您的 `state` 变量将自动随之更新。在这种情况下，您会看到
+    语言设置为 "english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染 Agent 状态
+
+您还可以在聊天 UI 中渲染 Agent 的状态。这对于以
+更上下文相关的方式告知用户 Agent 的状态非常有用。为此，您可以使用带有 `render` 函数的 `useAgent` Hook。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义 Agent 状态类型，应与您的 Agent 实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "my_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="warn" title="重要">
+  `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+</Callout>
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当 Agent 状态变化时会自动更新。
+</Callout>
+
+## 中间流式传输和渲染 Agent 状态
+
+默认情况下，当您的后端发出 `StateSnapshotEvent` 时，AG2 状态更新对 CopilotKit 可见。
+为了更流畅的长期运行工作流，从您的后端工具发出额外的中间快照。

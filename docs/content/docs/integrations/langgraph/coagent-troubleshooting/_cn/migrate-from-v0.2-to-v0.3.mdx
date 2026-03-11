@@ -1,0 +1,32 @@
+---
+title: 从 v0.2 迁移到 v0.3
+description: 如何从 v0.2 迁移到 v0.3。
+---
+
+## v0.3 有什么新功能？
+
+从 `v0.3` 开始，我们更改了 Agent（LangGraph）和 CopilotKit 之间消息同步的方式。本质上，两者现在将共享完全相同的消息历史记录。
+
+这意味着您需要从 LangGraph 节点返回要在 CopilotKit 聊天中显示的消息，例如：
+
+```python
+def my_node(state: State, config: RunnableConfig) -> State:
+    response = # ... llm 调用 ...
+    return {
+        "messages": response,
+    }
+```
+
+所有工具消息现在默认都会发出，因此您不需要手动调用 `copilotkit_customize_config` 来配置工具调用发出。
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents-v-0-3-migration-image.png" />
+</Frame>
+
+## 如何迁移？
+
+1. 确保从 LangGraph 节点返回任何要作为消息历史记录一部分的消息（工具调用或文本消息）。
+
+2. 可选地，当您想要发出工具调用时，删除手动的 `copilotkit_customize_config` 调用。
+
+3. 如果您想从聊天中隐藏工具调用或消息，请使用 `copilotkit_customize_config` 并将 `emit_tool_calls` 或 `emit_messages` 设置为 `False`。确保不要在节点中返回这些消息，这样它们就不会成为消息历史记录的一部分。

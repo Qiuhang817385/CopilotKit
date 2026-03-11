@@ -1,0 +1,57 @@
+---
+title: 简介
+icon: "custom/awsStrands"
+description: 通过 AG-UI 使用 CopilotKit 将你的 AWS Strands Agent 带给用户。
+hideHeader: true
+---
+import { AwsStrandsIcon } from "@/lib/icons/custom-icons";
+import { FrameworkOverview } from "@/components/content/landing-pages/framework-overview";
+
+<FrameworkOverview
+  frameworkName="AWS Strands"
+  frameworkIcon={<AwsStrandsIcon className="h-10 w-10" />}
+  header="将你的 AWS Strands Agent 带给用户"
+  subheader="使用 CopilotKit 和 AG-UI 让你的 AWS Strands Agent 实现真正的用户交互性。构建丰富、交互式的 Agent 驱动应用程序。"
+  bannerVideo="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/overview.mp4"
+  guideLink="/aws-strands/quickstart"
+  initCommand="npx copilotkit@latest init"
+  featuresLink="https://feature-viewer.copilotkit.ai/aws-strands/feature/agentic_chat"
+  supportedFeatures={[
+    {
+      title: "生成式 UI",
+      description: "使用自定义 UI 组件实时渲染 Agent 的状态、进度、输出和工具调用。弥合 AI Agent 与用户界面之间的差距。",
+      documentationLink: "/aws-strands/generative-ui/backend-tools",
+      demoLink: "https://feature-viewer.copilotkit.ai/aws-strands/feature/tool_based_generative_ui",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/haiku.mp4"
+    },
+    {
+      title: "人工介入",
+      description: "在关键检查点赋予用户引导 Agent 的能力。结合 AI 和人类判断的最佳实践，实现更可靠和可控的 Agent 行为。",
+      documentationLink: "/aws-strands/human-in-the-loop",
+      demoLink: "https://examples-coagents-ai-travel-app.vercel.app/",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+    },
+    {
+      title: "共享状态",
+      description: "保持你的 Agent 和应用同步。你的 Agent 可以看到应用中的所有内容，你的应用也可以实时响应你的 Agent。",
+      documentationLink: "/aws-strands/shared-state/in-app-agent-read",
+      demoLink: "https://feature-viewer.copilotkit.ai/aws-strands/feature/shared_state",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+    }
+  ]}
+  architectureImage="https://cdn.copilotkit.ai/docs/copilotkit/images/generic-agui-architecture.png"
+  liveDemos={[
+    {
+      type: "saas",
+      title: "SaaS Copilot",
+      description: "通过 AI Agent 增强的传统 SaaS 应用。这些 Copilots 无缝集成到现有工作流程中，为特定业务流程提供智能辅助。非常适合客户服务、销售自动化、项目管理和领域特定任务，用户需要引导式、分步的 AI 辅助。",
+      iframeUrl: "https://examples-coagents-ai-travel-app.vercel.app?copilotOpen=true"
+    },
+    {
+      type: "canvas",
+      title: "Canvas Copilot",
+      description: "一个无限画布界面，用户在其中与 AI Agent 在空间化、可视化的环境中协作。这些 Copilots 在研究、头脑风暴、内容创作和复杂问题解决方面表现出色，在这些场景中，信息需要以非线性、创造性的方式进行组织、连接和探索。",
+      iframeUrl: "https://examples-coagents-research-canvas-ui.vercel.app/"
+    }
+  ]}
+/>

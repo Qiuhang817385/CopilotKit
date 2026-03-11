@@ -1,0 +1,188 @@
+---
+title: 写入智能体状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入智能体的状态。
+---
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  此视频展示了应用[实现](#implementation)部分后 `npx copilotkit@latest init` 的结果。
+</Callout>
+
+## 这是什么？
+
+本指南向您展示如何从您的应用程序写入智能体的状态。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 什么时候应该使用它？
+
+当您希望保持界面和后端智能体状态同步时，可以使用它。CopilotKit 允许您从 UI 更新状态，而 AG2 在后续轮次中消费该状态。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    启动您的 AG2 后端并将您的 CopilotKit 前端连接到 AG-UI `/chat` 端点。
+  </Step>
+  <Step>
+    ### 定义智能体状态
+
+    使用 `ContextVariables` 创建您的 AG2 后端，并在状态更改时发出 `StateSnapshotEvent`：
+
+    ```python title="agent.py"
+    from typing import Annotated
+
+    from ag_ui.core import EventType, StateSnapshotEvent
+    from fastapi import FastAPI, Header
+    from fastapi.responses import StreamingResponse
+    from autogen import ContextVariables, ConversableAgent, LLMConfig
+    from autogen.ag_ui import AGUIStream, RunAgentInput
+
+    def read_state(context: ContextVariables) -> dict:
+        return context.get("agent_state", {"language": "english"})
+
+    def write_state(context: ContextVariables, state: dict) -> StateSnapshotEvent:
+        context["agent_state"] = state
+        return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=state)
+
+    agent = ConversableAgent(
+        name="assistant",
+        system_message=(
+            "You are a helpful assistant for tracking language. "
+            "Always respond in the current language."
+        ),
+        llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+    )
+
+    @agent.register_for_llm(description="Update the language in shared state.")
+    def set_language(
+        context: ContextVariables,
+        language: Annotated[str, "language such as english or spanish"],
+    ) -> StateSnapshotEvent:
+        return write_state(context, {"language": language.lower()})
+
+    agent.register_for_execution(name="set_language")(set_language)
+
+    stream = AGUIStream(agent)
+    app = FastAPI()
+
+    @app.post("/chat")
+    async def run_agent(
+        message: RunAgentInput,
+        accept: str | None = Header(None),
+    ):
+        return StreamingResponse(
+            stream.dispatch(message, accept=accept),
+            media_type=accept or "text/event-stream",
+        )
+    ```
+
+  </Step>
+  <Step>
+    ### 从 `useAgent` hook 调用 `setState` 函数
+    `useAgent` 返回一个带有 `setState` 函数的 `agent` 对象，您可以使用它来更新智能体状态。调用此
+    函数将更新智能体状态并触发依赖于智能体状态的任何内容的重新渲染。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    // 在伪 React 组件中的示例用法
+    function YourMainContent() {
+      const { agent } = useAgent({ // [!code highlight]
+        agentId: "my_agent", // 必须与 CopilotRuntime 中的智能体名称匹配
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:2] */}
+          <p>Language: {agent.state.language}</p>
+          <button onClick={toggleLanguage}>Toggle Language</button>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="Important">
+      `agentId` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试
+    您现在可以使用 `agent.setState` 更新智能体状态，并使用 `agent.state` 读取它。尝试切换语言按钮
+    并与您的智能体交谈。您将看到语言更改以匹配智能体的状态。
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用有关更改内容的提示重新运行智能体
+
+新的智能体状态将在智能体下次运行时使用。
+如果您想手动重新运行它，请使用 `copilotkit.runAgent()`。
+
+智能体将使用最新更新的状态重新运行。您还可以在重新运行之前添加提示消息。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "my_agent",
+  });
+  const { copilotkit } = useCopilotKit(); // [!code highlight]
+
+  // 设置为在应用程序中发生某些事件时调用
+  const toggleLanguage = async () => {
+    const newLanguage = agent.state.language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // 添加提示消息并重新运行智能体
+    // [!code highlight:7]
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `the language has been updated to ${newLanguage}`,
+    });
+    await copilotkit.runAgent({ agent });
+  };
+
+  return (
+    // ...
+  );
+}
+```
+
+### 中间流式传输和渲染智能体状态
+
+默认情况下，AG2 状态更新在您的后端发出 `StateSnapshotEvent` 时对 CopilotKit 可见。
+对于更流畅的长运行工作流，从您的后端工具发出额外的中间快照。

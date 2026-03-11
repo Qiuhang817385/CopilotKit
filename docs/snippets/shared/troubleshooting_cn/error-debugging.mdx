@@ -1,0 +1,91 @@
+# 如何调试错误
+
+CopilotKit 为本地开发和调试提供可视化错误显示。此功能完全免费，不需要 API 密钥。
+
+## 快速设置
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      runtimeUrl="<your-runtime-url>"
+      showDevConsole={true} // [!code highlight]
+    >
+      {/* 您的应用 */}
+    </CopilotKit>
+  );
+}
+```
+
+<Callout type="warning">
+  避免在生产环境中显示开发控制台，因为它会向终端用户暴露内部错误详情。
+</Callout>
+
+## 何时使用开发调试
+
+- **本地开发** - 在您的 UI 中立即查看错误
+- **快速调试** - 无需设置，开箱即用
+- **测试** - 在开发期间验证错误处理
+
+## 程序化错误处理（v2）
+
+v2 API 在 `CopilotKitProvider` 和 `CopilotChat` 上都提供 `onError` 回调，用于程序化错误处理。不需要 `publicApiKey`。
+
+### 提供程序级别错误处理
+
+捕获整个应用中的所有错误：
+
+```tsx
+import { CopilotKitProvider } from "@copilotkit/react-core/v2";
+
+<CopilotKitProvider
+  runtimeUrl="/api/copilotkit"
+  onError={(event) => {
+    // event.code — 错误类型（例如 "runtime_info_fetch_failed", "agent_run_failed"）
+    // event.error — Error 对象
+    // event.context — 附加上下文（agentId, toolName 等）
+    console.error(`[CopilotKit ${event.code}]`, event.error.message);
+    errorTracker.capture(event);
+  }}
+>
+  <App />
+</CopilotKitProvider>
+```
+
+### 聊天级别错误处理
+
+限定到特定聊天的智能体 —— 除了提供程序级别处理程序外还会触发：
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat
+  agentId="my-agent"
+  onError={(event) => {
+    showToast(`智能体错误: ${event.error.message}`);
+  }}
+/>
+```
+
+### 错误代码
+
+| 代码 | 描述 |
+|------|-------------|
+| `runtime_info_fetch_failed` | 无法访问运行时 `/info` 端点 |
+| `agent_connect_failed` | 智能体连接（线程设置）失败 |
+| `agent_run_failed` | 智能体运行被拒绝（例如网络错误） |
+| `agent_run_failed_event` | 智能体的 `onRunFailed` 订阅者触发 |
+| `agent_run_error_event` | 智能体发送了 `RUN_ERROR` 事件 |
+| `tool_argument_parse_failed` | 工具调用参数不是有效的 JSON |
+| `tool_handler_failed` | 前端工具处理程序抛出错误 |
+
+## 故障排除
+
+### 开发调试问题
+
+- **开发控制台未显示：**
+  - 确认 `showDevConsole={true}`
+  - 检查浏览器控制台中的 JavaScript 错误
+  - 确保没有 CSS 隐藏错误横幅

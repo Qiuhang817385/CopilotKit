@@ -1,0 +1,37 @@
+---
+title: 共享状态
+description: 在您的 UI 和 AG2 Agent 状态之间创建双向连接。
+icon: "lucide/Repeat"
+---
+
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+
+<ImageZoom
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+  alt="共享状态演示"
+  width={1000}
+  height={1000}
+  className="rounded-lg shadow-lg border mt-0"
+/>
+
+
+## 什么是共享状态？
+
+CoAgents 维护一个共享状态，将您的 UI 与 Agent 的执行无缝连接。此共享状态系统允许您：
+
+- 显示 Agent 的当前进度和中间结果
+- 通过 UI 交互更新 Agent 的状态
+- 在整个应用程序中实时响应状态变化
+
+该系统的基础建立在 AG2 `ContextVariables` 和 AG-UI `StateSnapshotEvent` 之上。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 什么时候应该使用它？
+
+当您想促进 Agent 与用户之间的协作时，状态流是完美的选择。您的 AG2 后端
+在快照事件中发出的任何状态都将由 UI 自动共享。同样，用户在 UI 中更新的任何状态都将自动反映。
+
+这提供了一致的体验，Agent 和用户都在同一页面上。

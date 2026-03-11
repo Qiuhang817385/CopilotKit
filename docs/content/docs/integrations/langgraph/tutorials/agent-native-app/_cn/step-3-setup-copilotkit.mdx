@@ -1,0 +1,145 @@
+---
+title: "第 3 步：设置 CopilotKit"
+---
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { GoServer } from "react-icons/go";
+import { FaCloud } from "react-icons/fa";
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+现在我们已经运行了应用程序和智能体，让我们使用 CopilotKit 连接它们。必要的依赖项已经安装在 `frontend` 目录中：
+
+- `@copilotkit/react-core`：CopilotKit 核心功能和钩子
+- `@copilotkit/react-ui`：用于聊天界面的预构建 UI 组件
+
+<Accordions>
+<Accordion title="安装命令（可选）">
+  **本教程中的软件包版本是固定的，因此更新依赖项可能会破坏教程。**
+
+  ```npm
+  npm install @copilotkit/react-core @copilotkit/react-ui
+  ```
+</Accordion>
+</Accordions>
+
+<Steps>
+<Step>
+### 设置 Copilot Cloud
+创建一个 [Copilot Cloud 账户](https://cloud.copilotkit.ai/sign-in) 来开始。这提供了一个生产就绪的 LLM 代理。
+
+<Callout>
+Copilot Cloud 包含免费的 LLM 开发积分。
+</Callout>
+
+</Step>
+<Step>
+### 获取 Copilot Cloud API 密钥
+
+登录后，你会看到一些入门步骤。我们主要需要的是一个公共 API 密钥。为此，你需要创建一个 OpenAI API 密钥并将其提供给 Copilot Cloud。
+
+<ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/cpkCloudSetup.png" alt="CopilotCloud API 密钥" height={1000} width={1000} />
+
+</Step>
+<Step>
+### 配置环境变量
+创建并填充前端环境文件：
+
+```shell
+touch frontend/.env
+```
+
+然后，将你的 Copilot Cloud API 密钥添加到文件中，如下所示：
+
+```txt title="frontend/.env"
+NEXT_PUBLIC_CPK_PUBLIC_API_KEY=...
+```
+
+</Step>
+<Step>
+### 添加 CopilotKit 提供程序
+用你的应用程序包裹 CopilotKit 提供程序：
+
+```tsx title="frontend/src/app/layout.tsx"
+"use client";
+
+// ...
+import { CopilotKit } from "@copilotkit/react-core"; // [!code ++]
+import "@copilotkit/react-ui/v2/styles.css"; // [!code ++]
+// ...
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+    return (
+      <html lang="en" className="h-full">
+        <body className={`${lato.variable} ${noto.className} antialiased h-full`}>
+          // [!code ++:4]
+          <CopilotKit
+            publicApiKey={process.env.NEXT_PUBLIC_CPK_PUBLIC_API_KEY}
+          >
+            <TooltipProvider>
+              <ResearchProvider>
+                {children}
+              </ResearchProvider>
+            </TooltipProvider>
+          </CopilotKit> // [!code ++]
+        </body>
+      </html>
+    );
+}
+```
+
+</Step>
+<Step>
+
+### 添加聊天界面
+
+我们提供了几个可定制的组件供你与你的助手交互。其中一些是 [`<CopilotPopup/>`](/reference/v1/components/chat/CopilotPopup)、[`<CopilotSidebar/>`](/reference/v1/components/chat/CopilotSidebar) 和 [`<CopilotChat/>`](/reference/v1/components/chat/CopilotChat)，以及通过 [`useCopilotChat`](/reference/v1/hooks/useCopilotChat) 提供的你自己的完全自定义 UI。
+
+在本教程中，我们将使用 `<CopilotChat/>` 组件，因为我们的目标是实现一个非模态聊天界面。
+
+<Callout>
+  `Chat` 组件将作为 CopilotKit `CopilotChat` 组件的包装器。这是为了帮助简化你需要编写的内容。
+</Callout>
+
+```tsx title="frontend/src/components/Chat.tsx"
+"use client"
+
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import { INITIAL_MESSAGE, MAIN_CHAT_INSTRUCTIONS, MAIN_CHAT_TITLE } from "@/lib/consts";
+
+export default function Chat({ onSubmitMessage }: { onSubmitMessage: () => void }) {
+  return (
+      // [!code ++:10]
+      <CopilotChat
+          labels={{
+              modalHeaderTitle: MAIN_CHAT_TITLE,
+              welcomeMessageText: INITIAL_MESSAGE,
+          }}
+          className="h-full w-full font-noto"
+          onSubmitMessage={onSubmitMessage}
+      />
+      // [!code --:4]
+      <h1 className="text-2xl font-bold flex items-center justify-center h-full mx-auto mr-20">
+        如果我们这里有聊天功能那就太酷了！
+      </h1>
+  )
+}
+```
+
+</Step>
+</Steps>
+
+## 回顾
+
+我们完成了！我们做了什么：
+
+- 我们设置了 Copilot Cloud 账户并获取了 API 密钥。
+- 我们在应用程序中配置了 CopilotKit 提供程序以使用我们的 API 密钥。
+- 我们将 CopilotSidebar 添加到我们的应用程序中。
+
+现在，返回应用程序，你会在页面左侧找到一个聊天界面。此时，你可以开始与你的助手交互了！🎉
+
+<Frame>
+  <ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-3-finish.png" alt="step-3-finish" height={1000} width={1000} />
+</Frame>
+
+这是一个非常简单的助手，还没有与我们的 LangGraph 对话。在下一步中，我们将添加 LangGraph 智能体。

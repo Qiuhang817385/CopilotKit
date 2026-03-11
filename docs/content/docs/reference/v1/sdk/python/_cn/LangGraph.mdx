@@ -1,0 +1,202 @@
+---
+title: "LangGraph SDK"
+description: "用于 Python 的 CopilotKit LangGraph SDK 允许您使用 CopilotKit 构建和运行 LangGraph 工作流。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * sdk-python/copilotkit/langgraph.py
+  */
+}
+## copilotkit_customize_config
+
+自定义用于 CopilotKit 的 LangGraph 配置。
+
+    要安装 CopilotKit SDK，请运行：
+
+    ```bash
+    pip install copilotkit
+    ```
+
+    ### 示例
+
+    禁用发送消息和工具调用：
+    
+    ```python
+    from copilotkit.langgraph import copilotkit_customize_config
+
+    config = copilotkit_customize_config(
+        config,
+        emit_messages=False,
+        emit_tool_calls=False
+    )
+    ```
+
+    要将工具调用作为流式 LangGraph 状态发出，请在状态中传递目标键、
+    工具名称以及可选的工具参数。（如果您不传递参数名称，
+    所有参数都会在状态键下发出。）
+
+    ```python
+    from copilotkit.langgraph import copilotkit_customize_config
+
+    config = copilotkit_customize_config(
+        config,
+        emit_intermediate_state=[
+           {
+                "state_key": "steps",
+                "tool": "SearchTool",
+                "tool_argument": "steps"
+            },
+        ]
+    )
+    ```
+
+### 参数
+
+<PropertyReference name="base_config" type="Optional[RunnableConfig]" > 
+要自定义的 LangChain/LangGraph 配置。传递 None 以创建新配置。
+</PropertyReference>
+
+<PropertyReference name="emit_messages" type="Optional[bool]" > 
+配置如何发送消息。默认情况下，所有消息都会被发送。传递 False 以禁用发送消息。
+</PropertyReference>
+
+<PropertyReference name="emit_tool_calls" type="Optional[Union[bool, str, List[str]]]" > 
+配置如何发送工具调用。默认情况下，所有工具调用都会被发送。传递 False 以禁用发送工具调用。传递字符串或字符串列表以仅发送特定的工具调用。
+</PropertyReference>
+
+<PropertyReference name="emit_intermediate_state" type="Optional[List[IntermediateStateConfig]]" > 
+让您将工具调用作为流式 LangGraph 状态发出。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="RunnableConfig">
+自定义的 LangGraph 配置。
+</PropertyReference>
+
+## copilotkit_exit
+
+在运行完成后退出当前 Agent。调用 copilotkit_exit() 不会
+    立即停止 Agent。相反，它向 CopilotKit 发出信号，在
+    运行完成后停止 Agent。
+
+    ### 示例
+
+    ```python
+    from copilotkit.langgraph import copilotkit_exit
+
+    def my_node(state: Any):
+        await copilotkit_exit(config)
+        return state
+    ```
+
+### 参数
+
+<PropertyReference name="config" type="RunnableConfig" required> 
+LangGraph 配置。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>
+
+## copilotkit_emit_state
+
+向 CopilotKit 发送中间状态。如果您有一个运行时间较长的节点，并且想要
+    向用户更新节点的当前状态，这会很有用。
+
+    ### 示例
+
+    ```python
+    from copilotkit.langgraph import copilotkit_emit_state
+
+    for i in range(10):
+        await some_long_running_operation(i)
+        await copilotkit_emit_state(config, {"progress": i})
+    ```
+
+### 参数
+
+<PropertyReference name="config" type="RunnableConfig" required> 
+LangGraph 配置。
+</PropertyReference>
+
+<PropertyReference name="state" type="Any" required> 
+要发送的状态（必须是 JSON 可序列化的）。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>
+
+## copilotkit_emit_message
+
+手动向 CopilotKit 发送消息。在运行时间较长的节点中更新用户时很有用。
+    重要提示：您仍然需要从节点返回消息。
+
+    ### 示例
+
+    ```python
+    from copilotkit.langgraph import copilotkit_emit_message
+
+    message = "Step 1 of 10 complete"
+    await copilotkit_emit_message(config, message)
+
+    # 从节点返回消息
+    return {
+        "messages": [AIMessage(content=message)]
+    }
+    ```
+
+### 参数
+
+<PropertyReference name="config" type="RunnableConfig" required> 
+LangGraph 配置。
+</PropertyReference>
+
+<PropertyReference name="message" type="str" required> 
+要发送的消息。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>
+
+## copilotkit_emit_tool_call
+
+手动向 CopilotKit 发送工具调用。
+
+    ```python
+    from copilotkit.langgraph import copilotkit_emit_tool_call
+
+    await copilotkit_emit_tool_call(config, name="SearchTool", args={"steps": 10})
+    ```
+
+### 参数
+
+<PropertyReference name="config" type="RunnableConfig" required> 
+LangGraph 配置。
+</PropertyReference>
+
+<PropertyReference name="name" type="str" required> 
+要发送的工具名称。
+</PropertyReference>
+
+<PropertyReference name="args" type="Dict[str, Any]" required> 
+要发送的参数。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>

@@ -1,0 +1,168 @@
+---
+title: 可读内容
+icon: "lucide/BookA"
+description: 与您的代理共享应用特定的上下文。
+---
+import RunAndConnect from "@/snippets/integrations/microsoft-agent-framework/run-and-connect.mdx"
+
+CopilotKit 最常见的用例之一是使用 `useAgentContext` 注册应用状态和上下文。
+这样，您可以实时通知 CopilotKit 您的应用中正在发生的事情。
+一些示例可能是：当前用户、当前页面等。
+
+然后，这些上下文可以与您的 AG-UI 服务器和代理逻辑共享。
+
+## 实现
+<Callout>
+    查看[前端数据文档](https://docs.copilotkit.ai/direct-to-llm/guides/connect-your-data/frontend)以了解这是什么以及如何使用它。
+</Callout>
+
+<Steps>
+    <Step>
+      <RunAndConnect />
+    </Step>
+    <Step>
+        ### 将数据添加到 Copilot
+
+        [`useAgentContext` 钩子](/reference/v1/hooks/useAgentContext)用于将数据作为上下文添加到 Copilot。
+
+        ```tsx title="YourComponent.tsx" showLineNumbers {1, 7-10}
+        "use client" // 仅在使用 Next.js 的 App Router 时需要。 // [!code highlight]
+        import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+        import { useState } from 'react';
+
+        export function YourComponent() {
+            // 创建带有示例数据的同事状态
+            const [colleagues, setColleagues] = useState([
+                { id: 1, name: "John Doe", role: "Developer" },
+                { id: 2, name: "Jane Smith", role: "Designer" },
+                { id: 3, name: "Bob Wilson", role: "Product Manager" }
+            ]);
+
+            // 定义 Copilot 可读状态
+            // [!code highlight:4]
+            useAgentContext({
+                description: "当前用户的同事",
+                value: colleagues,
+            });
+            return (
+                // 您的自定义 UI 组件
+                <>...</>
+            );
+        }
+        ```
+    </Step>
+
+    <Step>
+        ### 在您的 AG-UI 服务器中使用数据
+        您在前端注册的 `context` 会在 `ChatOptions.AdditionalProperties["ag_ui_context"]` 中转发给您的 AG-UI 服务器。使用中间件访问此上下文并将其注入到代理的对话中。
+
+        <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+          <Tab value=".NET">
+            ```csharp title="Program.cs"
+            using System.Runtime.CompilerServices;
+            using System.Text;
+            using Azure.AI.OpenAI;
+            using Azure.Identity;
+            using Microsoft.Agents.AI;
+            using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.Extensions.AI;
+
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddAGUI();
+            var app = builder.Build();
+
+            string endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]!;
+            string deployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT_NAME"]!;
+
+            // 创建基础代理
+            AIAgent baseAgent = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+                .GetChatClient(deployment)
+                .CreateAIAgent(
+                    name: "AGUIAssistant",
+                    instructions: "您是一个有用的助手。使用提供的关于同事的上下文来回答问题。");
+
+            // 使用中间件包装代理以注入上下文
+            AIAgent agent = baseAgent
+                .AsBuilder()
+                .Use(runFunc: null, runStreamingFunc: InjectContextMiddleware)
+                .Build();
+
+            // 映射 AG-UI 端点
+            app.MapAGUI("/", agent);
+            await app.RunAsync();
+
+            // 将 useAgentContext 上下文作为系统消息注入的中间件
+            async IAsyncEnumerable<AgentRunResponseUpdate> InjectContextMiddleware(
+                IEnumerable<ChatMessage> messages,
+                AgentThread? thread,
+                AgentRunOptions? options,
+                AIAgent innerAgent,
+                CancellationToken cancellationToken)
+            {
+                // 从 AG-UI 附加属性中提取上下文，如果存在则注入
+                if (options is ChatClientAgentRunOptions { ChatOptions.AdditionalProperties: { } properties } &&
+                    properties.TryGetValue("ag_ui_context", out KeyValuePair<string, string>[]? context) &&
+                    context?.Length > 0)
+                {
+                    var contextBuilder = new StringBuilder();
+                    contextBuilder.AppendLine("以下上下文来自用户的应用程序：");
+                    foreach (var item in context)
+                    {
+                        contextBuilder.AppendLine($"- {item.Key}: {item.Value}");
+                    }
+
+                    var contextMessage = new ChatMessage(
+                        ChatRole.System,
+                        [new TextContent(contextBuilder.ToString())]);
+
+                    messages = messages.Append(contextMessage);
+                }
+
+                await foreach (var update in innerAgent.RunStreamingAsync(messages, thread, options, cancellationToken))
+                {
+                    yield return update;
+                }
+            }
+            ```
+          </Tab>
+          <Tab value="Python">
+            ```python title="agent/src/agent.py"
+
+            from agent_framework import ChatAgent, ChatClientProtocol
+            from agent_framework.ag_ui import AgentFrameworkAgent
+
+
+            def create_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAgent:
+                """
+                用于代理应用上下文演示的最小代理（前端上下文自动转发）。
+                """
+                base_agent = ChatAgent(
+                    name="sample_agent",
+                    instructions="您是一个有用的助手。",
+                    chat_client=chat_client,
+                )
+
+                return AgentFrameworkAgent(
+                    agent=base_agent,
+                    name="CopilotKitMicrosoftAgentFrameworkAgent",
+                    description="使用从转发的前端应用上下文的助手。",
+                    require_confirmation=False,
+                )
+            ```
+          </Tab>
+        </Tabs>
+
+        <Callout type="info">
+          使用 `useAgentContext` 注册的上下文会自动通过 AG-UI 协议在 `ChatOptions.AdditionalProperties["ag_ui_context"]` 中转发，作为键值对数组（描述 → 值）。中间件提取并将此上下文注入到对话中。
+        </Callout>
+
+        <Callout type="tip">
+          **配置与错误处理**：本示例使用环境变量进行配置。通过 `appsettings.json`、用户机密或环境变量设置 `AZURE_OPENAI_ENDPOINT` 和 `AZURE_OPENAI_DEPLOYMENT_NAME`。对于生产部署，添加适当的错误处理，并考虑使用 [快速入门](/microsoft-agent-framework/quickstart) 或 [认证](/microsoft-agent-framework/auth) 指南获取完整的设置模式。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试试看！
+        向您的代理询问有关上下文的问题（例如，"我的同事是谁？"）。代理将使用转发的上下文来回答！
+    </Step>
+</Steps>

@@ -1,0 +1,130 @@
+---
+title: "MCP 服务器"
+icon: "lucide/Plug"
+description: "将 MCP 服务器连接到你的内置代理。"
+---
+
+## 什么是 MCP 服务器？
+
+MCP（模型上下文协议）服务器为你的代理提供额外的工具和功能。内置代理支持通过 **HTTP** 或 **SSE** 传输连接到 MCP 服务器。
+
+## 什么时候使用？
+
+- 你想将代理连接到现有的 MCP 兼容工具服务器
+- 你需要添加第三方 MCP 提供商的功能
+- 你想在多个代理或应用之间共享工具
+
+## SSE 传输
+
+SSE（服务器发送事件）传输是最常见的选项：
+
+```typescript title="src/copilotkit.ts"
+import { BuiltInAgent } from "@copilotkit/runtime/v2";
+
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  mcpServers: [
+    {
+      type: "sse", // [!code highlight]
+      url: "https://my-mcp-server.example.com/sse",
+    },
+  ],
+});
+```
+
+### 认证头
+
+传递自定义头进行认证：
+
+```typescript
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  mcpServers: [
+    {
+      type: "sse",
+      url: "https://my-mcp-server.example.com/sse",
+      headers: { // [!code highlight:3]
+        Authorization: `Bearer ${process.env.MCP_API_KEY}`,
+      },
+    },
+  ],
+});
+```
+
+## HTTP 传输
+
+HTTP（可流式 HTTP）传输使用标准 HTTP 请求：
+
+```typescript
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  mcpServers: [
+    {
+      type: "http", // [!code highlight]
+      url: "https://my-mcp-server.example.com/mcp",
+    },
+  ],
+});
+```
+
+HTTP 传输也接受可选的 `options` 用于底层 `StreamableHTTPClientTransport` 的高级配置。
+
+## 多服务器
+
+连接多个 MCP 服务器 —— 所有服务器的工具对代理都可用：
+
+```typescript
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  mcpServers: [
+    {
+      type: "sse",
+      url: "https://search-mcp.example.com/sse",
+    },
+    {
+      type: "sse",
+      url: "https://db-mcp.example.com/sse",
+      headers: { Authorization: `Bearer ${process.env.DB_MCP_KEY}` },
+    },
+    {
+      type: "http",
+      url: "https://analytics-mcp.example.com/mcp",
+    },
+  ],
+});
+```
+
+## 与服务端工具结合使用
+
+MCP 服务器与 `defineTool` 服务端工具一起工作 —— 代理可以看到来自两个来源的所有工具：
+
+```typescript
+import { BuiltInAgent, defineTool } from "@copilotkit/runtime/v2";
+import { z } from "zod";
+
+const customTool = defineTool({
+  name: "getUser",
+  description: "Get the current user",
+  parameters: z.object({}),
+  execute: async () => {
+    return { name: "Jane", role: "Admin" };
+  },
+});
+
+const builtInAgent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  tools: [customTool], // 你的自定义工具
+  mcpServers: [        // 加上来自 MCP 服务器的工具
+    { type: "sse", url: "https://search-mcp.example.com/sse" },
+  ],
+});
+```
+
+## 传输参考
+
+| 属性 | SSE | HTTP | 描述 |
+|----------|-----|------|-------------|
+| `type` | `"sse"` | `"http"` | 传输类型 |
+| `url` | string | string | MCP 服务器 URL |
+| `headers` | `Record<string, string>` | — | 自定义 HTTP 头（仅 SSE） |
+| `options` | — | `StreamableHTTPClientTransportOptions` | 传输选项（仅 HTTP） |

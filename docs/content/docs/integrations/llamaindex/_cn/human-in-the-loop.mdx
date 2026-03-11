@@ -1,0 +1,150 @@
+---
+title: 人机协同
+icon: "lucide/User"
+description: 创建前端工具并在您的 LlamaIndex 智能体中使用它们进行人机协同交互。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义客户端函数，让您的 LlamaIndex 智能体可以调用，执行完全在用户的浏览器中进行。当您的智能体调用前端工具时，逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于[让您的智能体控制 UI](/llamaindex/frontend-tools)、[生成式 UI](/llamaindex/frontend-tools)或人机协同交互。
+
+在本指南中，我们将介绍前端工具在人机协同中的使用。
+
+## 什么时候应该使用这个？
+
+当您需要智能体与客户端原语交互时，请使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+      ### 运行并连接您的智能体
+      <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 向智能体添加工具
+        向您的智能体添加一个将用于撰写文章的工具。由于该工具将在前端使用，
+        我们将把它添加到 `frontend_tools` 列表中。
+
+        ```python title="agent.py"
+        from fastapi import FastAPI
+        from llama_index.llms.openai import OpenAI
+        from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+        def offerOptions(option_1: str, option_2: str) -> str:
+            """让用户在两个选项之间选择并让他们选择一个。"""
+            return f"展示选项: {option_1} 或 {option_2}"
+
+        # 初始化 LLM
+        llm = OpenAI(model="gpt-5.2")
+
+        # 创建 AG-UI 工作流路由器
+        agentic_chat_router = get_ag_ui_workflow_router(
+            llm=llm,
+            frontend_tools=[offerOptions],
+            system_prompt="你是一个有帮助的 AI 助手，可以撰写文章。当用户要求你在两个选项之间选择或当你需要向他们展示选项时，你必须使用 offerOptions 工具让他们在选项之间选择。",
+        )
+
+        # 创建 FastAPI 应用
+        app = FastAPI(
+            title="LlamaIndex 智能体",
+            description="与 CopilotKit 集成的 LlamaIndex 智能体",
+            version="1.0.0"
+        )
+
+        # 包含路由器
+        app.include_router(agentic_chat_router)
+
+        # 健康检查端点
+        @app.get("/health")
+        async def health_check():
+            return {"status": "healthy", "agent": "llamaindex"}
+
+        if __name__ == "__main__":
+            import uvicorn
+            uvicorn.run(app, host="localhost", port=8000)
+        ```
+    </Step>
+
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式利用。其中一种方式是设置人机协同流程，工具的响应由用户的决定来控制。
+
+        在这个例子中，我们将模拟执行命令的"审批"流程。首先，使用 `useHumanInTheLoop` 钩子创建一个提示用户审批的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "offerOptions",
+            description: "让用户在两个选项之间选择并让他们选择一个。",
+            parameters: [
+              {
+                name: "option_1",
+                type: "string",
+                description: "第一个选项",
+                required: true,
+              },
+              {
+                name: "option_2",
+                type: "string",
+                description: "第二个选项",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`${args.option_1} 被选中`)}>{args.option_1}</button>
+                  <button onClick={() => respond(`${args.option_2} 被选中`)}>{args.option_2}</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+
+        就是这样！您的智能体将自动访问您在 React 组件中使用 `useHumanInTheLoop` 定义的所有人机协同工具。
+
+        <Callout type="info">
+          使用 `useHumanInTheLoop` 注册的人机协同工具通过 AG-UI 协议自动转发给您的智能体。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试试看！
+
+        您现在已经赋予了智能体向用户展示两个选项并让他们选择其中一个的能力。然后智能体将知道用户的选择，并可以在后续步骤中使用它。
+
+        ```
+        你能给我展示两个好的餐厅名称选项吗？
+        ```
+    </Step>
+</Steps>

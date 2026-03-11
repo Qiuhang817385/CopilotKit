@@ -1,0 +1,412 @@
+---
+title: 快速入门
+description: 在 10 分钟内将您的 ADK Agent 转变为原生 Agent 应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+} from "lucide-react";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您需要准备以下内容：
+
+- Google Gemini API 密钥
+- Node.js 20+
+- Python 3.9+
+- 您喜欢的包管理器
+
+## 入门
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的起点</p>
+                <p className="text-base">
+                    您可以从我们的入门模板开始，或将 CopilotKit 集成到您现有的 ADK Agent 中。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从零开始"
+            description="使用我们现成的入门应用程序快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                ```bash
+                npx copilotkit@latest create -f adk
+                ```
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                ```npm
+                npm install
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                在您的 Agent 目录中创建一个 `.env` 文件并添加您的 Google API 密钥：
+
+                ```plaintext title="agent/.env"
+                GOOGLE_API_KEY=your_google_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  入门模板默认配置为使用 Google 的 Gemini，但您可以修改它以使用 ADK 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+
+                这将同时启动 UI 和 Agent 服务器。
+            </Step>
+            <Step>
+                ### 🎉 开始聊天！
+
+                您的 AI Agent 现在可以使用了！导航到 `localhost:3000` 并开始提示：
+
+                ```
+                将主题设置为橙色
+                ```
+
+                ```
+                写一句关于 AI 的谚语
+                ```
+
+                ```
+                获取旧金山的天气
+                ```
+
+                <Accordions className="mb-4">
+                    <Accordion title="故障排除">
+                        - 如果您遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                        - 确保您的 Agent 在端口 8000 上运行
+                        - 检查您的 Google API 密钥是否正确设置
+                    </Accordion>
+                </Accordions>
+
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="bring-your-own"
+            title="使用现有 Agent"
+            description="我已经有一个 ADK Agent，想要添加 CopilotKit。"
+        >
+            <Step>
+                ### 初始化您的 Agent 项目
+
+                如果您还没有设置 Python 项目，请使用 `uv` 创建一个：
+
+                ```bash
+                uv init my-agent
+                cd my-agent
+                ```
+            </Step>
+            <Step>
+                ### 安装带 AG-UI 的 ADK
+
+                将带有 AG-UI 支持的 ADK 和 uvicorn 添加到您的项目：
+
+                ```bash
+                uv add ag-ui-adk google-adk uvicorn fastapi
+                ```
+
+                <Callout type="info" title="什么是 AG-UI？">
+                  AG-UI 是一个用于前端-Agent 通信的开放协议。`ag-ui-adk` 包提供了 CopilotKit 可以连接的 ADK 集成。
+                </Callout>
+            </Step>
+            <Step>
+                ### 配置环境
+
+                将您的 Google API 密钥设置为环境变量：
+
+                ```bash
+                export GOOGLE_API_KEY=your_google_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  本示例使用 Gemini 2.5 Flash，但您可以修改它以使用 ADK 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 通过 AG-UI 暴露您的 Agent
+
+                更新您的 Agent 文件，将其暴露为 AG-UI ASGI 应用程序：
+
+                ```python title="main.py"
+                from fastapi import FastAPI
+                from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+                from google.adk.agents import LlmAgent
+
+                agent = LlmAgent(
+                    name="assistant",
+                    model="gemini-2.5-flash",
+                    instruction="Be helpful and fun!"
+                )
+
+                adk_agent = ADKAgent(
+                    adk_agent=agent,
+                    app_name="demo_app",
+                    user_id="demo_user",
+                    session_timeout_seconds=3600,
+                    use_in_memory_services=True
+                )
+
+                app = FastAPI()
+                add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+                if __name__ == "__main__":
+                    import uvicorn
+                    uvicorn.run(app, host="localhost", port=8000)
+                ```
+            </Step>
+            <Step>
+                ### 创建您的前端
+
+                CopilotKit 适用于任何基于 React 的前端。本示例将使用 Next.js。
+
+                ```bash
+                npx create-next-app@latest my-copilot-app
+                cd my-copilot-app
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit 包
+
+                ```npm
+                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/client
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot 运行时
+
+                创建一个 API 路由以将 CopilotKit 连接到您的 ADK Agent：
+
+                ```tsx title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                import { HttpAgent } from "@ag-ui/client";
+                import { NextRequest } from "next/server";
+
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                const runtime = new CopilotRuntime({
+                  agents: {
+                    my_agent: new HttpAgent({ url: "http://localhost:8000/" }),
+                  }
+                });
+
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+               ```
+            </Step>
+            <Step>
+                ### 配置 CopilotKit Provider
+
+                使用 CopilotKit Provider 包装您的应用程序：
+
+                ```tsx title="app/layout.tsx"
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css";
+
+                // ...
+
+                export default function RootLayout({ children }: {children: React.ReactNode}) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit" agent="my_agent">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+              ### 添加聊天界面
+
+              将 CopilotSidebar 组件添加到您的页面：
+
+              ```tsx title="app/page.tsx"
+              import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
+
+              export default function Page() {
+                return (
+                  <main>
+                    <h1>您的应用</h1>
+                    {/* [!code highlight:1] */}
+                    <CopilotSidebar />
+                  </main>
+                );
+              }
+              ```
+            </Step>
+            <Step>
+                ### 启动您的 Agent
+
+                从您的 Agent 目录，启动 Agent 服务器：
+
+                ```bash
+                uv run main.py
+                ```
+
+                您的 Agent 将在 `http://localhost:8000` 可用。
+            </Step>
+            <Step>
+                ### 启动您的 UI
+
+                在单独的终端中，导航到您的前端目录并启动开发服务器：
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        cd my-copilot-app
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        cd my-copilot-app
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        cd my-copilot-app
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        cd my-copilot-app
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+            <Step>
+                ### 🎉 开始聊天！
+
+                您的 AI Agent 现在可以使用了！导航到 `localhost:3000` 并尝试问它一些问题：
+
+                ```
+                你能给我讲个笑话吗？
+                ```
+
+                ```
+                你能帮我理解 AI 吗？
+                ```
+
+                ```
+                你觉得 React 怎么样？
+                ```
+
+                <Accordions className="mb-4">
+                    <Accordion title="故障排除">
+                        - 如果您遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                        - 确保您的 Agent 在端口 8000 上运行
+                        - 检查您的 Google API 密钥是否正确设置
+                        - 验证 `@ag-ui/client` 包是否已安装到您的前端
+                    </Accordion>
+                </Accordions>
+
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+</Steps>
+
+## 下一步？
+
+现在您已经完成了基本的 Agent 设置，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="实现人机协作"
+    description="允许您的用户和 Agent 在任务上协同工作。"
+    href="/adk/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="利用共享状态"
+    description="了解如何同步 Agent 的状态与 UI 的状态，反之亦然。"
+    href="/adk/shared-state"
+    icon={<RepeatIcon />}
+  />
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染 Agent 的进度和输出。"
+    href="/adk/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="赋予您的 Agent 调用前端工具的能力，直接更新您的应用程序。"
+    href="/adk/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

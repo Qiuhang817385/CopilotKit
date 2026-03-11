@@ -1,0 +1,63 @@
+---
+title: "OpenAIAssistantAdapter"
+description: "适用于 OpenAI Assistant API 的 Copilot Runtime 适配器。"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行：
+  * packages/v1/runtime/src/service-adapters/openai/openai-assistant-adapter.ts
+  */
+}
+适用于 OpenAI Assistant API 的 Copilot Runtime 适配器。
+ 
+## 示例
+ 
+```ts
+import { CopilotRuntime, OpenAIAssistantAdapter } from "@copilotkit/runtime";
+import OpenAI from "openai";
+ 
+const copilotKit = new CopilotRuntime();
+ 
+const openai = new OpenAI({
+  organization: "<your-organization-id>",
+  apiKey: "<your-api-key>",
+});
+ 
+return new OpenAIAssistantAdapter({
+  openai,
+  assistantId: "<your-assistant-id>",
+  codeInterpreterEnabled: true,
+  fileSearchEnabled: true,
+});
+```
+
+## 构造函数参数
+
+<PropertyReference name="assistantId" type="string" required > 
+要使用的助手 ID。
+</PropertyReference>
+
+<PropertyReference name="openai" type="OpenAI"  > 
+可选的 OpenAI 实例。如果未提供，将创建一个新实例。
+</PropertyReference>
+
+<PropertyReference name="codeInterpreterEnabled" type="boolean"  default="true"> 
+是否启用代码解释。
+</PropertyReference>
+
+<PropertyReference name="fileSearchEnabled" type="boolean"  default="true"> 
+是否启用文件搜索。
+</PropertyReference>
+
+<PropertyReference name="disableParallelToolCalls" type="boolean"  default="false"> 
+是否禁用并行工具调用。
+  你可以禁用并行工具调用以强制模型按顺序执行工具调用。
+  当你希望按特定顺序执行工具调用，以便一个工具调用引入的状态更改对下一个工具调用可见时，这很有用。（即新操作或可读项）
+</PropertyReference>
+
+<PropertyReference name="keepSystemRole" type="boolean"  default="false"> 
+是否将系统消息中的角色保持为 "System"。
+  默认情况下，它会转换为 "developer"，较新的 OpenAI 模型使用此角色
+</PropertyReference>

@@ -1,0 +1,183 @@
+---
+title: "第 4 步：集成智能体"
+---
+此时，我们在 LangGraph Studio 中运行着一个 LangGraph 智能体，并且有一个我们自己的非智能体助手可以与之交互。现在，让我们将两者结合起来，创建一个智能体助手！
+
+## React 状态
+
+让我们快速回顾一下应用程序的状态是如何工作的。打开 [`lib/hooks/use-trips.tsx`](https://github.com/CopilotKit/CopilotKit/blob/coagents-travel-tutorial-start/examples/coagents-travel/ui/lib/hooks/use-trips.tsx) 文件。
+
+一眼看去，我们可以看到该文件暴露了一个提供程序 (`TripsProvider`)，它定义了很多有用的东西。我们关心的主要是 `state` 对象，它采用 `AgentState` 类型的形状。这可以通过 `useTrips` 钩子消费，我们在应用程序的其余部分中使用它（请随时查看 `TripCard`、`TripContent` 和 `TripSelect` 组件）。
+
+这类似于大多数 React 应用程序，其中前端状态（无论是用于某个功能还是整个应用程序）都由上下文或状态管理库管理。
+
+## 集成智能体
+
+为了将智能体集成到此状态中，我们需要向 CopilotKit 注册一个智能体，然后使用 `useCoAgent` 钩子将两者连接起来。
+
+<Steps>
+<Step>
+## 注册智能体
+
+确保你有上一步中的 LangGraph Studio 端点！
+
+<Tabs groupId="hosting" items={['Copilot Cloud', '自托管']}>
+<Tab value="Copilot Cloud">
+我们将使用 CopilotKit CLI 在我们本地运行的 LangGraph 智能体和 Copilot Cloud 之间建立一个隧道。你需要我们之前设置的 LangGraph Studio 端点的端口号。
+
+<Callout title="在找端口号？">
+它会在 LangGraph Studio 界面的左下角，像这样。
+
+<Frame>
+  <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/lgs-endpoint.png" alt="LangGraph Studio 端点" />
+</Frame>
+
+</Callout>
+
+要打开隧道，运行以下命令。
+
+```bash
+# 将 <port_number> 替换为 LangGraph Studio 端点的端口号
+npx copilotkit@latest dev --port <port_number>
+```
+
+它会引导你完成选择项目和创建隧道的过程。你应该会看到类似以下的输出。
+
+```bash
+✔ 选择项目 本地 (ID: <project_id>)
+✅ LangGraph Platform 端点已检测到
+⠹ 正在创建隧道...
+
+隧道信息：
+
+• 隧道 URL:            https://<tunnel_id>.tunnels.devcopilotkit.com
+• 端点类型:         LangGraph Platform
+• 项目:               projects/<project_id>
+
+按 Ctrl+C 停止隧道
+
+✔ 🚀 本地隧道已激活并链接到 Copilot Cloud！
+```
+
+</Tab>
+<Tab value="自托管">
+
+在我们之前设置的 `/api/copilotkit` 路由中，我们将添加以下内容。
+
+```tsx title="ui/app/api/copilotkit/route.ts"
+// ...
+
+import { CopilotRuntime, LangGraphAgent } from '@copilotkit/runtime'; // [!code ++]
+
+// ...
+
+const runtime = new CopilotRuntime();// [!code --]
+// [!code ++:10]
+const runtime = new CopilotRuntime({
+  // [!code highlight:7]
+  agents: {
+    'travel': new LangGraphAgent({
+      deploymentUrl: "http://localhost:<port_number>",
+      graphId: 'travel',
+      langsmithApiKey: "your-langsmith-api-key" // 可选
+    }),
+  },
+});
+
+// ...
+```
+
+<Callout>
+`deploymentUrl` 来自 LangGraph Studio，但它也可以是托管在 LangGraph Platform 中的图！
+</Callout>
+</Tab>
+</Tabs>
+
+这允许 CopilotKit 知道在调用智能体时将请求发送到哪里。
+
+</Step>
+<Step>
+## 锁定智能体
+
+默认情况下，CopilotKit 会根据上下文智能地将请求路由到适当的智能体。这允许你拥有多个智能体和操作，而无需担心手动路由请求。
+
+然而，在我们的例子中，我们只有一个智能体，理想情况下是将所有请求锁定到该智能体。我们可以通过更新 `CopilotKit` 提供程序的 props 来做到这一点。
+
+```tsx title="ui/app/page.tsx"
+// ...
+<CopilotKit
+  // ...
+  agent="travel" // [!code ++]
+>
+  {...}
+</CopilotKit>
+```
+
+这将确保每个请求都发送到 `travel` 智能体。`travel` 名称在 [agents/langgraph.json](https://github.com/CopilotKit/CopilotKit/blob/main/examples/coagents-travel/agent/langgraph.json) 文件中定义。当我们将智能体部署到 Copilot Cloud 时，这会自动处理。自托管时，我们需要在 `langGraphPlatformEndpoint` 构造函数中指定智能体的名称。
+</Step>
+<Step>
+
+## `useCoAgent` 钩子
+
+LangGraph 智能体是有状态的，这意味着它们可以维护自己的状态。我们之前在 LangGraph Studio 的左下角看到过这一点。我们也有通过 React 的应用程序状态。
+
+我们当前的目标是在这两个状态之间创建双向连接。幸运的是，[`useCoAgent`](/reference/v1/hooks/useCoAgent) 钩子让这变得很容易。
+
+```tsx title="ui/lib/hooks/use-trips.tsx" {3,8-11}
+// ...
+// [!code word:AgentState:1]
+import { Trip, Place, AgentState, defaultTrips} from "@/lib/trips";
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code ++]
+
+export const TripsProvider = ({ children }: { children: ReactNode }) => {
+  // [!code --:5]
+  const [state, setState] = useState<{ trips: Trip[], selected_trip_id: string | null }>({
+    trips: defaultTrips,
+    selected_trip_id: defaultTrips && defaultTrips[0] ? defaultTrips[0].id : null
+  });
+  // [!code ++:9]
+  const { state, setState } = useAgent<AgentState>({
+    name: "travel",
+    initialState: {
+      trips: defaultTrips,
+      selected_trip_id: defaultTrips[0].id,
+    },
+  });
+
+  // ...
+```
+
+<Callout>
+`useCoAgent` 钩子是泛型的。这意味着我们可以指定一个类型来表示 LangGraph 智能体的状态。如果你要指定一个类型，你应该非常小心，确保该类型与你的 LangGraph 智能体的状态形状相同。
+
+不推荐，但你可以放弃类型参数，而是获取一个 `any` 类型。
+</Callout>
+
+在此示例中，我们使用 `useCoAgent` 钩子将应用程序的状态连接到 LangGraph 智能体的状态。
+- 对于泛型类型，我们传递了已在 `@/lib/types.ts` 中为应用程序定义的 `AgentState` 类型。
+- 对于 `name` 参数，我们传递在 `agent/langgraph.json` 中定义的图的名称。
+- 对于 `initialState` 参数，我们传递已在 `@/lib/trips.ts` 中定义的 LangGraph 智能体的初始状态。
+</Step>
+</Steps>
+
+## 试试看！
+
+现在，试试看！向助手询问关于你行程状态的问题。例如：
+
+```
+我目前有哪些行程？
+```
+
+状态在应用程序和智能体之间共享，因此你可以手动编辑行程，问同样的问题，智能体就会知道。
+
+```
+我现在有哪些行程？
+```
+
+同样，你可以让智能体更新你的行程，它将在 UI 中渲染。例如：
+
+```
+给我的纽约行程添加一些酒店
+```
+
+就是这么简单，你现在已将 LangGraph 智能体集成到应用程序中作为智能体助手。在接下来的步骤中，我们将改善用户体验，但核心智能体现在可以通过应用程序的聊天界面访问了。

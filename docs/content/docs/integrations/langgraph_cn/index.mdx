@@ -1,0 +1,58 @@
+---
+title: 介绍
+icon: "custom/langchain"
+description: 通过 AG-UI 使用 CopilotKit 将您的 LangGraph 智能体带给您的用户。
+hideHeader: true
+---
+import { SiLangchain } from "react-icons/si";
+import { FrameworkOverview } from "@/components/content/landing-pages/framework-overview";
+
+<FrameworkOverview
+  frameworkName="LangGraph"
+  frameworkIcon={<SiLangchain className="h-14 w-14" />}
+  header="将您的 LangGraph 智能体带给用户"
+  subheader="使用 CopilotKit 和 AG-UI 为您的 LangGraph 智能体提供真正的用户交互性。构建丰富、交互式的智能体驱动应用程序。"
+  bannerVideo="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/overview.mp4"
+  guideLink="/langgraph/quickstart"
+  initCommand="npx copilotkit@latest init"
+  featuresLink="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_chat"
+  supportedFeatures={[
+    {
+      title: "生成式 UI",
+      description: "使用自定义 UI 组件实时渲染智能体的状态、进度、输出和工具调用。弥合 AI 智能体与用户界面之间的差距。",
+      documentationLink: "/langgraph/generative-ui",
+      demoLink: "https://feature-viewer.copilotkit.ai/langgraph/feature/tool_based_generative_ui",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/haiku.mp4"
+    },
+    {
+      title: "人机协同",
+      description: "在关键检查点让用户引导智能体。结合 AI 和人类判断的优势，实现更可靠、可控的智能体行为。",
+      documentationLink: "/langgraph/human-in-the-loop",
+      demoLink: "https://examples-coagents-ai-travel-app.vercel.app/",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+    },
+    {
+      title: "共享状态",
+      description: "保持智能体与应用程序同步。您的智能体可以看到应用程序中的一切，您的应用程序也可以实时响应智能体。",
+      documentationLink: "/langgraph/shared-state",
+      demoLink: "https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+    }
+  ]}
+  architectureImage="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-highlevel-overview.png"
+  liveDemos={[
+    {
+      type: "saas",
+      title: "SaaS 智能助手",
+      description: "通过 AI 智能体增强的传统 SaaS 应用程序。这些智能助手无缝集成到现有工作流程中，为特定的业务流程提供智能帮助。非常适合客户服务、销售自动化、项目管理和需要引导式、分步 AI 帮助的领域特定任务。",
+      iframeUrl: "https://examples-coagents-ai-travel-app.vercel.app?copilotOpen=true"
+    },
+    {
+      type: "canvas",
+      title: "画布智能助手",
+      description: "一个无限画布界面，用户可以在空间化、可视化的环境中与 AI 智能体协作。这些智能助手在需要以非线性、创造性方式组织、连接和探索信息的研究、头脑风暴、内容创作和复杂问题解决方面表现出色。",
+      iframeUrl: "https://examples-coagents-research-canvas-ui.vercel.app/"
+    }
+  ]}
+  tutorialLink="/langgraph/tutorials/ai-travel-app"
+/>

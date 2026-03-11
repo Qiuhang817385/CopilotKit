@@ -1,0 +1,101 @@
+---
+title: "步骤 2：设置 CopilotKit"
+---
+
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotCloudConfigureCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/self-hosting-copilot-runtime-configure-copilotkit-provider.mdx";
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content";
+import { FaCloud, FaServer } from "react-icons/fa";
+
+现在我们已经运行了待办事项应用，准备集成 CopilotKit。在本教程中，我们将安装以下依赖：
+
+- `@copilotkit/react-core`：CopilotKit 的核心库，包含 CopilotKit Provider 和有用的 Hooks。
+- `@copilotkit/react-ui`：CopilotKit 的 UI 库，包含 CopilotKit UI 组件，如侧边栏、聊天弹窗、文本域等。
+
+## 安装依赖
+
+要安装 CopilotKit 依赖，请运行以下命令：
+
+```npm
+npm install @copilotkit/react-core @copilotkit/react-ui
+```
+
+## 设置 CopilotKit
+
+<TailoredContent id="hosting">
+<TailoredContentOption
+  id="copilot-cloud"
+  title="Copilot Cloud（推荐）"
+  description="使用我们托管的后端端点快速开始。"
+  icon={<FaCloud />}
+>
+为了使用 CopilotKit，我们需要配置 `CopilotKit` Provider。
+
+<CopilotCloudConfigureCopilotKitProvider components={props.components} />
+</TailoredContentOption>
+<TailoredContentOption
+  id="self-hosted"
+  title="自托管"
+  description="学习如何用自己的后端托管 CopilotKit 的运行时。"
+  icon={<FaServer />}
+>
+
+<Steps>
+<Step>
+### 设置 Copilot 运行时端点
+<SelfHostingCopilotRuntimeCreateEndpoint components={props.components} />
+</Step>
+<Step>
+
+### 配置 CopilotKit Provider
+
+<SelfHostingCopilotRuntimeConfigureCopilotKitProvider
+  components={props.components}
+/>
+
+</Step>
+</Steps>
+</TailoredContentOption>
+</TailoredContent>
+
+### CopilotKit 聊天弹窗
+
+我们提供了几个即插即用的组件供你与 Copilot 交互。其中包括 `<CopilotPopup/>`、`<CopilotSidebar/>` 和 `<CopilotChat/>`。当然，你也可以使用 CopilotKit 的无头模式，通过 [`useCopilotChat`](/reference/v1/hooks/useCopilotChat) 提供完全自定义的 UI。
+
+在本教程中，我们将使用 `<CopilotPopup/>` 组件来显示聊天弹窗。
+
+```tsx title="app/page.tsx" showLineNumbers {6-7,15}
+"use client";
+
+import { TasksList } from "@/components/TasksList";
+import { TasksProvider } from "@/lib/hooks/use-tasks";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotPopup } from "@copilotkit/react-core/v2"; // [!code highlight]
+import "@copilotkit/react-ui/v2/styles.css"; // [!code highlight]
+
+export default function Home() {
+  return (
+    <>
+      <TasksProvider>
+        <TasksList />
+      </TasksProvider>
+      {/* [!code highlight:1] */}
+      <CopilotPopup />
+    </>
+  );
+}
+```
+
+以下是我们所做的：
+
+- 我们从 `@copilotkit/react-ui` 导入了 `<CopilotPopup />` 组件。
+- 我们用 `<CopilotKit>` Provider 包裹了页面。
+- 我们从 `@copilotkit/react-ui` 导入了内置样式。
+
+现在，返回你的应用，你会在页面右下角找到一个聊天弹窗。此时，你可以开始与你的 Copilot 互动了！🎉
+
+在下一步中，我们将通过向 Copilot 提供关于待办事项列表的可读状态来让它变得更智能。

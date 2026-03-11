@@ -1,0 +1,258 @@
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- OpenAI API 密钥（或您首选的 LLM 提供商的 API 密钥）
+- Node.js 20+
+- 您喜欢的包管理器
+- 一个正在运行的 MCP 服务器（见下面的[示例 MCP 服务器](#example-mcp-servers)）
+
+## 什么是 MCP Apps？
+
+MCP Apps 是带有相关 UI 资源的 MCP 服务器。当智能体调用其中一个工具时，CopilotKit 会自动获取并在聊天中渲染 UI 组件 —— 无需额外的代码。
+
+主要优势：
+- **零前端代码** - UI 组件由 MCP 服务器提供
+- **完全交互性** - 组件可以使用 HTML、CSS 和 JavaScript
+- **安全沙箱** - 内容在隔离的 iframe 中运行
+- **直接服务器通信** - 中间件安全地代理渲染的 UI 与 MCP 服务器之间的通信，实现实时交互
+- **线程持久性** - MCP Apps 存储在对话历史记录中，并在重新连接时恢复
+
+## 快速开始
+
+想用新应用尝试 MCP Apps？我们有一个预构建的示例应用，您可以通过我们的 CLI 使用。
+
+```bash
+npx copilotkit create -f mcp-apps
+```
+
+## 开始使用
+
+如果您想在现有应用中添加 MCP App，让我们逐步介绍该过程。
+
+<Steps>
+  <Step>
+    ### （可选）创建新应用
+
+    我们将从头开始这个示例，但如果您已有应用，可以随意跳过此步骤。
+
+    为了本示例，我们将使用 Next.js，但该过程适用于任何前端 React 框架。
+
+    ```bash
+    npx create-next-app@latest
+    ```
+  </Step>
+  <Step>
+    ### 添加依赖
+
+    ```npm
+    npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/mcp-apps-middleware
+    ```
+  </Step>
+  <Step>
+    ### 配置您的智能体
+
+    将您的智能体配置添加到 CopilotRuntime，并将 `MCPAppsMiddleware` 添加到带有 MCP 服务器配置的 BuiltInAgent：
+
+    <Callout>
+      此过程适用于任何智能体配置。
+    </Callout>
+
+    ```bash
+    touch app/api/copilotkit/route.ts
+    ```
+
+    ```typescript title="app/api/copilotkit/route.ts"
+    import {
+      CopilotRuntime,
+      ExperimentalEmptyAdapter,
+      copilotRuntimeNextJSAppRouterEndpoint,
+    } from "@copilotkit/runtime";
+    import { BuiltInAgent } from "@copilotkit/runtime/v2";
+    import { NextRequest } from "next/server";
+    import { MCPAppsMiddleware } from "@ag-ui/mcp-apps-middleware";
+
+    // 1. 创建您的智能体并添加 MCP Apps 中间件
+    const agent = new BuiltInAgent({
+      model: "openai/gpt-5.2",
+      prompt: "您是一个有帮助的助手。",
+    }).use(
+       new MCPAppsMiddleware({
+        mcpServers: [
+          {
+            type: "http",
+            url: "http://localhost:3108/mcp",
+            serverId: "my-server" // 推荐：稳定标识符
+          },
+        ],
+      }),
+    )
+
+    // 2. 创建服务适配器，如果不相关则为空
+    const serviceAdapter = new ExperimentalEmptyAdapter();
+
+    // 3. 创建运行时并添加智能体
+    const runtime = new CopilotRuntime({
+      agents: {
+        default: agent,
+      },
+    });
+
+    // 4. 创建 API 路由
+    export const POST = async (req: NextRequest) => {
+      const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+        runtime,
+        serviceAdapter,
+        endpoint: "/api/copilotkit",
+      });
+
+      return handleRequest(req);
+    };
+
+    ```
+
+    <Callout type="info" title="服务器 ID">
+      始终为生产部署提供 `serverId`。如果没有它，CopilotKit 会从服务器 URL 生成哈希。如果您的 URL 发生变化（例如，不同环境），对话历史中先前存储的 MCP Apps 将无法正确加载。
+    </Callout>
+  </Step>
+  <Step>
+    ### 配置环境
+
+    在您的前端目录中创建一个 `.env.local` 文件并添加您的 API 密钥：
+
+    ```plaintext title=".env.local"
+    OPENAI_API_KEY=your_openai_api_key
+    ```
+
+    <Callout type="info" title="其他模型呢？">
+    示例默认配置使用 OpenAI 的 GPT-4o，但您可以修改 BuiltInAgent 以使用 CopilotKit 支持的任何语言模型。
+    </Callout>
+  </Step>
+  <Step>
+    ### 配置 CopilotKit 提供程序
+
+    用 CopilotKit 提供程序包装您的应用：
+
+    ```tsx title="app/layout.tsx"
+    // [!code highlight:2]
+    import { CopilotKit } from "@copilotkit/react-core/v2";
+    import "@copilotkit/react-ui/v2/styles.css";
+
+    // ...
+
+    export default function RootLayout({ children }: {children: React.ReactNode}) {
+        return (
+            <html lang="zh-CN">
+                <body>
+                    {/* [!code highlight:3] */}
+                    <CopilotKit runtimeUrl="/api/copilotkit">
+                        {children}
+                    </CopilotKit>
+                </body>
+            </html>
+        );
+    }
+    ```
+  </Step>
+  <Step>
+    ### 添加聊天界面
+
+    将 CopilotSidebar 组件添加到您的页面：
+
+    ```tsx title="app/page.tsx"
+    "use client";
+
+    import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+    export default function Page() {
+        return (
+            <main>
+                <h1>您的应用</h1>
+                <CopilotSidebar />
+            </main>
+        );
+    }
+    ```
+  </Step>
+  <Step>
+    ### 启动您的 UI
+
+    启动开发服务器：
+
+    <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+        <Tab value="npm">
+            ```bash
+            npm run dev
+            ```
+        </Tab>
+        <Tab value="pnpm">
+            ```bash
+            pnpm dev
+            ```
+        </Tab>
+        <Tab value="yarn">
+            ```bash
+            yarn dev
+            ```
+        </Tab>
+        <Tab value="bun">
+            ```bash
+            bun dev
+            ```
+        </Tab>
+    </Tabs>
+
+    您的应用将在 `http://localhost:3000` 可用。
+  </Step>
+</Steps>
+
+就是这样！当智能体使用具有相关 UI 资源的工具时，MCP Apps 现在将自动渲染。
+
+## 传输类型
+
+中间件支持两种传输类型：
+
+### HTTP 传输
+
+对于使用基于 HTTP 通信的 MCP 服务器：
+
+```typescript
+{
+  type: "http",
+  url: "http://localhost:3101/mcp",
+  serverId: "my-http-server"
+}
+```
+
+### SSE 传输
+
+对于使用服务器发送事件的 MCP 服务器：
+
+```typescript
+{
+  type: "sse",
+  url: "https://mcp.example.com/sse",
+  headers: {
+    "Authorization": "Bearer token"
+  },
+  serverId: "my-sse-server"
+}
+```
+
+## 线程支持
+
+MCP Apps 与 CopilotKit 的线程系统完全集成：
+
+- **持久性** - 当您保存线程时，MCP Apps 作为对话历史的一部分存储
+- **恢复** - 加载线程会恢复所有 MCP Apps 及其原始状态
+- **服务器 ID 稳定性** - 使用一致的 `serverId` 值可确保 MCP Apps 在会话之间正确加载
+
+## 示例 MCP 服务器
+
+尝试这些开源 MCP Apps 服务器以开始使用：
+
+https://github.com/modelcontextprotocol/ext-apps
+
+此仓库包含多个演示服务器，具有预算分配器、数据可视化和交互式仪表板等工具。

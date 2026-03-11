@@ -1,0 +1,64 @@
+---
+title: "第 4 步：Copilot 文本区域"
+---
+
+目前，我们的应用有一个用于回复邮件的简单文本区域。让我们将其替换为 AI 驱动的文本区域，以便受益于我们 helpful 的 AI 助手。
+
+## `<Reply />` 组件
+
+前往 [`/components/Reply.tsx`](https://github.com/CopilotKit/example-textarea/blob/base-start-here/components/Reply.tsx) 文件。
+
+乍一看，您可以看到该组件使用 `useState` 来保存当前输入值并将其提供给文本区域。我们还使用文本区域的 `onChange` 属性来更新状态。
+
+## 实现 `<CopilotTextarea />`
+
+`<CopilotTextarea />` 组件被设计为 `<textarea />` 组件的直接替代品。让我们来实现它！
+
+```tsx title="components/Reply.tsx"
+// ... 文件的其余部分
+
+import { CopilotTextarea } from "@copilotkit/react-textarea"; // [!code highlight]
+
+export function Reply() {
+  // ...
+  return (
+    <div className="mt-4 pt-4 space-y-2 bg-background p-4 rounded-md border">
+      <CopilotTextarea // [!code highlight]
+        className="min-h-40 border h-40 p-2 overflow-hidden"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="撰写您的回复..."
+        // [!code highlight:4]
+        autosuggestionsConfig={{
+          textareaPurpose: `协助我回复此邮件线程。记住所有重要细节。`,
+          chatApiConfigs: {}
+        }}
+      />
+      <Button disabled={!input} onClick={handleReply}>
+        回复
+      </Button>
+    </div>
+  );
+}
+```
+
+我们导入 `<CopilotTextarea />` 组件，并用它替换 `<textarea />` 组件。这里还做了一些可选的样式更改。
+
+我们可以通过 `autoSuggestionsConfig.textareaPurpose` 属性为这个特定的文本区域提供更具体的说明。
+
+## 试试看！
+
+现在，回到应用并在文本区域中输入任何内容。您会看到 AI 助手在您输入时提供建议。是不是很酷？
+
+## `CMD + K`/`CTRL + K` 快捷键
+
+当文本区域处于焦点时，您可以使用 `CMD + K`（macOS）或 `CTRL + K`（Windows）快捷键打开操作弹出窗口。在这里，您可以给 copilot 特定的指令，例如：
+
+- `将文本改得更正式`
+- `让回复更简洁`
+- `告诉 John 我很乐意帮忙`
+
+<br />
+<hr />
+
+我们已经实现了 `<CopilotTextarea />` 组件，但有一个问题——copilot 助手无法感知邮件线程。在下一步中，我们将让 CopilotKit 感知我们的邮件历史。

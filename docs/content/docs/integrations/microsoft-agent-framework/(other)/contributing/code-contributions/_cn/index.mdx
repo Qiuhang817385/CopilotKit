@@ -1,0 +1,148 @@
+---
+title: 代码贡献
+---
+
+我们非常感谢您对贡献 CopilotKit 的兴趣。我们欢迎新的贡献者，并感谢您的帮助，使 CopilotKit 变得更好。
+
+本指南将帮助您尽可能顺利地开始。
+
+## 第 1 步：安装先决条件
+
+- [Node.js](https://nodejs.org/en/) 20.x 或更高版本
+- [pnpm](https://pnpm.io/) v9.x 全局安装 (`npm i -g pnpm@^9`)
+- [Turborepo v2.x](https://turborepo.org/) 全局安装 (`npm i -g turbo@2`)
+
+## 第 2 步：仓库设置
+
+<Steps>
+  <Step>
+  ### Fork 仓库
+  首先，前往 [CopilotKit 仓库](https://github.com/CopilotKit/CopilotKit) 创建一个 fork。
+
+  然后，将您的 fork 克隆到您的本地机器：
+  ```bash
+  git clone https://github.com/<您的用户名>/CopilotKit
+  cd CopilotKit
+  ```
+  </Step>
+  <Step>
+  ### 安装依赖
+  <Callout type="info">
+    CopilotKit 仓库是一个基于 [Turborepo](https://turborepo.org/) 的 monorepo。
+    我们使用 [pnpm](https://pnpm.io/) 作为我们的包管理器。
+  </Callout>
+
+  使用 pnpm 安装依赖：
+  ```bash
+  pnpm install
+  ```
+  </Step>
+  <Step>
+  ### 构建包
+  为了确保一切正常工作，让我们构建所有包一次：
+  ```bash
+  turbo run build
+  ```
+  </Step>
+</Steps>
+
+## 第 3 步：开发模式
+现在一切设置完成并按预期工作，您可以开始开发了：
+
+```bash
+# 以开发模式启动所有包
+turbo run dev
+
+# 以开发模式启动特定包
+turbo run dev --filter="@copilotkit/包名"
+```
+
+现在您可以开始对代码进行更改。
+
+<Callout type="info">
+您可以在 monorepo 的 `packages` 文件夹下找到所有 `@copilotkit/*` 包。
+</Callout>
+
+## 第 4 步：实时测试更改
+
+在大多数情况下，您希望在开发时实时无缝地测试您的更改。
+
+我们在 monorepo 中有一个 `examples` 文件夹，其中包含几个使用 CopilotKit 的不同示例。您可以运行这些示例以测试您的更改，因为它们链接到 monorepo 中的 `@copilotkit/*` 包。
+
+对于本教程，我们将使用 `next-openai` 示例，特别是演示文稿演示 (`/presentation`)。
+
+在单独的终端中，运行以下命令来启动示例：
+
+```bash
+cd examples/next-openai
+export OPENAI_API_KEY=<您的-openai-api-密钥>
+pnpm run example-dev
+```
+
+<Callout type="info">
+我们使用 `pnpm run example-dev` 命令来运行示例，这与我们用于处理单个包的 `turbo run dev` 命令不同。
+</Callout>
+
+现在导航到 http://localhost:3000/presentation，您应该会看到示例正在运行。您对 CopilotKit 包的任何更改都将立即反映在这里。
+
+## 第 5 步：格式化和 lint
+
+在提交更改之前，通过在 monorepo 的根目录运行以下命令确保您的文件格式正确：
+```bash
+turbo run format
+```
+
+此外，确保您没有 lint 错误：
+```bash
+turbo run lint
+```
+
+## 第 6 步：提交 Pull Request
+
+现在您已经进行了更改，提交并推送它们。然后，只需前往 [Pull Requests 页面](https://github.com/CopilotKit/CopilotKit/pulls) 创建一个 pull request。做得好！
+
+{/* TODO: 添加此部分的 MAF 等效内容。 */}
+{/* ## 使用热重载启动开发环境
+
+CopilotKit 包含一个现成的脚本，用于基于其中一个代理示例启动开发环境。它让您可以在核心 TypeScript、Python 或 .NET 代码中处理 CopilotKit 内部工作，同时将您的更改应用于所选示例。
+
+作为先决条件，请确保您已安装 GNU parallel 和 agent framework CLI。
+
+接下来，进入 `CopilotKit/` 目录并为您想要处理的示例运行 `example.sh` 脚本：
+
+```bash
+./scripts/develop/example.sh agents-starter
+```
+
+这将启动一个带热重载的开发环境。
+
+您可以选择通过在 agent framework 平台上运行相同的示例：
+
+```bash
+./scripts/develop/example.sh agents-starter agent framework-platform
+``` */}
+
+## 调试
+
+每次您在 localhost 上运行 CopilotKit 时，您都可以在聊天窗口中看到 **CopilotKit 开发控制台**。开发控制台为您提供有用的功能来调试您的 copilot（例如，查看 copilot 知道什么状态、它可以执行什么操作等）。
+
+<Frame description="CopilotKit 开发控制台">
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/contributing/copilotkit-dev-console.png"
+    className="w-auto max-w-[420px]"
+  />
+</Frame>
+
+如果您想在本地禁用开发控制台，只需在您的 `<CopilotKit />` 提供程序中将 `showDevConsole` 设置为 `false`。
+
+## （高级）包链接
+
+ 在某些情况下，您想在自己的项目中测试您的 CopilotKit 更改。例如，您尝试将 CopilotKit 集成到自己的代码库中，并遇到了想要修复的错误。
+
+ 方便地，您可以将本地 CopilotKit 包链接到您自己的项目以测试您的更改。
+
+ 查看[高级：包链接](/contributing/code-contributions/package-linking)指南以了解如何操作。
+
+## 需要帮助？
+
+如果您需要任何帮助，请随时在 [Discord](https://discord.gg/6dffbvGU3D) 上联系我们。我们有一个专门的 [#contributing](https://discord.com/channels/1122926057641742418/1183863183149117561) 频道。

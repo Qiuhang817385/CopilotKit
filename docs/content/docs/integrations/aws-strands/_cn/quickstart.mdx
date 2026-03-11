@@ -1,0 +1,382 @@
+---
+title: 快速开始
+description: 在 10 分钟内将您的 Strands 代理转变为代理原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+} from "lucide-react";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- OpenAI API 密钥
+- Node.js 20+
+- Python 3.12+
+- 您喜欢的包管理器
+
+## 开始入门
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的起点</p>
+                <p className="text-base">
+                    您可以从我们的入门模板开始，也可以将 CopilotKit 集成到现有的 Strands 代理中。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从零开始"
+            description="使用我们现成的入门应用程序快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                ```bash
+                npx copilotkit@latest create -f aws-strands-py
+                ```
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                ```npm
+                npm install
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                在代理目录中创建 `.env` 文件并添加您的 OpenAI API 密钥：
+
+                ```plaintext title="agent/.env"
+                OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  入门模板默认配置使用 OpenAI 的 GPT-4o，但您可以修改它以使用 Strands 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+
+                这将同时启动 UI 和代理服务器。
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="bring-your-own"
+            title="使用现有代理"
+            description="我已经有一个 Strands 代理，想要添加 CopilotKit。"
+        >
+            <Step>
+                ### 初始化代理项目
+
+                如果您还没有 Python 项目，请使用 `uv` 创建一个：
+
+                ```bash
+                uv init my-agent
+                cd my-agent
+                ```
+            </Step>
+            <Step>
+                ### 安装带 AG-UI 的 Strands
+
+                将 Strands 和所需包添加到您的项目：
+
+                ```bash
+                uv add ag-ui-strands "strands-agents[OpenAI]" fastapi uvicorn
+                ```
+            </Step>
+            <Step>
+                ### 配置环境
+
+                将您的 OpenAI API 密钥设置为环境变量：
+
+                ```bash
+                export OPENAI_API_KEY=your_openai_api_key
+                ```
+
+                <Callout type="info" title="其他模型呢？">
+                  本示例使用 OpenAI 的 GPT-4o，但您可以修改它以使用 Strands 支持的任何语言模型。
+                </Callout>
+            </Step>
+            <Step>
+                ### 通过 AG-UI 暴露您的代理
+
+                更新代理文件以将其作为 AG-UI ASGI 应用程序暴露：
+
+                ```python title="main.py"
+                import os
+
+                from ag_ui_strands import StrandsAgent, create_strands_app
+                from strands import Agent
+                from strands.models.openai import OpenAIModel
+
+                # 设置您的 Strands 代理
+                api_key = os.getenv("OPENAI_API_KEY", "")
+                model = OpenAIModel(
+                    client_args={"api_key": api_key},
+                    model_id="gpt-5.2",
+                )
+
+                agent = Agent(
+                    model=model,
+                    system_prompt="您是一个乐于助人的 AI 助手。",
+                )
+
+                # 包装 AG-UI 集成
+                agui_agent = StrandsAgent(
+                    agent=agent,
+                    name="strands_agent",
+                )
+
+                # 创建 FastAPI 应用
+                app = create_strands_app(agui_agent, "/")
+
+                if __name__ == "__main__":
+                    import uvicorn
+
+                    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+                ```
+
+                <Callout type="info" title="什么是 AG-UI？">
+                  AG-UI 是一个用于前端-代理通信的开放协议。`create_strands_app` 函数创建一个 CopilotKit 可以连接的 ASGI 应用。
+                </Callout>
+            </Step>
+            <Step>
+                ### 创建前端
+
+                CopilotKit 适用于任何基于 React 的前端。本示例使用 Next.js。
+
+                ```bash
+                npx create-next-app@latest frontend
+                cd frontend
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit 包
+
+                ```npm
+                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/client
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot Runtime
+
+                创建一个 API 路由将 CopilotKit 连接到您的 Strands 代理：
+
+                ```tsx title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                import { HttpAgent } from "@ag-ui/client";
+                import { NextRequest } from "next/server";
+
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                const runtime = new CopilotRuntime({
+                  agents: {
+                    strands_agent: new HttpAgent({ url: "http://localhost:8000" }),
+                  }
+                });
+
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+               ```
+            </Step>
+            <Step>
+                ### 配置 CopilotKit Provider
+
+                使用 CopilotKit provider 包装您的应用程序：
+
+                ```tsx title="app/layout.tsx"
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css";
+
+                // ...
+
+                export default function RootLayout({ children }: {children: React.ReactNode}) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit" agent="strands_agent">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+              ### 添加聊天界面
+
+              将 CopilotSidebar 组件添加到您的页面：
+
+              ```tsx title="app/page.tsx"
+              import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code highlight:1]
+
+              export default function Page() {
+                return (
+                  <main>
+                    <h1>您的应用</h1>
+                    {/* [!code highlight:1] */}
+                    <CopilotSidebar />
+                  </main>
+                );
+              }
+              ```
+            </Step>
+            <Step>
+                ### 启动代理
+
+                从代理目录启动代理服务器：
+
+                ```bash
+                cd ..
+                uv run main.py
+                ```
+
+                您的代理将在 `http://localhost:8000` 上可用。
+            </Step>
+            <Step>
+                ### 启动 UI
+
+                在单独的终端中，导航到前端目录并启动开发服务器：
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        cd frontend
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        cd frontend
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        cd frontend
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        cd frontend
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 开始聊天！
+
+        您的 AI 代理现在可以使用了！导航到 `localhost:3000` 并尝试向它提问：
+
+        ```
+        你能做什么？
+        ```
+
+        ```
+        请给我讲个笑话。
+        ```
+
+        ```
+        你对 React 有什么看法？
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                - 如果您遇到连接问题，尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                - 确保您的代理在端口 8000 上运行
+                - 检查您的 OpenAI API 密钥是否正确设置
+                - 验证 `@ag-ui/client` 包是否已安装在前端中
+            </Accordion>
+        </Accordions>
+
+    </Step>
+</Steps>
+
+## 下一步是什么？
+
+现在您已经设置了基本代理，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染代理的进度和输出。"
+    href="/aws-strands/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端工具"
+    description="让您的代理能够调用前端工具，直接更新您的应用程序。"
+    href="/aws-strands/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

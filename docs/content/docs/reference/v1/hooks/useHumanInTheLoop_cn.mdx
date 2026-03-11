@@ -1,0 +1,233 @@
+---
+title: "useHumanInTheLoop"
+description: "useHumanInTheLoop Hook 启用人工批准和交互工作流。"
+---
+
+<Callout type="warning">
+  `useHumanInTheLoop` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useHumanInTheLoop`](/reference/v2/hooks/useHumanInTheLoop)。
+</Callout>
+
+`useHumanInTheLoop` 暂停 AI 执行以请求人工输入或批准。当 AI 调用此工具时，它会停止并等待用户通过你的自定义 UI 响应，然后再继续。这对于敏感操作、确认或收集只有用户才能提供的信息至关重要。
+
+与 `useFrontendTool` 不同，它没有处理函数——相反，你的渲染函数接收一个 `respond` 回调，用于将用户的输入发送回 AI。直到调用 `respond`，AI 执行才会保持暂停，这是一个真正的阻塞交互。
+
+## 用法
+
+### 简单确认示例
+
+```tsx
+import { useHumanInTheLoop } from "@copilotkit/react-core";
+
+useHumanInTheLoop({
+  name: "confirmDeletion",
+  description: "在删除项目之前请求用户确认",
+  parameters: [
+    {
+      name: "itemName",
+      type: "string",
+      description: "要删除的项目名称",
+      required: true,
+    },
+    {
+      name: "itemCount",
+      type: "number",
+      description: "要删除的项目数量",
+      required: true,
+    },
+  ],
+  render: ({ args, status, respond, result }) => {
+    if (status === "executing" && respond) {
+      return (
+        <div className="p-4 border rounded">
+          <p>你确定要删除 {args.itemCount} 个 {args.itemName} 吗？</p>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => respond({ confirmed: true })}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
+              删除
+            </button>
+            <button
+              onClick={() => respond({ confirmed: false })}
+              className="bg-gray-300 px-4 py-2 rounded"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (status === "complete" && result) {
+      return (
+        <div className="p-2 text-sm text-gray-600">
+          {result.confirmed ? "项目已删除" : "删除已取消"}
+        </div>
+      );
+    }
+
+    return null;
+  },
+});
+```
+
+### 复杂输入收集示例
+
+```tsx
+import { useHumanInTheLoop } from "@copilotkit/react-core";
+import { useState } from "react";
+
+useHumanInTheLoop({
+  name: "collectUserPreferences",
+  description: "从用户收集详细的偏好设置",
+  parameters: [
+    {
+      name: "context",
+      type: "string",
+      description: "需要偏好设置的原因上下文",
+      required: true,
+    },
+    {
+      name: "requiredFields",
+      type: "string[]",
+      description: "要收集的字段",
+      required: true,
+    },
+  ],
+  render: ({ args, status, respond }) => {
+    const [preferences, setPreferences] = useState({
+      theme: "light",
+      notifications: true,
+      language: "zh",
+    });
+
+    if (status === "executing" && respond) {
+      return (
+        <div className="p-4 border rounded">
+          <h3 className="font-bold mb-2">{args.context}</h3>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            respond(preferences);
+          }}>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              保存偏好设置
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    return null;
+  },
+});
+```
+
+## 最佳实践
+
+1. 在渲染交互元素之前始终检查 `respond` 函数是否存在
+2. 处理所有状态状态以提供良好的用户反馈
+3. 在调用 `respond` 之前验证用户输入
+4. 在你的 UI 中提供关于期望什么输入的明确说明
+5. 考虑时间敏感操作的超时场景
+
+## 从 useCopilotAction 迁移
+
+如果你正在从具有 `renderAndWaitForResponse` 的 `useCopilotAction` 迁移：
+
+```tsx
+// 使用 useCopilotAction 之前
+useCopilotAction({
+  name: "confirmAction",
+  parameters: [
+    { name: "message", type: "string", required: true },
+  ],
+  renderAndWaitForResponse: ({ args, respond, status }) => {
+    return (
+      <ConfirmDialog
+        message={args.message}
+        onConfirm={() => respond(true)}
+        onCancel={() => respond(false)}
+        isActive={status === "executing"}
+      />
+    );
+  },
+});
+
+// 使用 useHumanInTheLoop 之后
+useHumanInTheLoop({
+  name: "confirmAction",
+  parameters: [
+    {
+      name: "message",
+      type: "string",
+      description: "要显示的消息",
+      required: true,
+    },
+  ],
+  render: ({ args, respond, status }) => {
+    if (status === "executing" && respond) {
+      return (
+        <ConfirmDialog
+          message={args.message}
+          onConfirm={() => respond(true)}
+          onCancel={() => respond(false)}
+          isActive={true}
+        />
+      );
+    }
+    return null;
+  },
+});
+```
+
+主要区别是：
+1. 该属性称为 `render` 而不是 `renderAndWaitForResponse`
+2. 你需要检查 `respond` 函数是否存在
+
+## 参数
+
+<PropertyReference name="name" type="string" required >
+工具的名称。
+</PropertyReference>
+
+<PropertyReference name="description" type="string"  >
+工具的描述。用于指导 Copilot 何时请求人工输入。
+</PropertyReference>
+
+<PropertyReference name="parameters" type="T"  >
+将传递给渲染函数的参数定义数组。每个参数对象应具有：
+- `name`（字符串）：参数名称
+- `type`（字符串）：参数类型（例如 "string"、"number"、"boolean"、"string[]"、"object"）
+- `description`（字符串）：参数用途的描述
+- `required`（布尔值）：参数是否必需
+- `properties`（数组，可选）：对于对象类型，使用相同的模式定义嵌套属性
+
+简单示例：`[{ name: "itemName", type: "string", description: "项目名称", required: true }]`
+
+嵌套示例：
+```typescript
+[
+  {
+    name: "approval",
+    type: "object",
+    description: "批准请求详情",
+    required: true,
+    properties: [
+      { name: "action", type: "string", description: "需要批准的操作", required: true },
+      { name: "reason", type: "string", description: "操作原因", required: false }
+    ]
+  }
+]
+```
+</PropertyReference>
+
+<PropertyReference name="render" type="FrontendAction<T>['renderAndWaitForResponse']" required >
+为人工输入渲染交互式 UI 的 React 组件。该组件接收包括 `args`、`status` 和 `respond` 函数的 props。
+</PropertyReference>
+
+<PropertyReference name="available" type="'disabled' | 'enabled'"  >
+工具是否可用。设置为 "disabled" 以阻止工具被调用。
+</PropertyReference>

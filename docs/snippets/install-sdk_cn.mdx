@@ -1,0 +1,15 @@
+import InstallPythonSDKSnippet from "@/snippets/install-python-sdk.mdx";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+任何 LangGraph 代理都可以与 CopilotKit 一起使用。但是，要使用 CopilotKit 创建深度代理体验，需要我们的 LangGraph SDK。
+
+<Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} className="p-0 m-0" persist>
+  <Tab value="Python" className="p-0 m-0">
+    <InstallPythonSDKSnippet components={props.components} />
+  </Tab>
+  <Tab value="TypeScript" className="p-0 m-0">
+    ```npm
+    npm install @copilotkit/sdk-js
+    ```
+  </Tab>
+</Tabs>

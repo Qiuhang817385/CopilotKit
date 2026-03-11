@@ -1,0 +1,33 @@
+---
+title: 共享状态
+description: 在您的 UI 和 Pydantic AI 代理状态之间创建双向连接。
+icon: "lucide/Repeat"
+---
+
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+
+<ImageZoom
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/SharedStateCoAgents.gif"
+  alt="共享状态演示"
+  width={1000}
+  height={1000}
+  className="rounded-lg shadow-lg border mt-0"
+/>
+
+
+## 什么是共享状态？
+
+CoAgents 维护一个共享状态，将您的 UI 与代理的执行无缝连接。这个共享状态系统允许您：
+
+- 显示代理的当前进度和中间结果
+- 通过 UI 交互更新代理的状态
+- 实时响应整个应用程序的状态变化
+
+该系统的基础建立在 Pydantic AI 通过 AG-UI 实现的有状态架构之上。
+
+## 什么时候应该使用这个？
+
+当您想要促进代理和用户之间的协作时，状态流是完美的。您的 Pydantic AI 代理
+持久化的任何状态都将由 UI 自动共享。同样，用户在 UI 中更新的任何状态都将自动反映。
+
+这提供了一致的体验，让代理和用户保持一致。

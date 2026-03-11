@@ -1,0 +1,91 @@
+---
+title: "手动发送消息"
+icon: "lucide/Radio"
+---
+
+import InstallSDKSnippet from "@/snippets/install-python-sdk-crew.mdx";
+import RunAndConnectSnippet from "@/snippets/coagents/run-and-connect-agent.mdx";
+
+虽然大多数智能体交互通过共享状态更新自动发生，但您也可以**从智能体代码中手动发送消息**以向用户提供即时反馈。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/emit-messages.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  这个视频展示了运行 `npx copilotkit@latest init` 并应用[实现](#实现)部分的结果！
+</Callout>
+
+## 这是什么？
+
+在 CrewAI 中，消息只在函数完成时发出。CopilotKit 允许您在函数执行过程中手动发送消息，以向用户提供即时反馈。
+
+## 什么时候应该使用它？
+
+手动发送的消息非常适合**当您不想等待函数**完成**并且您**：
+
+- 有一个长时间运行的任务，您想提供反馈
+- 想向用户提供状态更新
+- 想提供警告或错误消息
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并将您的智能体连接到 CopilotKit
+        <RunAndConnectSnippet />
+    </Step>
+    <Step>
+        ### 安装 CopilotKit SDK
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 手动发送消息
+        `copilotkit_emit_message` 方法允许您在函数执行的早期发送消息，以向用户传达状态更新。这对于长时间运行的任务特别有用。
+
+        <Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+            <Tab value="Python">
+                ```python
+                from litellm import completion
+                from crewai.flow.flow import start
+                from copilotkit.crewai import copilotkit_emit_message # [!code highlight]
+                # ...
+
+                @start()
+                async def start(self):
+                    # [!code highlight:2]
+                    intermediate_message = "正在努力思考..."
+                    await copilotkit_emit_message(intermediate_message)
+
+                    # 模拟长时间运行的任务
+                    await asyncio.sleep(2)
+
+                    response = copilotkit_stream(
+                        completion(
+                            model="openai/gpt-5.2",
+                            messages=[
+                                {"role": "system", "content": "你是一个有用的助手。"},
+                                *self.state["messages"]
+                            ],
+                            stream=True
+                        )
+                    )
+                     message = response.choices[0]["message"]
+
+                    self.state["messages"].append(message)
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+    <Step>
+        ### 试试看！
+        现在当您与智能体交谈时，您会注意到它会立即响应消息"正在努力思考..."，
+        然后在 2 秒后给您回复。
+    </Step>
+
+</Steps>

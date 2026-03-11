@@ -1,0 +1,207 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染代理的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+所有 Mastra 代理都通过工作记忆保持状态。这意味着随着代理的执行，工作记忆会在整个会话中保留。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为**代理式生成 UI**。
+
+## 什么时候使用？
+
+在 UI 中渲染代理的状态在您希望向用户提供有关会话整体状态的反馈时非常有用。一个很好的例子是用户和代理一起解决问题的场景。代理可以在其工作记忆中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 设置带有工作记忆的代理
+
+    创建带有工作记忆的 Mastra 代理。这里有一个完整的示例，用于跟踪搜索：
+
+    ```ts title="src/mastra/agents/index.ts"
+    import { openai } from "@ai-sdk/openai";
+    import { Agent } from "@mastra/core/agent";
+    import { LibSQLStore } from "@mastra/libsql";
+    import { z } from "zod";
+    import { Memory } from "@mastra/memory";
+    import { createTool } from "@mastra/core/tools";
+
+    // 定义代理状态模式
+    const AgentStateSchema = z.object({
+      searches: z.array(
+        z.object({
+          query: z.string(),
+          done: z.boolean(),
+        })
+      ).default([]),
+    });
+
+    export type AgentState = z.infer<typeof AgentStateSchema>;
+
+    // 创建更新工作记忆的工具
+    const addSearch = createTool({
+      id: "addSearch",
+      inputSchema: z.object({
+        query: z.string(),
+      }),
+      description: "将搜索添加到代理的搜索列表中",
+      execute: async ({ query }) => {
+        // 工具实现 - 工作记忆会自动更新
+        return { success: true, query };
+      },
+    });
+
+    export const searchAgent = new Agent({
+      name: "Search Agent",
+      model: openai("gpt-5.2"),
+      instructions: `
+        您是一个用于存储搜索的 helpful 助手。
+
+        重要提示：
+        - 使用 addSearch 工具将搜索添加到代理状态
+        - 对于给定查询，仅使用 addSearch 工具一次
+      `,
+      tools: {
+        addSearch,
+      },
+      memory: new Memory({
+        storage: new LibSQLStore({ id: "mastra-storage", url: ":memory:" }),
+        options: {
+          workingMemory: {
+            enabled: true,
+            schema: AgentStateSchema,
+          },
+        },
+      }),
+    });
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染代理状态
+    现在我们可以利用带有 `render` 函数的 `useAgent` 来在**聊天中**渲染代理的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义代理的状态，应与 Mastra 代理的工作记忆匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，样式已省略
+      useAgent({
+        agentId: "searchAgent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Mastra 实例中定义的代理名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外部渲染状态
+    您也可以在**聊天外部**渲染代理的状态。当您想在聊天之外的任何地方渲染代理的状态时，这非常有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义代理的状态，应与 Mastra 代理的工作记忆匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "searchAgent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Mastra 实例中定义的代理名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+
+    您现在已经创建了一个将在聊天中渲染代理工作记忆的组件。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

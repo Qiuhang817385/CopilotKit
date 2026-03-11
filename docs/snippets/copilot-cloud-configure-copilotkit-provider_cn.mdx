@@ -1,0 +1,35 @@
+import { Callout } from 'fumadocs-ui/components/callout';
+import { LinkToCopilotCloud } from '@/components/react/link-to-copilot-cloud';
+
+[`<CopilotKit>`](/reference/v1/components/CopilotKit) 提供商必须包装应用程序中感知 Copilot 的部分。
+对于大多数用例，建议将 `CopilotKit` 提供商包装在整个应用周围，例如在您的 `layout.tsx` 中
+
+<Callout type="info">
+  请注意，您可以在应用程序的任何位置添加 `<CopilotKit>` 提供商。事实上，如果您想要独立的 copilot，每个应用可以有多个 `<CopilotKit>` 提供商。
+</Callout>
+
+
+<Callout type="info">
+    <LinkToCopilotCloud asButton={false}>点击此处免费获取您的 Copilot Cloud API 密钥</LinkToCopilotCloud>。然后，将 `<your-public-api-key>` 替换为您的实际 API 密钥。
+</Callout>
+
+```tsx title="layout.tsx" showLineNumbers
+import "./globals.css";
+
+import { ReactNode } from "react";
+import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+    return (
+      <html lang="en">
+        <body>
+          {/* 使用您从 Copilot Cloud 获得的公共 API 密钥  */}
+          {/* [!code highlight:3] */}
+          <CopilotKit publicApiKey="<your-copilot-cloud-public-api-key>">
+            {children}
+          </CopilotKit>
+        </body>
+      </html>
+    );
+}
+```

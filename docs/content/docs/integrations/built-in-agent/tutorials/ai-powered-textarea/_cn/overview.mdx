@@ -1,0 +1,53 @@
+---
+title: 概述
+---
+import { YouTubeVideo } from "@/components/react/youtube-video";
+import { FaGithub } from "react-icons/fa";
+import Link from "next/link";
+
+<div>
+  <div>**完成时间：** 5 分钟</div>
+  <div>**难度：** 简单</div>
+</div>
+
+<br />
+
+<YouTubeVideo videoId="C7px2wxr0k4" defaultPlaybackRate={1.25} />
+
+## 您将学习的内容
+
+在本教程中，您将创建一个简单的电子邮件应用程序，并为其添加 AI 驱动的自动完成功能。该应用是一个简单的电子邮件客户端，使用常规文本区域来撰写电子邮件。您将向应用添加 CopilotKit，以便文本区域在您键入时提供相关的自动完成建议。该文本区域将了解完整的电子邮件历史记录。
+
+您将学习：
+
+- 💡 如何使用 `useCopilotReadable` 让您的 Copilot 读取应用的状态
+- 💡 如何使用 `<CopilotTextarea />` 组件在您的应用中获取即时上下文感知自动完成
+- 💡 如何使用 Copilot Textarea 操作弹出窗口生成文本或调整文本区域中的现有文本
+
+## 试一试！
+
+您可以在下面试用最终结果的交互式示例：
+
+<Link href="https://github.com/CopilotKit/example-textarea?ref=docs-tutorial" className="no-underline" target="_blank">
+  <button className="bg-neutral-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 mt-2 font-medium">
+    <FaGithub className="w-4 h-4" />
+    <span>在 GitHub 上查看源代码</span>
+  </button>
+</Link>
+
+<div className="flex flex-col shadow-lg rounded-lg my-4">
+  <div className="bg-neutral-800 h-11 rounded-t-lg flex items-center px-4">
+    <div className="flex-1 text-center text-white font-medium">CopilotKit 待办事项列表 Copilot 演示</div>
+  </div>
+  <iframe
+    className="rounded-b-lg h-[850px]"
+    src="https://example-textarea.vercel.app/"
+    width="100%"
+    referrerPolicy="strict-origin-when-cross-origin"
+    title="CopilotKit Textarea Demo"
+    frameBorder="0"
+    allowFullScreen
+    ></iframe>
+</div>
+
+在下一步中，我们将开始构建我们的 Copilot。

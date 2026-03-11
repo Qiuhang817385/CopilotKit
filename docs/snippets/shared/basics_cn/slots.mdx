@@ -1,0 +1,309 @@
+## 这是什么？
+
+每个 CopilotKit 聊天组件都是由可组合的**插槽**构建的 —— 命名的子组件，您可以单独覆盖。插槽系统为您提供三个级别的自定义，无需重建整个 UI：
+
+1. **Tailwind 类** —— 传递字符串以添加/覆盖 CSS 类
+2. **Props 覆盖** —— 传递对象以覆盖默认组件上的特定 props
+3. **自定义组件** —— 传递您自己的 React 组件以完全替换插槽
+
+插槽是递归的 —— 您可以在任何深度深入到嵌套子组件。
+
+## Tailwind 类
+
+自定义插槽的最简单方式。传递一个 Tailwind 类字符串，它将与默认组件的类合并。
+
+```tsx title="page.tsx"
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+export function Chat() {
+  return (
+    <CopilotChat
+      // [!code highlight:2]
+      messageView="bg-gray-50 dark:bg-gray-900 p-4"
+      input="border-2 border-blue-400 rounded-xl"
+    />
+  );
+}
+```
+
+## Props 覆盖
+
+传递一个对象以覆盖默认组件上的特定 props。这对于添加 `className`、事件处理程序、数据属性或默认组件接受的任何其他 prop 很有用。
+
+```tsx title="page.tsx"
+<CopilotChat
+  // [!code highlight:4]
+  messageView={{
+    className: "my-custom-messages",
+    "data-testid": "message-view",
+  }}
+  input={{ autoFocus: true }}
+/>
+```
+
+## 自定义组件
+
+为了完全控制，传递您自己的 React 组件。它接收与默认组件相同的所有 props。
+
+```tsx title="page.tsx"
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+// [!code highlight:8]
+const CustomMessageView = ({ messages, isRunning }) => (
+  <div className="space-y-4 p-6">
+    {messages?.map((msg) => (
+      <div key={msg.id} className={msg.role === "user" ? "text-right" : "text-left"}>
+        {msg.content}
+      </div>
+    ))}
+    {isRunning && <div className="animate-pulse">思考中...</div>}
+  </div>
+);
+
+export function Chat() {
+  return (
+    // [!code highlight:1]
+    <CopilotChat messageView={CustomMessageView} />
+  );
+}
+```
+
+## 嵌套插槽（深入）
+
+插槽是递归的。您可以通过嵌套对象在任何深度自定义子组件。
+
+### 两层深度
+
+覆盖消息视图中的助手消息工具栏：
+
+```tsx title="page.tsx"
+<CopilotChat
+  // [!code highlight:7]
+  messageView={{
+    assistantMessage: {
+      toolbar: CustomToolbar,
+      copyButton: CustomCopyButton,
+    },
+    userMessage: CustomUserMessage,
+  }}
+/>
+```
+
+### 三层深度
+
+覆盖助手消息工具栏中的特定按钮：
+
+```tsx title="page.tsx"
+<CopilotChat
+  messageView={{
+    // [!code highlight:5]
+    assistantMessage: {
+      copyButton: ({ onClick }) => (
+        <button onClick={onClick}>复制</button>
+      ),
+    },
+  }}
+/>
+```
+
+### 输入子插槽
+
+```tsx title="page.tsx"
+<CopilotChat
+  input={{
+    // [!code highlight:2]
+    textArea: CustomTextArea,
+    sendButton: CustomSendButton,
+  }}
+/>
+```
+
+### 滚动视图子插槽
+
+```tsx title="page.tsx"
+<CopilotChat
+  scrollView={{
+    // [!code highlight:2]
+    feather: CustomFeather,
+    scrollToBottomButton: CustomScrollButton,
+  }}
+/>
+```
+
+### 建议视图子插槽
+
+```tsx title="page.tsx"
+<CopilotChat
+  suggestionView={{
+    // [!code highlight:2]
+    suggestion: CustomSuggestionPill,
+    container: CustomSuggestionContainer,
+  }}
+/>
+```
+
+## 子元素渲染函数
+
+为了完全控制布局，使用 `children` 渲染函数模式。这让您获得预构建的插槽元素，您可以随意排列。
+
+```tsx title="page.tsx"
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+export function Chat() {
+  return (
+    <CopilotChat>
+      {/* [!code highlight:8] */}
+      {({ messageView, input, scrollView, suggestionView }) => (
+        <div className="flex flex-col h-full">
+          <header className="p-4 border-b font-semibold">我的智能体</header>
+          {scrollView}
+          <div className="border-t p-4">{input}</div>
+        </div>
+      )}
+    </CopilotChat>
+  );
+}
+```
+
+## 标签
+
+通过 `labels` prop 自定义 UI 中的任何文本字符串。这不使用插槽系统 —— 它是 `CopilotChat`、`CopilotSidebar` 和 `CopilotPopup` 上的一个单独便捷 prop。
+
+```tsx title="page.tsx"
+<CopilotChat
+  // [!code highlight:5]
+  labels={{
+    chatInputPlaceholder: "向您的智能体提问...",
+    welcomeMessageText: "今天我能帮您什么？",
+    chatDisclaimerText: "AI 回复可能不准确。",
+  }}
+/>
+```
+
+## 可用插槽
+
+### `CopilotChat` / `CopilotSidebar` / `CopilotPopup`
+
+这些是所有聊天组件上可用的根级插槽 props：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `messageView` | 消息列表容器。 |
+| `scrollView` | 带有自动滚动行为的滚动容器。 |
+| `input` | 带有发送/转录控件的文本输入区域。 |
+| `suggestionView` | 显示在消息下方的建议标签。 |
+| `welcomeScreen` | 初始空状态屏幕（传递 `false` 以禁用）。 |
+
+`CopilotSidebar` 和 `CopilotPopup` 还有：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `header` | 模态标题栏。 |
+| `toggleButton` | 打开/关闭切换按钮。 |
+
+### `messageView` 子插槽
+
+可通过 `messageView={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `assistantMessage` | 渲染助手回复。有自己的子插槽（见下文）。 |
+| `userMessage` | 渲染用户消息。有自己的子插槽（见下文）。 |
+| `reasoningMessage` | 渲染模型推理/思考步骤。有自己的子插槽（见下文）。 |
+| `cursor` | 智能体响应时显示的流式光标指示器。 |
+
+### `assistantMessage` 子插槽
+
+可通过 `messageView={{ assistantMessage: { ... } }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `markdownRenderer` | Markdown 渲染组件。 |
+| `toolbar` | 消息下方的操作工具栏。 |
+| `copyButton` | 复制消息按钮。 |
+| `thumbsUpButton` | 点赞反馈按钮。 |
+| `thumbsDownButton` | 点踩反馈按钮。 |
+| `readAloudButton` | 朗读按钮。 |
+| `regenerateButton` | 重新生成回复按钮。 |
+| `toolCallsView` | 工具调用可视化。 |
+
+### `userMessage` 子插槽
+
+可通过 `messageView={{ userMessage: { ... } }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `messageRenderer` | 用户消息的文本渲染组件。 |
+| `toolbar` | 悬停时的操作工具栏。 |
+| `copyButton` | 复制消息按钮。 |
+| `editButton` | 编辑消息按钮。 |
+| `branchNavigation` | 消息分支之间的导航（编辑后）。 |
+
+### `reasoningMessage` 子插槽
+
+可通过 `messageView={{ reasoningMessage: { ... } }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `header` | 可折叠的标题（点击展开/折叠）。 |
+| `contentView` | 推理内容区域。 |
+| `toggle` | 展开/折叠切换包装器。 |
+
+### `input` 子插槽
+
+可通过 `input={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `textArea` | 文本输入元素。 |
+| `sendButton` | 发送/提交按钮。 |
+| `addMenuButton` | 附件/工具菜单按钮。 |
+| `startTranscribeButton` | 开始语音转录按钮。 |
+| `cancelTranscribeButton` | 取消转录按钮。 |
+| `finishTranscribeButton` | 完成转录按钮。 |
+| `audioRecorder` | 音频录制组件。 |
+| `disclaimer` | 输入下方的免责声明文本。 |
+
+### `scrollView` 子插槽
+
+可通过 `scrollView={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `feather` | 滚动区域底部的渐变叠加层。 |
+| `scrollToBottomButton` | 向上滚动时出现的按钮。 |
+
+### `suggestionView` 子插槽
+
+可通过 `suggestionView={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `suggestion` | 单个建议标签/按钮。 |
+| `container` | 包装所有建议标签的容器。 |
+
+### `welcomeScreen` 子插槽
+
+可通过 `welcomeScreen={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `welcomeMessage` | 空状态显示的欢迎文本。 |
+
+### `header` 子插槽（仅限 Sidebar/Popup）
+
+可通过 `header={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `titleContent` | 标题中的标题文本。 |
+| `closeButton` | 关闭/最小化按钮。 |
+
+### `toggleButton` 子插槽（仅限 Sidebar/Popup）
+
+可通过 `toggleButton={{ ... }}` 访问：
+
+| 插槽 | 描述 |
+|------|-------------|
+| `openIcon` | 聊天关闭时显示的图标。 |
+| `closeIcon` | 聊天打开时显示的图标。 |

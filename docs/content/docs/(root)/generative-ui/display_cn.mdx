@@ -1,0 +1,66 @@
+---
+title: 显示组件
+icon: "lucide/Eye"
+description: 注册 React 组件，让智能体可以在聊天中渲染它们。
+hideTOC: true
+---
+import { IntegrationGrid } from "@/components/content/integration-grid";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+## 这是什么？
+
+仅渲染式生成 UI 让您可以将 React 组件注册为智能体可调用的工具。当智能体调用该工具时，CopilotKit 会直接使用工具参数作为 props 在聊天中渲染您的组件 —— 无需处理逻辑或用户交互。
+
+<Tabs items={['page.tsx', 'chart.tsx']}>
+  <Tab value="page.tsx">
+  ```tsx
+  import { z } from "zod";
+  import { useComponent } from "@copilotkit/react-core/v2";
+  import { ChartProps, Chart } from "@/chart.tsx"
+
+  useComponent({
+    name: "showChart",
+    description: "填充数据并向用户展示图表",
+    parameters: ChartProps,
+    render: Chart
+  });
+  ```
+  </Tab>
+  <Tab value="chart.tsx">
+  ```tsx
+  import { z } from "zod";
+  import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+  export const ChartProps = z.object({
+    title: z.string(),
+    data: z.array(z.object({ label: z.string(), value: z.number() })),
+  });
+
+  export function Chart({ title, data }: z.infer<typeof ChartProps>) {
+    return (
+      <div>
+        <h3>{title}</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={data}>
+            <XAxis dataKey="label" /><YAxis /><Tooltip />
+            <Bar dataKey="value" fill="#6366f1" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+  ```
+  </Tab>
+</Tabs>
+
+## 何时使用？
+
+在以下情况下使用仅渲染式生成 UI：
+- 在聊天中内联显示丰富的 UI（卡片、图表、表格）
+- 展示智能体响应中的结构化数据
+- 渲染预览、状态指示器或视觉反馈
+- 让智能体呈现纯文本之外的信息
+
+## 选择您的集成
+
+<IntegrationGrid path="render-only" />

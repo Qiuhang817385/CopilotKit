@@ -1,0 +1,243 @@
+---
+title: "useAgent"
+description: "用于访问 AG-UI Agent 实例的 React Hook"
+---
+
+## 概述
+
+`useAgent` 是一个返回 [AG-UI AbstractAgent](https://docs.ag-ui.com/sdk/js/client/abstract-agent) 实例的 React Hook。该 Hook 订阅 Agent 状态更改，并在 Agent 的状态、消息或执行状态更改时触发重新渲染。
+
+**抛出错误** 如果没有使用指定的 `agentId` 配置 Agent。
+
+## 签名
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function useAgent(options?: UseAgentProps): { agent: AbstractAgent }
+```
+
+## 参数
+
+<PropertyReference name="options" type="UseAgentProps">
+  Hook 的配置对象。
+
+  <PropertyReference name="agentId" type="string" default='"default"'>
+    要检索的 Agent ID。必须与 `CopilotKitProvider` 中配置的 Agent 匹配。
+  </PropertyReference>
+
+  <PropertyReference name="updates" type="UseAgentUpdate[]" default="[OnMessagesChanged, OnStateChanged, OnRunStatusChanged]">
+    控制哪些 Agent 更改会触发组件重新渲染。选项：
+    - `UseAgentUpdate.OnMessagesChanged` - 消息更改时重新渲染
+    - `UseAgentUpdate.OnStateChanged` - 状态更改时重新渲染
+    - `UseAgentUpdate.OnRunStatusChanged` - 执行状态更改时重新渲染
+
+    传递空数组 `[]` 以防止自动重新渲染。
+  </PropertyReference>
+</PropertyReference>
+
+## 返回值
+
+<PropertyReference name="object" type="{ agent: AbstractAgent }">
+  包含 Agent 实例的对象。
+
+  <PropertyReference name="agent" type="AbstractAgent">
+    AG-UI Agent 实例。有关完整接口详情，请参阅 [AbstractAgent 文档](https://docs.ag-ui.com/sdk/js/client/abstract-agent)。
+
+    ### 核心属性
+
+    <PropertyReference name="agentId" type="string | undefined">
+      Agent 实例的唯一标识符。
+    </PropertyReference>
+
+    <PropertyReference name="description" type="string">
+      Agent 用途的人类可读描述。
+    </PropertyReference>
+
+    <PropertyReference name="threadId" type="string">
+      当前对话线程的唯一标识符。
+    </PropertyReference>
+
+    <PropertyReference name="messages" type="Message[]">
+      对话消息数组。每条消息包含：
+      - `id: string` - 唯一消息标识符
+      - `role: "user" | "assistant" | "system"` - 消息角色
+      - `content: string` - 消息内容
+    </PropertyReference>
+
+    <PropertyReference name="state" type="any">
+      在应用程序和 Agent 之间同步的共享状态对象。两者都可以读取和修改此状态。
+    </PropertyReference>
+
+    <PropertyReference name="isRunning" type="boolean">
+      指示 Agent 当前是否正在执行。
+    </PropertyReference>
+
+    ### 方法
+
+    <PropertyReference name="runAgent" type="(options?: RunAgentOptions) => Promise<void>">
+      手动触发 Agent 执行。
+
+      **参数：**
+      - `options.forwardedProps?: any` - 传递给 Agent 执行上下文的数据
+
+      **示例：**
+      ```tsx
+      await agent.runAgent({
+        forwardedProps: {
+          command: { resume: "user response" }
+        }
+      });
+      ```
+    </PropertyReference>
+
+    <PropertyReference name="setState" type="(newState: any) => void">
+      更新共享状态。更改立即对应用程序和 Agent 可用。
+
+      **示例：**
+      ```tsx
+      agent.setState({
+        ...agent.state,
+        theme: "dark"
+      });
+      ```
+    </PropertyReference>
+
+    <PropertyReference name="subscribe" type="(subscriber: AgentSubscriber) => { unsubscribe: () => void }">
+      订阅 Agent 事件。返回清理函数。
+
+      **订阅者事件：**
+      - `onCustomEvent?: ({ event: { name: string, value: any } }) => void` - 自定义事件
+      - `onRunStartedEvent?: () => void` - Agent 执行开始
+      - `onRunFinalized?: () => void` - Agent 执行完成
+      - `onStateChanged?: (state: any) => void` - 状态更改
+      - `onMessagesChanged?: (messages: Message[]) => void` - 消息添加/修改
+    </PropertyReference>
+
+    <PropertyReference name="addMessage" type="(message: Message) => void">
+      向对话添加单条消息并通知订阅者。
+    </PropertyReference>
+
+    <PropertyReference name="addMessages" type="(messages: Message[]) => void">
+      向对话添加多条消息并一次性通知订阅者。
+    </PropertyReference>
+
+    <PropertyReference name="setMessages" type="(messages: Message[]) => void">
+      用新的消息数组替换整个消息历史记录。
+    </PropertyReference>
+
+    <PropertyReference name="abortRun" type="() => void">
+      中止当前正在运行的 Agent 执行。
+    </PropertyReference>
+
+    <PropertyReference name="clone" type="() => AbstractAgent">
+      创建 Agent 的深拷贝，包括克隆的消息、状态和配置。
+    </PropertyReference>
+
+  </PropertyReference>
+</PropertyReference>
+
+## 用法
+
+### 基本用法
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function AgentStatus() {
+  const { agent } = useAgent();
+
+  return (
+    <div>
+      <div>Agent: {agent.agentId}</div>
+      <div>Messages: {agent.messages.length}</div>
+      <div>Running: {agent.isRunning ? "Yes" : "No"}</div>
+    </div>
+  );
+}
+```
+
+### 访问和更新状态
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function StateController() {
+  const { agent } = useAgent();
+
+  return (
+    <div>
+      <pre>{JSON.stringify(agent.state, null, 2)}</pre>
+      <button onClick={() => agent.setState({ ...agent.state, count: 1 })}>
+        Update State
+      </button>
+    </div>
+  );
+}
+```
+
+### 事件订阅
+
+```tsx
+import { useEffect } from "react";
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function EventListener() {
+  const { agent } = useAgent();
+
+  useEffect(() => {
+    const { unsubscribe } = agent.subscribe({
+      onRunStartedEvent: () => console.log("Started"),
+      onRunFinalized: () => console.log("Finished"),
+    });
+
+    return unsubscribe;
+  }, []);
+
+  return null;
+}
+```
+
+### 多 Agent
+
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function MultiAgentView() {
+  const { agent: primary } = useAgent({ agentId: "primary" });
+  const { agent: support } = useAgent({ agentId: "support" });
+
+  return (
+    <div>
+      <div>Primary: {primary.messages.length} messages</div>
+      <div>Support: {support.messages.length} messages</div>
+    </div>
+  );
+}
+```
+
+### 优化重新渲染
+
+```tsx
+import { useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2";
+
+// 仅在消息更改时重新渲染
+function MessageCount() {
+  const { agent } = useAgent({
+    updates: [UseAgentUpdate.OnMessagesChanged]
+  });
+
+  return <div>Messages: {agent.messages.length}</div>;
+}
+```
+
+## 行为
+
+- **自动重新渲染**：当 Agent 状态、消息或执行状态更改时，组件重新渲染（可通过 `updates` 参数配置）
+- **错误处理**：如果指定的 `agentId` 不存在 Agent，则抛出错误
+- **状态同步**：通过 `setState()` 进行的状态更新立即对应用程序和 Agent 可用
+- **事件订阅**：生命周期和自定义事件的订阅/取消订阅模式
+
+## 相关
+
+- [AG-UI AbstractAgent](https://docs.ag-ui.com/sdk/js/client/abstract-agent) - 完整的 Agent 接口文档

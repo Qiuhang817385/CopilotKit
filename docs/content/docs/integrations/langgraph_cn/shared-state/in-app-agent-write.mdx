@@ -1,0 +1,153 @@
+---
+title: 写入智能体状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入智能体的状态。
+---
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state) 中写入共享状态。
+</Callout>
+
+## 这是什么？
+
+本指南向您展示如何从您的应用程序写入智能体的状态。
+
+## 何时应该使用？
+
+您可以在想要向用户提供有关智能体正在做什么的反馈时使用此功能，特别是当您的智能体正在调用工具时。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+    LangGraph 是有状态的。当您在节点之间转换时，该状态会被更新并传递给下一个节点。在此示例中，
+    让我们假设我们的智能体状态看起来像这样。
+
+    <Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            language: Literal["english", "spanish"] = "english"
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+        ```ts title="agent-js/src/agent.ts"
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+        export const AgentStateAnnotation = Annotation.Root({
+            language: Annotation<"english" | "spanish">,
+            ...CopilotKitStateAnnotation.spec,
+        });
+        export type AgentState = typeof AgentStateAnnotation.State;
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 使用 `useAgent` 钩子读取和写入状态
+    `useAgent` 让您可以访问智能体，包括其状态。您可以通过调用 `agent.setState` 来更新状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 伪 React 组件中的示例用法
+    function YourMainContent() {
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      });
+
+      const language = (agent.state.language as string) ?? "english";
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见，省略了样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {language}</p>
+          <button onClick={toggleLanguage}>切换语言</button>
+        </div>
+      );
+    }
+    ```
+  </Step>
+  <Step>
+    ### 试试看！
+    现在您可以使用 `setState` 函数更新智能体状态，并使用 `state` 读取它。尝试切换语言按钮并与您的智能体交谈。您会看到语言随着智能体状态的变化而变化。
+
+    <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/write-agent-state.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+    <Callout>
+      此视频展示了将 [实现](#实现) 部分应用于 `npx copilotkit@latest init` 的结果！
+    </Callout>
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用更新后的状态重新运行智能体
+
+新的智能体状态将在智能体下次运行时使用。
+如果您想手动重新运行它，请在更新状态后使用 `agent.runAgent`。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "sample_agent",
+  });
+
+  const language = (agent.state.language as string) ?? "english";
+
+  // 设置为在应用程序中发生某些事件时调用
+  const toggleLanguage = () => {
+    const newLanguage = language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // [!code highlight:2]
+    // 使用更新后的状态重新运行智能体
+    agent.runAgent();
+  };
+
+  return (
+    // ...
+  );
+}
+```
+
+### 中间流式传输和渲染智能体状态
+默认情况下，LangGraph 智能体状态只会在 LangGraph 节点转换_之间_更新——这意味着状态更新将是不连续和延迟的。
+
+您可能希望**连续地**渲染智能体状态更新。
+
+请参阅 **[预测状态更新](/langgraph/shared-state/predictive-state-updates)。**

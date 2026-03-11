@@ -1,0 +1,372 @@
+<Steps>
+  <Step>
+    ### 导入钩子
+
+    首先，从 v2 包中导入 `useAgent`：
+
+    ```tsx title="page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    ```
+  </Step>
+
+  <Step>
+    ### 访问您的代理
+
+    调用钩子以获取对代理的引用：
+
+    ```tsx title="page.tsx"
+    export function AgentInfo() {
+      const { agent } = useAgent(); // [!code highlight]
+
+      return (
+        <div>
+          {/* [!code highlight:4] */}
+          <p>代理 ID: {agent.id}</p>
+          <p>线程 ID: {agent.threadId}</p>
+          <p>状态: {agent.isRunning ? "运行中" : "空闲"}</p>
+          <p>消息数: {agent.messages.length}</p>
+        </div>
+      );
+    }
+    ```
+
+    如果没有配置代理，钩子将抛出错误，因此您可以安全地使用 `agent` 而无需空值检查。
+  </Step>
+
+  <Step>
+    ### 显示消息
+
+    访问代理的对话历史：
+
+    ```tsx title="page.tsx"
+    export function MessageList() {
+      const { agent } = useAgent();
+
+      return (
+        <div>
+          {/* [!code highlight:6] */}
+          {agent.messages.map((msg) => (
+            <div key={msg.id}>
+              <strong>{msg.role}:</strong>
+              <span>{msg.content}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 显示运行状态
+
+    当代理正在处理时添加加载指示器：
+
+    ```tsx title="page.tsx"
+    export function AgentStatus() {
+      const { agent } = useAgent();
+
+      return (
+        <div>
+          {/* [!code highlight:8] */}
+          {agent.isRunning ? (
+            <div>
+              <div className="spinner" />
+              <span>代理正在处理...</span>
+            </div>
+          ) : (
+            <span>就绪</span>
+          )}
+        </div>
+      );
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 运行代理
+
+    使用 `copilotkit.runAgent()` 以编程方式触发代理：
+
+    ```tsx title="page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2";
+    import { useCopilotKit } from "@copilotkit/react-core/v2";
+    import { randomUUID } from "@copilotkit/shared/v2";
+
+    export function RunAgent() {
+      const { agent } = useAgent();
+      // [!code highlight:1]
+      const { copilotkit } = useCopilotKit();
+
+      const handleRun = async () => {
+        agent.addMessage({
+          id: randomUUID(),
+          role: "user",
+          content: "您好，代理！",
+        });
+
+        // [!code highlight:1]
+        await copilotkit.runAgent({ agent });
+      };
+
+      return <button onClick={handleRun}>发送</button>;
+    }
+    ```
+
+    `copilotkit.runAgent()` 编排完整的代理生命周期——执行前端工具、处理后续运行和流式传输结果。这与 `<CopilotChat />` 内部使用的方法相同。
+  </Step>
+</Steps>
+
+## 使用状态
+
+代理通过 `agent.state` 属性公开其状态。此状态在您的应用程序和代理之间共享——双方都可以读取和修改它。
+
+### 读取状态
+
+访问代理的当前状态：
+
+```tsx title="page.tsx"
+export function StateDisplay() {
+  const { agent } = useAgent();
+
+  return (
+    <div>
+      <h3>代理状态</h3>
+      {/* [!code highlight:1] */}
+      <pre>{JSON.stringify(agent.state, null, 2)}</pre>
+
+      {/* 访问特定属性 */}
+      {/* [!code highlight:2] */}
+      {agent.state.user_name && <p>用户: {agent.state.user_name}</p>}
+      {agent.state.preferences && <p>偏好设置: {JSON.stringify(agent.state.preferences)}</p>}
+    </div>
+  );
+}
+```
+
+当代理的状态更改时，您的组件会自动重新渲染。
+
+### 更新状态
+
+更新代理可以访问的状态：
+
+```tsx title="page.tsx"
+export function ThemeSelector() {
+  const { agent } = useAgent();
+
+  const updateTheme = (theme: string) => {
+    // [!code highlight:4]
+    agent.setState({
+      ...agent.state,
+      user_theme: theme,
+    });
+  };
+
+  return (
+    <div>
+      {/* [!code highlight:2] */}
+      <button onClick={() => updateTheme("dark")}>深色模式</button>
+      <button onClick={() => updateTheme("light")}>浅色模式</button>
+      <p>当前: {agent.state.user_theme || "默认"}</p>
+    </div>
+  );
+}
+```
+
+状态更新会立即在代理的下一次执行中可用。
+
+## 订阅代理事件
+
+您可以使用 `subscribe()` 方法订阅代理事件。这对于日志记录、监控或响应特定的代理行为非常有用。
+
+### 基本事件订阅
+
+```tsx title="page.tsx"
+import { useEffect } from "react";
+import { useAgent } from "@copilotkit/react-core/v2";
+import type { AgentSubscriber } from "@ag-ui/client";
+
+export function EventLogger() {
+  const { agent } = useAgent();
+
+  useEffect(() => {
+    // [!code highlight:15]
+    const subscriber: AgentSubscriber = {
+      onCustomEvent: ({ event }) => {
+        console.log("自定义事件:", event.name, event.value);
+      },
+      onRunStartedEvent: () => {
+        console.log("代理开始运行");
+      },
+      onRunFinalized: () => {
+        console.log("代理完成运行");
+      },
+      onStateChanged: (state) => {
+        console.log("状态更改:", state);
+      },
+    };
+
+    // [!code highlight:2]
+    const { unsubscribe } = agent.subscribe(subscriber);
+    return () => unsubscribe();
+  }, []);
+
+  return null;
+}
+```
+
+### 可用事件
+
+`AgentSubscriber` 接口提供：
+
+- **`onCustomEvent`** - 代理发出的自定义事件
+- **`onRunStartedEvent`** - 代理开始执行
+- **`onRunFinalized`** - 代理完成执行
+- **`onStateChanged`** - 代理的状态更改
+- **`onMessagesChanged`** - 消息被添加或修改
+
+## 渲染工具调用
+
+您可以自定义代理工具调用在 UI 中的显示方式。首先，定义您的工具渲染器：
+
+```tsx title="components/weather-tool.tsx"
+import { defineToolCallRenderer } from "@copilotkit/react-core/v2";
+
+// [!code highlight:6]
+export const weatherToolRender = defineToolCallRenderer({
+  name: "get_weather",
+  render: ({ args, status }) => {
+    return <WeatherCard location={args.location} status={status} />;
+  },
+});
+
+function WeatherCard({ location, status }: { location?: string; status: string }) {
+  return (
+    <div className="rounded-lg border p-6 shadow-sm">
+      <h3 className="text-xl font-semibold">{location} 的天气</h3>
+      <div className="mt-4">
+        <span className="text-5xl font-light">70°F</span>
+      </div>
+      {status === "executing" && <div className="spinner">加载中...</div>}
+    </div>
+  );
+}
+```
+
+向 CopilotKit 注册您的工具渲染器：
+
+```tsx title="layout.tsx"
+import { CopilotKit } from "@copilotkit/react-core";
+import { weatherToolRender } from "./components/weather-tool";
+
+export default function RootLayout({ children }) {
+  return (
+    <CopilotKit
+      runtimeUrl="/api/copilotkit"
+      {/* [!code highlight:1] */}
+      renderToolCalls={[weatherToolRender]}
+    >
+      {children}
+    </CopilotKit>
+  );
+}
+```
+
+然后使用 `useRenderToolCall` 从代理消息中渲染工具调用：
+
+```tsx title="components/message-list.tsx"
+import { useAgent, useRenderToolCall } from "@copilotkit/react-core/v2";
+
+export function MessageList() {
+  const { agent } = useAgent();
+  const renderToolCall = useRenderToolCall();
+
+  return (
+    <div className="messages">
+      {agent.messages.map((message) => (
+        <div key={message.id}>
+          {/* 显示消息内容 */}
+          {message.content && <p>{message.content}</p>}
+
+          {/* 如果存在，渲染工具调用 */}
+          {/* [!code highlight:9] */}
+          {message.role === "assistant" && message.toolCalls?.map((toolCall) => {
+            const toolMessage = agent.messages.find(
+              (m) => m.role === "tool" && m.toolCallId === toolCall.id
+            );
+            return (
+              <div key={toolCall.id}>
+                {renderToolCall({ toolCall, toolMessage })}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## 构建完整的仪表板
+
+以下是将所有概念组合成交互式代理仪表板的完整示例：
+
+```tsx title="page.tsx"
+"use client";
+
+import { useAgent } from "@copilotkit/react-core/v2";
+
+export default function AgentDashboard() {
+  const { agent } = useAgent();
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-6">
+      {/* 状态 */}
+      <div className="p-6 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">代理状态</h2>
+        <div className="space-y-2">
+          {/* [!code highlight:6] */}
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${
+              agent.isRunning ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+            }`} />
+            <span>{agent.isRunning ? "运行中" : "空闲"}</span>
+          </div>
+          <div>线程: {agent.threadId}</div>
+          <div>消息数: {agent.messages.length}</div>
+        </div>
+      </div>
+
+      {/* 状态 */}
+      <div className="p-6 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">代理状态</h2>
+        {/* [!code highlight:3] */}
+        <pre className="bg-gray-50 p-4 rounded text-sm overflow-auto">
+          {JSON.stringify(agent.state, null, 2)}
+        </pre>
+      </div>
+
+      {/* 消息 */}
+      <div className="p-6 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">对话</h2>
+        <div className="space-y-3">
+          {/* [!code highlight:11] */}
+          {agent.messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`p-3 rounded-lg ${
+                msg.role === "user" ? "bg-blue-50 ml-8" : "bg-gray-50 mr-8"
+              }`}
+            >
+              <div className="font-semibold text-sm mb-1">
+                {msg.role === "user" ? "您" : "代理"}
+              </div>
+              <div>{msg.content}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```

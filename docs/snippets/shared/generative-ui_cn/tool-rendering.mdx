@@ -1,0 +1,63 @@
+import { IframeSwitcher } from "@/components/content"
+import DefaultToolRendering from "@/snippets/shared/guides/default-tool-rendering.mdx"
+
+<IframeSwitcher
+  id="backend-tools-example"
+  exampleUrl={`https://feature-viewer.copilotkit.ai/${props.framework || "langgraph"}/feature/backend_tool_rendering?sidebar=false&chatDefaultOpen=false`}
+  codeUrl={`https://feature-viewer.copilotkit.ai/${props.framework || "langgraph"}/feature/backend_tool_rendering?view=code&sidebar=false&codeLayout=tabs`}
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout>
+  此示例演示了在 <a href={`https://feature-viewer.copilotkit.ai/${props.framework || "langgraph"}/feature/agentic_chat`} target="_blank">CopilotKit 功能查看器</a> 中应用的实现部分。
+</Callout>
+
+## 这是什么？
+
+工具是 LLM 调用预定义的、通常是确定性函数的方式。CopilotKit 允许您在 UI 中将这些工具渲染为自定义组件，我们称之为**生成式 UI**。
+
+## 什么时候应该使用？
+
+当您的智能体调用工具时，如果您想向用户提供关于智能体正在做什么的反馈，那么在 UI 中渲染工具会很有用。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 在前端渲染工具调用
+
+使用 `useRenderTool` 钩子在 UI 中渲染工具调用。名称必须与智能体中定义的工具名称匹配。
+
+<Callout type="info" title="重要">
+  要在 UI 中渲染工具调用，名称必须与工具名称匹配。
+</Callout>
+
+```tsx title="app/page.tsx"
+import { useRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { z } from "zod";
+// ...
+
+const weatherParams = z.object({
+  location: z.string().describe("获取天气的位置"),
+});
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:14]
+  useRenderTool({
+    name: "get_weather",
+    parameters: weatherParams,
+    render: ({ status, parameters }) => {
+      return (
+        <p className="text-gray-500 mt-2">
+          {status !== "complete" && "正在调用天气 API..."}
+          {status === "complete" && `已为 ${parameters.location} 调用天气 API。`}
+        </p>
+      );
+    },
+  });
+  // ...
+}
+```
+
+## 默认工具渲染
+
+<DefaultToolRendering components={props.components} />

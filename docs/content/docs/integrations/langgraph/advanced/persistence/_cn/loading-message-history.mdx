@@ -1,0 +1,73 @@
+---
+title: 对话线程
+description: 学习如何在 CopilotKit 框架中加载聊天消息和线程。
+icon: "lucide/MessagesSquare"
+---
+
+LangGraph 支持线程，这是一种将消息分组在一起并最终维护连续聊天记录的方式。CopilotKit
+提供了几种与此概念交互的不同方式。
+
+本指南假设您已经完成了 [快速入门](/langgraph/quickstart) 指南。
+
+## 加载现有线程
+
+要在 CopilotKit 中加载现有线程，您只需在 `<CopilotKit>` 上设置 `threadId` 属性，如下所示。
+
+<Callout>
+  使用 LangGraph 平台时，`threadId` 必须是 UUID。
+</Callout>
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+{/* [!code highlight:1] */}
+<CopilotKit threadId="37aa68d0-d15b-45ae-afc1-0ba6c3e11353">
+  <YourApp />
+</CopilotKit>
+```
+
+## 动态切换线程
+
+您还可以使 `threadId` 动态化。一旦设置，CopilotKit 将加载该线程的先前消息。
+
+```tsx
+import { useState } from "react";
+import { CopilotKit } from "@copilotkit/react-core";
+
+const Page = () => {
+  const [threadId, setThreadId] = useState("af2fa5a4-36bd-4e02-9b55-2580ab584f89"); // [!code highlight]
+  return (
+    {/* [!code highlight:3] */}
+    <CopilotKit threadId={threadId}>
+      <YourApp setThreadId={setThreadId} />
+    </CopilotKit>
+  )
+}
+
+const YourApp = ({ setThreadId }) => {
+  return (
+    {/* [!code highlight:1] */}
+    <Button onClick={() => setThreadId("679e8da5-ee9b-41b1-941b-80e0cc73a008")}>
+      切换线程
+    </Button>
+  )
+}
+```
+
+## 使用 setThreadId
+
+CopilotKit 还将从 `useCopilotContext` 钩子返回当前的 `threadId` 和一个 `setThreadId` 函数。您可以使用 `setThreadId` 来更改 `threadId`。
+
+```tsx
+import { useCopilotContext } from "@copilotkit/react-core/v2";
+
+const ChangeThreadButton = () => {
+  const { threadId, setThreadId } = useCopilotContext(); // [!code highlight]
+  return (
+    {/* [!code highlight:1] */}
+    <Button onClick={() => setThreadId("d73c22f3-1f8e-4a93-99db-5c986068d64f")}>
+      切换线程
+    </Button>
+  )
+}
+```

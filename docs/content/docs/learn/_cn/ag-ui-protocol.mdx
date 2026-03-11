@@ -1,0 +1,39 @@
+---
+title: AG-UI（智能体<->用户）
+icon: "lucide/Zap"
+description: 通过 AG-UI 和 CopilotKit，将您在任何框架中构建的智能体带给用户。
+---
+import Image from "next/image"
+
+## 什么是 AG-UI 协议？
+
+AG-UI 是一个轻量级、基于事件的协议，它标准化了 AI 智能体如何连接到面向用户的应用程序。
+AG-UI 为简单性和灵活性而构建，实现了 AI 智能体、实时用户上下文和用户界面之间的无缝集成。
+AG-UI 是一个开放标准，由 CopilotKit 团队和多个智能体框架合作伙伴共同开发。
+
+<Image 
+  src="/images/agui-ecosystem-light.png" 
+  alt="AG-UI 生态系统图" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden"
+/>
+<Image 
+  src="/images/agui-ecosystem-dark.png" 
+  alt="AG-UI 生态系统图" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block"
+/>
+
+## CopilotKit 如何使用 AG-UI
+
+CopilotKit 使用 AG-UI 来抽象应用程序与驱动您 Copilot 的 AI 智能体之间的连接。您的智能体可以使用任何支持 AG-UI 的智能体框架构建（一个不断增长的列表，包括 LangGraph、Mastra、Pydantic AI 等）。与定制的框架集成相比，这种抽象具有几个优势。
+
+* __灵活性和互操作性__：通过遵循 AG-UI 标准，CopilotKit 组件变得可互换，允许开发人员将它们与任何支持 AG-UI 的智能体一起使用，或在不同的后端模型之间切换而无需更改 UI。
+* __统一通信__：CopilotKit 使用 AG-UI 协议来管理前端和 AI 智能体之间的所有来回通信，取代自定义的 WebSocket 格式和文本解析。
+* __前端工具调用__：当智能体需要使用集成到前端应用程序中的工具时，AG-UI 事件可以促进这种交互。
+* __UI 组件__：CopilotKit 提供为 AG-UI 协议构建的 React 组件。这些组件使用 AG-UI 事件接收和显示来自智能体的流式 AI 响应和其他数据，创造丰富的用户体验。
+* __状态管理__：AG-UI 协议包括用于管理前端和智能体之间共享状态的事件。CopilotKit 可以使用这些事件使应用程序的 UI 和智能体的状态实时同步。
+
+要了解更多信息，请访问 [AG-UI](https://ag-ui.com) 网站。

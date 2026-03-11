@@ -1,0 +1,418 @@
+import { ImageAndCode } from "@/components/react/image-and-code"
+import {
+  MessageCircleDashed,
+  Blocks,
+  LayoutList,
+  UserPen,
+  BookOpen,
+} from "lucide-react"
+
+## 概述
+
+CopilotKit 通过 `useCopilotChatHeadless_c` 钩子提供*完全无头 UI*。通过使用此钩子，您可以从头开始构建自己的聊天界面，同时仍然利用 CopilotKit 的核心功能和易用性。
+
+## 导航
+此页面包含您开始使用 CopilotKit 无头 UI 所需的所有信息。选择您想从下面开始的地方。
+
+<Cards className="gap-6">
+  <Card
+    icon={<MessageCircleDashed className="text-primary" />}
+    className="p-6 rounded-xl text-base md:col-span-2"
+    title="开始使用"
+    description="从头开始构建一个完全无头的聊天界面。"
+    href="#getting-started"
+  />
+  <Card
+    icon={<Blocks className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="生成式 UI"
+    description="了解如何使用生成式 UI 来渲染工具和其他 UI 元素。"
+    href="#working-with-generative-ui"
+  />
+  <Card
+    icon={<LayoutList className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="建议"
+    description="了解如何使用建议为用户提供生成的或静态选项列表来操作聊天。"
+    href="#working-with-suggestions"
+  />
+  <Card
+    icon={<UserPen className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="人机交互"
+    description="了解如何使用人机交互来暂停聊天并等待人类回复。"
+    href="#working-with-human-in-the-loop"
+  />
+  <Card
+    icon={<BookOpen className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="参考"
+    description="`useCopilotChatHeadless_c` 钩子的参考文档。"
+    href="/reference/v1/hooks/useCopilotChatHeadless_c"
+  />
+</Cards>
+
+## 开始使用
+首先，让我们逐步构建一个简单的聊天界面。从那里开始，我们将介绍如何进行更高级的操作，如使用建议和生成式 UI。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/full-headless-chat.mp4"
+  className="rounded-xl shadow-lg border"
+  loop
+  playsInline
+  autoPlay
+  muted
+/>
+
+要达到这个目标，让我们从构建一个简单的聊天界面开始。
+
+<Steps>
+  <Step>
+    ### 创建新应用
+    ```bash
+    npx copilotkit@latest create
+    ```
+  </Step>
+
+  <Step>
+    ### 设置您的应用
+    首先，按照 README 中的说明设置您的应用，这将是一个简单的过程。
+
+    ```bash
+    open README.md
+    ```
+  </Step>
+
+  <Step>
+    ### 设置 CopilotKit 提供程序
+    您需要向 `CopilotKit` 提供程序组件提供您的公共许可证密钥。在 [Copilot Cloud](https://cloud.copilotkit.ai) 获取您的密钥，或阅读更多关于[高级功能](/premium)的信息。
+
+    ```tsx title="src/app/layout.tsx"
+    <CopilotKit
+      publicLicenseKey="your-free-public-license-key"
+    >
+      {children}
+    </CopilotKit>
+    ```
+  </Step>
+
+  <Step>
+    ### 创建无头聊天组件
+    将您的主页面替换为使用无头钩子的简单聊天界面。
+
+    ```tsx title="src/app/page.tsx"
+    "use client";
+    import { useState } from "react";
+    import { useCopilotChatHeadless_c } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    export default function Home() {
+      const { messages, sendMessage, isLoading } = useCopilotChatHeadless_c(); // [!code highlight]
+      const [input, setInput] = useState("");
+
+      const handleSend = () => {
+        if (input.trim()) {
+          // [!code highlight:5]
+          sendMessage({
+            id: Date.now().toString(),
+            role: "user",
+            content: input,
+          });
+          setInput("");
+        }
+      };
+
+      return (
+        <div>
+          <h1>我的无头聊天</h1>
+
+          {/* 消息 */}
+          <div>
+            {/* [!code highlight:6] */}
+            {messages.map((message) => (
+              <div key={message.id}>
+                <strong>{message.role === "user" ? "您" : "助手"}:</strong>
+                <p>{message.content}</p>
+              </div>
+            ))}
+
+            {/* [!code highlight:1] */}
+            {isLoading && <p>助手正在输入...</p>}
+          </div>
+
+          {/* 输入 */}
+          <div>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              // [!code highlight:1]
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="在此输入您的消息..."
+            />
+            {/* [!code highlight:1] */}
+            <button onClick={handleSend} disabled={isLoading}>
+              发送
+            </button>
+          </div>
+        </div>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+## 使用生成式 UI
+
+您还可以通过 `useCopilotAction` 或直接读取工具并渲染它们来渲染生成式 UI。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/gen-ui.mp4"
+  className="rounded-xl shadow-lg border"
+  loop
+  playsInline
+  autoPlay
+  muted
+/>
+
+### 使用 `useCopilotAction`
+CopilotKit 的标准组件利用 `useCopilotAction` 允许工具在前端被渲染和调用。使用 `useCopilotChatHeadless_c` 钩子时，这些相同的接口同样可用。
+
+```tsx title="src/app/components/chat.tsx"
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+
+export const Chat = () => {
+  // ...
+
+  // 定义一个将显示自定义组件的操作
+  useFrontendTool({
+    name: "showCustomComponent",
+    // 在前端处理工具
+    // [!code highlight:3]
+    handler: () => {
+      return "Foo, Bar, Baz";
+    },
+    // 为底层数据渲染自定义组件
+    // [!code highlight:13]
+    render: ({ result, args, status}) => {
+      return <div style={{
+        backgroundColor: "red",
+        padding: "10px",
+        borderRadius: "5px",
+      }}>
+        <p>自定义组件</p>
+        <p>结果: {result}</p>
+        <p>参数: {JSON.stringify(args)}</p>
+        <p>状态: {status}</p>
+      </div>;
+    }
+  });
+
+  // ...
+
+  return <div>
+    {messages.map((message) => (
+      <p key={message.id}>
+        {message.role === "user" ? "用户: " : "助手: "}
+        {message.content}
+        {/* 如果存在则渲染生成式 UI */}
+        {/* [!code highlight:1] */}
+        {message.role === "assistant" && message.generativeUI?.()}
+      </p>
+    ))}
+  </div>
+};
+```
+
+### 使用原始数据
+如果您不想使用 `useCopilotAction`，您也可以直接渲染原始数据。
+
+```tsx title="src/app/components/chat.tsx"
+export const Chat = () => {
+  // ...
+
+  return <div>
+    {messages.map((message) => (
+      <p key={message.id}>
+        {/* 如果存在则渲染工具调用 */}
+        {/* [!code highlight:5] */}
+        {message.role === "assistant" && message.toolCalls?.map((toolCall) => (
+          <p key={toolCall.id}>
+            {toolCall.function.name}: {toolCall.function.arguments}
+          </p>
+        ))}
+      </p>
+    ))}
+  </div>
+};
+```
+
+## 使用建议
+
+CopilotKit 的建议是向用户提供建议列表以操作聊天的一种方式。使用
+无头 UI 时，您可以完全控制这些建议的生命周期。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/suggestions.mp4"
+  className="rounded-xl shadow-lg border"
+  loop
+  playsInline
+  autoPlay
+  muted
+/>
+
+### 生成建议
+
+您可以通过调用 `generateSuggestions` 函数来生成建议。
+```tsx title="src/app/components/chat.tsx"
+import { useCopilotChatHeadless_c, useCopilotChatSuggestions } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+export const Chat = () => {
+  // 指定应该生成什么建议
+  // [!code highlight:5]
+  useCopilotChatSuggestions({
+    instructions:
+      "建议程序员在下次假期可以做的 5 件有趣的事情",
+    maxSuggestions: 5,
+  });
+
+  // 从无头钩子获取相关状态
+  const { suggestions, generateSuggestions, sendMessage } = useCopilotChatHeadless_c(); // [!code highlight]
+
+  // 组件挂载时生成建议
+  useEffect(() => {
+    generateSuggestions(); // [!code highlight]
+  }, []);
+
+  // ...
+
+  // [!code word:suggestion]
+  return <div>
+    {suggestions.map((suggestion, index) => (
+      <button
+        key={index}
+        onClick={() => sendMessage({
+          id: "123",
+          role: "user",
+          content: suggestion.message
+        })}
+      >
+        {suggestion.title}
+      </button>
+    ))}
+  </div>
+};
+```
+
+### 以编程方式设置建议
+如果您希望对建议有更多的确定性控制，可以手动设置它们。
+
+```tsx title="src/app/components/chat.tsx"
+import { useCopilotChatHeadless_c } from "@copilotkit/react-core/v2";
+
+export const Chat = () => {
+  // 从无头钩子获取相关状态
+  // [!code highlight:1]
+  const { suggestions, setSuggestions } = useCopilotChatHeadless_c();
+
+  // 组件挂载时设置建议
+  // [!code highlight:6]
+  useEffect(() => {
+    setSuggestions([
+      { title: "建议 1", message: "建议 1 的实际消息" },
+      { title: "建议 2", message: "建议 2 的实际消息" },
+    ]);
+  }, []);
+
+  // 函数调用时更改建议
+  const changeSuggestions = () => {
+    // [!code highlight:4]
+    setSuggestions([
+      { title: "Foo", message: "Bar" },
+      { title: "Baz", message: "Bat" },
+    ]);
+  };
+
+  // [!code word:suggestion]
+  return (
+    <div>
+      {/* 点击按钮时更改 */}
+      <button onClick={changeSuggestions}>更改建议</button>
+
+      {/* 渲染 */}
+      {suggestions.map((suggestion, index) => (
+        <button
+          key={index}
+          onClick={() => sendMessage({
+            id: "123",
+            role: "user",
+            content: suggestion.message
+          })}
+        >
+          {suggestion.title}
+        </button>
+      ))}
+    </div>
+  );
+};
+```
+
+## 使用人机交互
+
+CopilotKit 的人机交互（HITL）功能允许您暂停聊天并等待人类回复。这有两种形式：**基于工具**和**基于中断**（适用于某些框架）。
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/hitl.mp4"
+  className="rounded-xl shadow-lg border"
+  loop
+  playsInline
+  autoPlay
+  muted
+/>
+
+### 基于工具
+基于工具的 HITL 允许您暂停工具调用的完成并等待人类回复。该人类的回复成为工具调用的结果。
+
+
+```tsx title="src/app/components/chat.tsx"
+import { useFrontendTool, useCopilotChatHeadless_c } from "@copilotkit/react-core/v2";
+
+export const Chat = () => {
+  const { messages, sendMessage } = useCopilotChatHeadless_c();
+
+  // 定义一个将等待用户输入其名称的操作
+  useFrontendTool({
+    name: "getName",
+    renderAndWaitForResponse: ({ respond, args, status}) => {
+      if (status === "complete") {
+        return <div>
+          <p>名称已获取...</p>
+        </div>;
+      }
+
+      return <div>
+        <input
+          type="text"
+          value={args.name || ""}
+          onChange={(e) => respond?.(e.target.value)}
+          placeholder="输入您的名称"
+        />
+        {/* 用名称回复 */}
+        {/* [!code highlight:1] */}
+        <button onClick={() => respond?.(args.name)}>提交</button>
+      </div>;
+    }
+  });
+
+  return (
+    {messages.map((message) => (
+      <p key={message.id}>
+        {message.role === "user" ? "用户: " : "助手: "}
+        {message.content}
+        {/* [!code highlight:2] */}
+        {/* 这将渲染基于工具的 HITL（如果存在） */}
+        {message.role === "assistant" && message.generativeUI?.()}
+      </p>
+    ))}
+  )
+};
+```

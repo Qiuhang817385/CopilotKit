@@ -1,0 +1,92 @@
+---
+title: "CopilotTask"
+description: "CopilotTask 用于执行一次性任务，例如在按钮点击时。"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行：
+  * packages/v1/react-core/src/lib/copilot-task.ts
+  */
+}
+此类用于执行一次性任务，例如在按钮按下时。它可以使用通过 [useCopilotReadable](/reference/v1/hooks/useCopilotReadable) 提供的上下文和通过 [useCopilotAction](/reference/v1/hooks/useCopilotAction) 提供的操作，或者你可以提供自己的上下文和操作。
+
+## 示例
+在最简单的情况下，在你的应用上下文中使用 CopilotTask，并给它关于要做什么的指示。
+
+```tsx
+import { CopilotTask, useCopilotContext } from "@copilotkit/react-core";
+
+export function MyComponent() {
+  const context = useCopilotContext();
+
+  const task = new CopilotTask({
+    instructions: "Set a random message",
+    actions: [
+      {
+        name: "setMessage",
+      description: "Set the message.",
+      argumentAnnotations: [
+        {
+          name: "message",
+          type: "string",
+          description:
+            "A message to display.",
+          required: true,
+        },
+      ],
+     }
+    ]
+  });
+
+  const executeTask = async () => {
+    await task.run(context, action);
+  }
+
+  return (
+    <>
+      <button onClick={executeTask}>
+        Execute task
+      </button>
+    </>
+  )
+}
+```
+
+查看 [Presentation Example App](https://github.com/CopilotKit/CopilotKit/blob/main/src/v1.x/examples/next-openai/src/app/presentation/page.tsx) 以获取更完整的示例。
+
+## 构造函数参数
+
+<PropertyReference name="instructions" type="string" required >
+要提供给助手的指示。
+</PropertyReference>
+
+<PropertyReference name="actions" type="FrontendAction<any>[]"  >
+可以调用的操作定义数组。
+</PropertyReference>
+
+<PropertyReference name="includeCopilotReadable" type="boolean"  >
+是否在任务中包含 copilot 可读上下文。
+</PropertyReference>
+
+<PropertyReference name="includeCopilotActions" type="boolean"  >
+是否在任务中包含通过 useCopilotAction 定义的操作。
+</PropertyReference>
+
+<PropertyReference name="forwardedParameters" type="ForwardedParametersInput"  >
+用于任务的转发参数。
+</PropertyReference>
+
+<PropertyReference name="run" type="context: CopilotContextParams, data?: T">
+运行任务。
+
+  <PropertyReference name="context" type="CopilotContextParams" required>
+  用于任务的 CopilotContext。使用 `useCopilotContext` 获取当前上下文。
+  </PropertyReference>
+
+  <PropertyReference name="data" type="T" >
+  用于任务的数据。
+  </PropertyReference>
+
+</PropertyReference>

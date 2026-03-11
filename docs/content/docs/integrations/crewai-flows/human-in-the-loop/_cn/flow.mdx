@@ -1,0 +1,201 @@
+---
+title: CrewAI Flows
+description: 学习如何使用 CrewAI Flows 实现 Human-in-the-Loop (HITL)。
+icon: lucide/Share2
+---
+
+import RunAndConnectAgentSnippet from "@/snippets/coagents/run-and-connect-agent.mdx";
+import InstallSDKSnippet from "@/snippets/install-python-sdk-crew.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/node-hitl.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+<Callout type="info">
+  上图展示的是 [coagent
+  starter](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-starter-crewai-flows)
+  应用了下面的实现！
+</Callout>
+
+## 这是什么？
+
+[基于 Flow 的智能体](https://docs.crewai.com/concepts/flows) 是有状态的智能体，可以被中断和恢复以允许用户输入。
+
+CopilotKit 允许您添加自定义 UI 来接收用户输入，然后在完成后将其传递回智能体。
+
+## 为什么要使用它？
+
+Human-in-the-loop 是实现生产就绪复杂工作流的强大方式。通过让人类参与循环，
+您可以确保智能体始终做出正确的决策，并最终被引导到正确的方向。
+
+基于 Flow 的智能体是实现 HITL 的好方法，适用于更复杂的工作流，您希望确保智能体了解 HITL 交互期间发生的一切。
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的智能体
+
+        在继续之前，您需要运行您的智能体并将其连接到 CopilotKit。如果您还没有这样做，
+        可以按照 [快速入门](/crewai-flows/quickstart) 指南中的说明进行操作。
+
+        如果您还没有智能体，可以使用 [coagent starter](https://github.com/CopilotKit/CopilotKit/tree/main/examples/coagents-starter-crewai-flows) 作为起点，
+        因为本指南使用它作为起点。
+    </Step>
+
+    <Step>
+      ### 安装 CopilotKit SDK
+      <InstallSDKSnippet components={props.components}/>
+    </Step>
+
+    <Step>
+        ### 在前端添加 `useFrontendTool`
+        首先，我们将创建一个组件，用于渲染智能体的文章草稿并等待用户批准。
+
+        ```tsx title="ui/app/page.tsx"
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2"
+        import { Markdown } from "@copilotkit/react-core/v2"
+
+        function YourMainContent() {
+          // ...
+
+          useFrontendTool({
+            name: "writeEssay",
+            available: "remote",
+            description: "撰写一篇文章，并接受草稿作为参数。",
+            parameters: z.object({
+              draft: z.string().describe("文章草稿"),
+            }),
+            // [!code highlight:25]
+            renderAndWaitForResponse: ({ args, respond, status }) => {
+              return (
+                <div>
+                  <Markdown content={args.draft || '正在准备您的草稿...'} />
+
+                  <div className={`flex gap-4 pt-4 ${status !== "executing" ? "hidden" : ""}`}>
+                    <button
+                      onClick={() => respond?.("CANCEL")}
+                      disabled={status !== "executing"}
+                      className="border p-2 rounded-xl w-full"
+                    >
+                      重试
+                    </button>
+                    <button
+                      onClick={() => respond?.("SEND")}
+                      disabled={status !== "executing"}
+                      className="bg-blue-500 text-white p-2 rounded-xl w-full"
+                    >
+                      批准草稿
+                    </button>
+                  </div>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+
+    <Step>
+    ### 设置 CrewAI 智能体
+    现在我们将设置 CrewAI 智能体。如果没有完整的示例，这个流程很难理解，所以下面是智能体的完整实现及说明。
+
+    需要注意的主要事项：
+    - 智能体的状态继承自 `CopilotKitState` 以引入 CopilotKit 操作。
+    - CopilotKit 的操作作为工具绑定到模型。
+    - 如果在模型的响应中找到 `writeEssay` 操作，智能体将把控制权交回前端
+      以获取用户反馈。
+
+    <Tabs groupId="language_crewai-flows_agent" items={["Python"]} persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from typing import Any, cast
+        from crewai.flow.flow import Flow, start, listen
+        from copilotkit import CopilotKitState
+        from copilotkit.crewai import copilotkit_stream
+        from litellm import completion
+
+
+        class AgentState(CopilotKitState):
+            pass
+
+
+        class SampleAgentFlow(Flow[AgentState]):
+
+            @start()
+            async def check_for_user_feedback(self):
+                if not self.state.get("messages"):
+                    return
+
+                last_message = cast(Any, self.state["messages"][-1])
+
+                # 期望 CopilotKit 工具调用的结果 (SEND/CANCEL)
+                if last_message["role"] == "tool":
+                    user_response = last_message.get("content")
+
+                    if user_response == "SEND":
+                        self.state["messages"].append({
+                            "role": "assistant",
+                            "content": "✅ 太好了！正在通过邮件发送您的文章。",
+                        })
+                        return
+
+                    if user_response == "CANCEL":
+                        self.state["messages"].append({
+                            "role": "assistant",
+                            "content": "❌ 好的，我们可以改进草稿。您想修改什么？",
+                        })
+                        return
+
+                # 如果还没有工具结果，或者是用户消息，则提示下一步
+                if last_message.get("role") == "user":
+                    self.state["messages"].append({
+                        "role": "system",
+                        "content": (
+                            "你撰写文章。使用你的工具来撰写一篇文章；"
+                            "不要只是用纯文本来写。"
+                        )
+                    })
+
+            @listen(check_for_user_feedback)
+            async def chat(self):
+                messages = self.state.get("messages", [])
+
+                system_message = {
+                    "role": "system",
+                    "content": (
+                        "你撰写文章。使用你的工具来撰写一篇文章；"
+                        "不要只是用纯文本来写。"
+                    )
+                }
+
+                response = await copilotkit_stream(
+                    completion(
+                        model="openai/gpt-5.2",
+                        messages=[system_message, *messages],
+                        tools=self.state["copilotkit"]["actions"],
+                        stream=True
+                    )
+                )
+
+                self.state["messages"].append(response.choices[0].message)
+        ```
+      </Tab>
+    </Tabs>
+    </Step>
+    <Step>
+        ### 试试看！
+        尝试让您的智能体写一篇关于 AI 好处的文章。您会看到它会生成一篇文章，
+        流式传输进度，并最终要求您审查。
+    </Step>
+
+</Steps>

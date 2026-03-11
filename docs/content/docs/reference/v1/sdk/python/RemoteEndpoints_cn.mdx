@@ -1,0 +1,180 @@
+---
+title: "远程端点"
+description: "CopilotKit 远程端点允许你将用 Python 编写的 actions 和 agents 连接到你的 CopilotKit 应用程序。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * sdk-python/copilotkit/sdk.py
+  */
+}
+## CopilotKitRemoteEndpoint
+
+CopilotKitRemoteEndpoint 允许你将用 Python 编写的 actions 和 agents 连接到你的 
+    CopilotKit 应用程序。
+
+    要安装 CopilotKit for Python，请运行：
+
+    ```bash
+    pip install copilotkit
+    # 或包含 crewai
+    pip install copilotkit[crewai]
+    ```
+
+    ## 添加 actions
+
+    在此示例中，我们向 Copilot 提供一个简单的 action：
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint, Action
+
+    sdk = CopilotKitRemoteEndpoint(
+        actions=[
+            Action(
+                name="greet_user",
+                handler=greet_user_handler,
+                description="问候用户",
+                parameters=[
+                    {
+                        "name": "name",
+                        "type": "string",
+                        "description": "用户的姓名"
+                    }
+                ]
+            )
+        ]
+    )
+    ```
+
+    你还可以通过提供返回 action 列表的可调用对象来动态构建 actions。
+    在此示例中，我们使用 `properties` 对象中的 "name" 来参数化 action 处理程序。
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint, Action
+
+    sdk = CopilotKitRemoteEndpoint(
+        actions=lambda context: [
+            Action(
+                name="greet_user",
+                handler=make_greet_user_handler(context["properties"]["name"]), 
+                description="问候用户"
+            )
+        ]
+    )
+    ```
+
+    使用相同的方法，你可以限制 Copilot 可用的 actions：
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint, Action
+
+    sdk = CopilotKitRemoteEndpoint(
+        actions=lambda context: (
+            [action_a, action_b] if is_admin(context["properties"]["token"]) else [action_a]
+        )
+    )
+    ```
+
+    ## 添加 agents
+
+    服务 agents 的方式与服务 actions 类似：
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
+    from my_agent.agent import graph
+
+    sdk = CopilotKitRemoteEndpoint(
+        agents=[
+            LangGraphAgent(
+                name="email_agent",
+                description="这个 Agent 发送电子邮件",
+                graph=graph,
+            )
+        ]
+    )
+    ```
+
+    要动态构建 agents，请提供返回 agents 列表的可调用对象：
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
+    from my_agent.agent import graph
+
+    sdk = CopilotKitRemoteEndpoint(
+        agents=lambda context: [
+            LangGraphAgent(
+                name="email_agent",
+                description="这个 Agent 发送电子邮件",
+                graph=graph,
+                langgraph_config={
+                    "token": context["properties"]["token"]
+                }
+            )
+        ]
+    )
+    ```
+
+    要限制 Copilot 可用的 agents，只需根据 `context` 返回不同的 agents 列表：
+
+    ```python
+    from copilotkit import CopilotKitRemoteEndpoint
+    from my_agents import agent_a, agent_b, is_admin
+
+    sdk = CopilotKitRemoteEndpoint(
+        agents=lambda context: (
+            [agent_a, agent_b] if is_admin(context["properties"]["token"]) else [agent_a]
+        )
+    )
+    ```
+
+    ## 服务 CopilotKit SDK
+
+    要服务 CopilotKit SDK，你可以使用 `copilotkit.integrations.fastapi` 模块中的 `add_fastapi_endpoint` 函数：
+
+    ```python
+    from copilotkit.integrations.fastapi import add_fastapi_endpoint
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    sdk = CopilotKitRemoteEndpoint(...)
+    add_fastapi_endpoint(app, sdk, "/copilotkit")
+
+    def main():
+        uvicorn.run(
+            "your_package:app",
+            host="0.0.0.0",
+            port=8000,
+            reload=True,
+        )
+
+    ```
+
+### 参数
+
+<PropertyReference name="actions" type="Optional[Union[List[Action], Callable[[CopilotKitContext], List[Action]]]]" > 
+使 Copilot 可用的 actions。
+</PropertyReference>
+
+<PropertyReference name="agents" type="Optional[Union[List[Agent], Callable[[CopilotKitContext], List[Agent]]]]" > 
+使 Copilot 可用的 agents。
+</PropertyReference>
+
+## CopilotKitContext
+
+CopilotKit 上下文
+
+### 参数
+
+<PropertyReference name="properties" type="Any" required> 
+通过 `<CopilotKit properties={...} />` 提供给前端的属性
+</PropertyReference>
+
+<PropertyReference name="frontend_url" type="Optional[str]" > 
+前端的当前 URL
+</PropertyReference>
+
+<PropertyReference name="headers" type="Mapping[str, str]" required> 
+请求的 headers
+</PropertyReference>

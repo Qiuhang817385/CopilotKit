@@ -1,0 +1,44 @@
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { CopilotKit } from "@copilotkit/react-core";
+import { NewLookAndFeelPreview } from "@/components/react/component-previews/new-look-and-feel";
+
+## 有什么变化？
+
+### 新外观和感觉
+
+CopilotKit 1.8.2 引入了新的默认外观和感觉。这包括新的主题变量使用、新组件，以及通常全新的外观。
+
+**点击右下角的按钮查看新外观的实际效果！**
+
+### 点赞/点踩处理程序
+
+聊天组件现在具有 `onThumbsUp` 和 `onThumbsDown` 处理程序。指定这些将为每条消息添加悬停时显示的图标，允许用户提供反馈。
+
+```tsx
+<CopilotChat 
+  onThumbsUp={(message) => console.log(message)} 
+  onThumbsDown={(message) => console.log(message)}     
+/>
+```
+
+这在我们的框架中以前是可以实现的，但我们现在正在将其变成一流的功能！您可以使用此功能通过 CopilotKit 帮助微调您的模型，或只是通常跟踪用户反馈。
+
+### ResponseButton prop 已移除
+
+`ResponseButton` prop 已被移除。这是一个用于自定义响应生成后聊天中显示的按钮的 prop。
+
+作为替代，我们现在在每条消息下方放置按钮用于：
+- 点赞
+- 点踩
+- 复制
+- 重新生成
+
+这些按钮的行为、图标和样式都可以自定义。查看我们的[外观和感觉指南](/custom-look-and-feel)获取更多详细信息。
+
+### 开箱即用的深色模式支持
+
+CopilotKit 现在具有开箱即用的深色模式支持。这由 `.dark` 类（Tailwind）以及 `color-scheme` CSS 选择器控制。
+
+如果您想制作自定义主题，可以通过查看[自定义外观和感觉](/custom-look-and-feel)指南来实现。
+
+<NewLookAndFeelPreview/>

@@ -1,0 +1,156 @@
+---
+title: 读取 Agent 状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时 Agent 状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra-agent-local/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra-agent-local/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/mastra/feature/shared_state) 中读取共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 和原生应用程序 UX 中使用实时 Agent 状态。
+
+<Callout type="info" title="重要">
+  本指南假设您将 Mastra Agent 嵌入到 Copilot Runtime 中，如下所示。
+
+  ```ts
+  const runtime = new CopilotRuntime({
+    agents: MastraAgent.getLocalAgents({ mastra }),
+  });
+  ```
+
+  如果您使用的是**远程 Mastra Agent**，则此功能**将无法工作**。
+</Callout>
+
+## 何时使用？
+
+当您想要向用户提供有关工作内存的反馈时，可以使用此功能。随着 Agent 状态的更新，您可以在应用程序中以原生方式反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+    Mastra 具有高级的[工作内存概念](https://mastra.ai/en/docs/memory/working-memory)，可为您的 Agent 提供状态保持能力。CopilotKit 利用 Mastra 的工作内存概念，允许您在 Agent 和应用程序之间实现共享状态。
+
+    为 Agent 提供工作内存非常简单，只需向 Agent 提供一个 Zod schema 即可。
+
+    ```ts title="mastra/agents/language-agent.ts"
+    import { openai } from "@ai-sdk/openai";
+    import { Agent } from "@mastra/core/agent";
+    import { LibSQLStore } from "@mastra/libsql";
+    import { z } from "zod";
+    import { Memory } from "@mastra/memory";
+
+    // [!code highlight:4]
+    // 1. 定义 Agent 状态 schema
+    export const AgentStateSchema = z.object({
+      language: z.enum(["english", "spanish"]),
+    });
+
+    // 2. 从 schema 推断 Agent 状态类型
+    export const AgentState = z.infer<typeof AgentStateSchema>;
+
+    // 3. 创建 Agent
+    export const languageAgent = new Agent({
+      name: "Language Agent",
+      model: openai("gpt-5.2"),
+      instructions: "Always communicate in the preferred language of the user as defined in your working memory. Do not communicate in any other language.",
+      memory: new Memory({
+        storage: new LibSQLStore({ id: "mastra-storage", url: ":memory:" }),
+        options: {
+          // [!code highlight:4]
+          workingMemory: {
+            enabled: true,
+            schema: AgentStateSchema,
+          },
+        },
+      }),
+    });
+    ```
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    在您的 Agent 连接并运行后，剩下的就是调用 `useAgent` hook，传入 Agent 的名称，并可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { AgentState } from "@/mastra/agents/language-agent";
+
+    function YourMainContent() {
+      // [!code highlight:5]
+      const { agent } = useAgent({
+        agentId: "your-mastra-agent-name",
+        // 可选：提供类型安全的初始状态
+        initialState: { language: "english" }
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见，省略了样式
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:1] */}
+          <p>Language: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当工作内存变化时会自动更新。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    随着 Agent 状态的更新，您的 `state` 变量也会自动随之更新！在这种情况下，您会看到语言设置为 "english"，因为我们设置了初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染 Agent 状态
+
+您还可以在聊天 UI 中渲染工作内存。这对于以更具上下文感知的方式向用户告知工作内存非常有用。为此，您可以将 `useAgent` hook 与 `render` 函数一起使用。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义 Agent 状态类型，应与您的 Agent 的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+}
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "your-mastra-agent-name",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>Language: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当工作内存变化时会自动更新。
+</Callout>

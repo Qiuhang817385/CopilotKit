@@ -1,0 +1,119 @@
+---
+title: "第 7 步：智能体生成式 UI"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import InstallPythonSDK from "@/snippets/install-python-sdk.mdx";
+
+我们快完成了！在这一步中，我们将向应用程序添加生成式 UI，以便我们可以在聊天 UI 中可视化智能体状态。这样做的最终目标是允许用户在研究完成时看到智能体的研究进度。
+
+<Callout>
+我们将从智能体状态或其工具调用渲染的 UI 称为"生成式 UI"。
+</Callout>
+
+对于本指南，我们将开始使用 CopilotKit SDK 手动发出智能体的状态。这是因为在 LangGraph 中，状态仅在节点更改发生时更新（即，遍历边时）。
+
+因此，进行中的工作默认不会向用户发出。但是，我们可以使用 `copilotkit_emit_state` 函数手动发出状态。通过发出的状态，我们将使用 `useCoAgentStateRender` 钩子来渲染聊天中的更新，让用户感受到进度。
+
+
+
+
+<Steps>
+<Step>
+## CopilotKit Python SDK
+本教程已经安装了 CopilotKit Python SDK。这使我们能够利用各种 CopilotKit 特定功能，例如发出状态。
+
+<Accordions>
+<Accordion title="安装命令（可选）">
+  **本教程中的软件包版本是固定的，因此更新依赖项可能会破坏教程。**
+
+  <InstallPythonSDK components={props.components} />
+</Accordion>
+</Accordions>
+
+</Step>
+<Step>
+## 手动发出状态
+研究 ANA 在多个地方发出状态。为了简单起见，我们将把 `copilotkit_emit_state` 函数添加到 `agent/graph.py` 文件中，以便你了解它的工作原理。但是，状态也会在以下文件中发出，如果你想查看它们：
+- `agent/tools/outline_writer.py`
+- `agent/tools/section_writer.py`
+- `agent/tools/tavily_extract.py`
+- `agent/tools/tavily_search.py`
+
+这些文件都会将进度写入智能体状态的 `logs` 字段。紧接着，我们调用 `copilotkit_emit_state` 将状态发出到前端。
+
+例如，在 `tool_node` 中，我们根据工具结果更新一些状态，然后使用 `copilotkit_emit_state` 将状态发出到前端。
+
+```python title="agent/graph.py"
+# ...
+from copilotkit.langchain import copilotkit_emit_state # [!code ++]
+#...
+
+async def tool_node(self, state: ResearchState, config: RunnableConfig) -> Command[Literal["process_feedback_node", "call_model_node"]]:
+        # ...
+        for tool_call in state["messages"][-1].tool_calls:
+            # ...
+
+            tool_state = {
+                "title": new_state.get("title", ""),
+                "outline": new_state.get("outline", {}),
+                "sections": new_state.get("sections", []),
+                "sources": new_state.get("sources", {}),
+                "proposal": new_state.get("proposal", {}),
+                "logs": new_state.get("logs", []),
+                "tool": new_state.get("tool", {}),
+                "messages": msgs
+            }
+            await copilotkit_emit_state(config, tool_state) # [!code ++]
+
+        return tool_state
+```
+
+当这个循环被迭代时，工具写入的中间状态将被发出到前端。基本上，每当你想要将状态发出到前端时，你都可以通过调用 `copilotkit_emit_state` 来实现。
+
+</Step>
+<Step>
+## 渲染发出的状态
+现在，我们的状态正在被发出到前端。但是，我们需要在聊天中渲染它。为此，我们将使用 `useCoAgentStateRender` 钩子。
+
+```tsx title="frontend/src/app/layout.tsx"
+import { useCoAgentStateRender, useLangGraphInterrupt } from "@copilotkit/react-core/v2"; // [!code ++]
+
+export default function HomePage() {
+    //...
+    const { state: researchState, setResearchState } = useResearch()
+    // ...
+
+    // [!code ++:10]
+    useCoAgentStateRender<ResearchState>({
+        name: 'agent',
+        render: ({ state }) => {
+            if (state.logs?.length > 0) {
+                return <Progress logs={state.logs} />;
+            }
+            return null;
+        },
+    }, [researchState]);
+
+    // ...
+}
+```
+</Step>
+</Steps>
+
+
+## 回顾
+再次尝试运行智能体并执行相同的步骤。你现在会注意到状态正在中间流式传输，用户可以看到智能体的研究进度。
+
+```
+请研究一下狗！
+```
+
+<Frame className="mt-0">
+  <ImageZoom className="mt-0" src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-7-finish.png" alt="CopilotCloud API 密钥" height={1000} width={1000} />
+</Frame>
+
+回顾一下，我们做了以下工作：
+- 了解了如何使用 `copilotkit_emit_state` 随时发出状态。
+- 在我们的应用程序中添加了 `useCoAgentStateRender` 钩子，以在聊天中渲染中间状态。
+
+我们还差一步就完成了！现在我们将学习**渐进式状态更新**，这将允许我们在章节被写入状态时渲染它们。这将完成智能体体验。

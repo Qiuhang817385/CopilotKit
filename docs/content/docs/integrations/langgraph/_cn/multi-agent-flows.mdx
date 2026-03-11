@@ -1,0 +1,58 @@
+---
+title: 多 Agent 流程
+description: 使用多个 Agent 来编排复杂的流程。
+icon: "lucide/Users"
+---
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/multi-agent-flows.png" alt="多 Agent 流程" />
+</Frame>
+
+## 什么是多 Agent 流程？
+
+在构建 Agent 应用程序时，您通常希望编排需要多个 Agent 协调的复杂流程。这在传统上称为多 Agent 编排。
+
+## 何时使用？
+
+当您想要编排需要多个 Agent 协调的复杂流程时，多 Agent 流程非常有用。随着 Agent 应用程序的增长，将子任务委托给其他 Agent 可以帮助您扩展应用程序的关键部分。
+- 将上下文分成更小的块
+- 将子任务委托给其他 Agent
+- 使用单个 Agent 来编排流程
+
+## CopilotKit 如何支持此功能？
+
+CopilotKit 可以在两种不同模式之一中使用：**路由模式** 或 **Agent 锁定**。默认情况下，CopilotKit
+将使用路由模式，利用您定义的 LLM 在 Agent 之间路由请求。
+
+### 路由模式（默认）
+在使用 CoAgents 时，默认启用路由模式。要使用它，请在 `CopilotKit` 提供程序组件中指定 runtime URL 属性并省略 `agent` 属性，如下所示：
+```tsx
+<CopilotKit runtimeUrl="<copilot-runtime-url>">
+  {/* 您的应用程序组件 */}
+</CopilotKit>
+```
+
+在路由模式下，CopilotKit 充当中央枢纽，根据用户输入动态选择并在不同 Agent 或操作之间_路由_请求。此模式适用于聊天优先的体验，其中 LLM 聊天机器人是一系列交互的入口点，这些交互可以保留在聊天 UI 中或扩展为包括原生 React UI 小部件。
+
+在此模式下，CopilotKit 将根据上下文和用户输入智能地将请求路由到最合适的 Agent 或操作。
+
+请注意，使用此模式时，您需要在 Agent 代码中显式 "退出工作流"。
+您可以在文档的 ["退出 Agent 循环" 部分](https://docs.copilotkit.ai/langgraph/advanced/exit-agent) 找到更多信息。
+
+<Callout type="warn">
+    路由模式要求您设置 LLM 适配器。请参阅文档中 ["设置 copilot runtime"](https://docs.copilotkit.ai/direct-to-llm/guides/quickstart?copilot-hosting=self-hosted#set-up-a-copilot-runtime-endpoint) 部分的说明。
+</Callout>
+
+### Agent 锁定模式
+要使用 Agent 锁定模式，请在 `CopilotKit` 组件中使用 `agent` 属性指定 Agent 名称：
+```tsx
+// [!code word:agent]
+<CopilotKit runtimeUrl="<copilot-runtime-url>" agent="<the-name-of-the-agent>">
+  {/* 您的应用程序组件 */}
+</CopilotKit>
+```
+
+在此模式下，CopilotKit 配置为与特定 Agent 专门工作。当您想要专注于特定任务或领域时，此模式很有用。而在路由模式下，LLM 和 CopilotKit 的路由器可以自由切换 Agent 来处理用户请求，在 Agent 锁定模式下，所有请求都将保留在单个工作流图中，确保对工作流的精确控制。
+
+使用最适合您应用体验的模式！另外，请注意，虽然您不能嵌套 `CopilotKit` 提供程序，但您可以在应用的不同区域使用不同的 Agent 或模式 —— 例如，您可能希望在路由器模式下使用一个可以调用任何 Agent 或工具的聊天机器人，但也可能希望在别处集成一个特定的 Agent 以获得更专注的工作流。

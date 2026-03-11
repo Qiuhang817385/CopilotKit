@@ -1,0 +1,165 @@
+---
+title: 读取 Agent 状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时 Agent 状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state) 中读取共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 以及原生应用程序 UX 中使用实时 Agent 状态。
+
+## 何时使用？
+
+当您想向用户提供关于 Agent 状态的反馈时，可以使用此功能。随着 Agent 状态的更新，您可以在应用程序中原生地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+    LangGraph 是有状态的。当您在不同节点之间转换时，该状态会被更新并传递给下一个节点。在本示例中，假设我们的 Agent 状态如下所示。
+
+    <Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            language: Literal["english", "spanish"] = "english"
+
+        def chat_node(state: AgentState, config: RunnableConfig):
+          # 如果语言未定义，设置一个值。
+          # 这是因为状态类中的默认值在运行时不会被读取
+          language = state.get("language", "english")
+
+          # ... 添加节点实现的其余部分并使用 language 变量
+
+          return {
+            # ... 添加要返回的其余状态
+            # 返回 language 以使其可用于下一个节点和前端读取
+            "language": language
+          }
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+        ```ts title="agent-js/src/agent.ts"
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+        export const AgentStateAnnotation = Annotation.Root({
+            language: Annotation<"english" | "spanish">,
+            ...CopilotKitStateAnnotation.spec,
+        });
+        export type AgentState = typeof AgentStateAnnotation.State;
+
+        async function chat_node(state: AgentState, config: RunnableConfig) {
+          // 如果语言未定义，使用默认值
+          const language = state.language ?? 'english'
+
+          // ... 添加节点实现的其余部分并使用 language 变量
+
+          return {
+            // ... 添加要返回的其余状态
+            // 返回 language 以使其可用于下一个节点和前端读取
+            language
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    连接并运行 Agent 后，剩下要做的就是调用 `useAgent` Hook，传入 Agent 的 ID，然后读取状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    function YourMainContent() {
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      });
+
+      const language = (agent.state.language as string) ?? "english";
+
+      // ...
+
+      return (
+        // 为简洁起见，样式已省略
+        <div>
+          <h1>您的主内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `agent.state` 是响应式的，当 Agent 的状态发生变化时会自动更新。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    随着 Agent 状态的更新，您的 `state` 变量也会自动更新！在本例中，您会看到语言设置为 "english"，这是我们设置的初始状态。
+
+    <Frame>
+      <ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/read-agent-state.png" alt="读取 Agent 状态" width={1000} height={1000} className="my-0"/>
+    </Frame>
+
+    <Callout type="info">
+      上图是应用了 [实现](#implementation) 部分的 [coagent 启动器](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-starter)！
+    </Callout>
+  </Step>
+</Steps>
+
+## 在聊天中渲染 Agent 状态
+
+您还可以使用 `useRenderTool` 或通过 `useAgent` 访问 `agent.state` 在聊天 UI 中渲染 Agent 的状态。该状态是响应式的，会自动更新。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+function YourMainContent() {
+  // [!code highlight:3]
+  const { agent } = useAgent({
+    agentId: "sample_agent",
+  });
+
+  const language = (agent.state.language as string) ?? "english";
+
+  return (
+    <div>
+      <p>语言: {language}</p>
+    </div>
+  );
+}
+```
+
+## 中间流式传输和渲染 Agent 状态
+默认情况下，LangGraph Agent 状态仅在 LangGraph 节点转换之间更新 —— 这意味着状态更新将是不连续且延迟的。
+
+您可能希望在状态更新时**连续**渲染 Agent 状态。
+
+请参阅 **[发出中间状态](/langgraph/shared-state/predictive-state-updates)。**

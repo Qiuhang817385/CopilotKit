@@ -1,0 +1,176 @@
+---
+title: 读取代理状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时代理状态。
+---
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+import RunAndConnect from "@/snippets/integrations/pydantic-ai/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state) 中读取共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在原生应用程序 UX 中使用实时代理状态，而不仅仅是在聊天 UI 中。
+
+## 什么时候应该使用这个？
+
+您可以在想要向用户提供有关代理状态的反馈时使用此功能。随着代理
+状态的更新，您可以在应用程序中原生地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义代理状态
+
+    使用有状态结构创建您的 Pydantic AI 代理。下面是一个跟踪语言的完整示例：
+
+    ```python title="agent.py"
+    from textwrap import dedent
+
+    from pydantic import BaseModel
+    from pydantic_ai import Agent, RunContext
+    from pydantic_ai.ag_ui import StateDeps
+
+
+    class AgentState(BaseModel):
+        """代理的状态。"""
+        language: str = "english"
+
+
+    agent = Agent("openai:gpt-5.2-mini", deps_type=StateDeps[AgentState])
+
+
+    @agent.instructions()
+    async def language_instructions(ctx: RunContext[StateDeps[AgentState]]) -> str:
+        """语言跟踪代理的指令。
+
+        参数：
+            ctx: 包含语言状态信息的运行上下文。
+
+        返回：
+            语言跟踪代理的指令字符串。
+        """
+        return dedent(
+            f"""
+            您是跟踪语言的有用助手。
+
+            重要：
+            - 始终使用小写表示语言
+            - 始终使用当前语言响应：{ctx.deps.state.language}
+            """
+        )
+
+
+    app = agent.to_ag_ui(deps=StateDeps(AgentState()))
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` 钩子
+    连接并运行代理后，剩下要做的就是调用 `useAgent` 钩子，传入代理名称，并
+    可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义代理状态类型，应与代理的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言：{agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的代理名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当代理的状态变化时会自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+    随着代理状态的更新，您的 `state` 变量将自动随之更新！在这种情况下，您会看到
+    语言设置为 "english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染代理状态
+
+您还可以在聊天 UI 中渲染代理的状态。这对于以更上下文相关的方式通知用户代理的状态很有用。为此，您可以使用带有 `render` 函数的 `useAgent` 钩子。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义代理状态类型，应与代理的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "my_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言：{state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="warn" title="重要">
+  `name` 参数必须与您在 CopilotRuntime 配置中定义的代理名称完全匹配（例如，快速入门中的 `my_agent`）。
+</Callout>
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当代理的状态变化时会自动
+  更新。
+</Callout>
+
+## 中间流式传输和渲染代理状态
+
+默认情况下，Pydantic AI 代理状态只会在 Pydantic AI 代理节点转换之间更新 ——
+这意味着状态更新将是不连续和延迟的。

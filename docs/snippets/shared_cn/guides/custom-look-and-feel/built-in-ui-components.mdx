@@ -1,0 +1,44 @@
+## 入门
+<Steps>
+  <Step>
+    ### 导入默认样式
+
+    在您的根组件（通常是 `layout.tsx`）中导入默认样式：
+
+    ```tsx filename="layout.tsx"
+    import "@copilotkit/react-ui/v2/styles.css";
+    ```
+  </Step>
+  <Step>
+    ### 选择您的组件
+    CopilotKit 提供了许多高度灵活的组件，可以满足您的需求。选择您喜欢的任何一个，
+    它们在功能上是相同的，但布局不同。
+
+    <Tabs items={["CopilotChat", "CopilotSidebar", "CopilotPopup"]}>
+      <Tab value="CopilotChat">
+        <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/copilotchat-example.gif" alt="CopilotChat 示例" className="w-full rounded-lg my-4" />
+      </Tab>
+      <Tab value="CopilotSidebar">
+        <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/sidebar-example.gif" alt="CopilotSidebar 示例" className="w-full rounded-lg my-4" />
+      </Tab>
+      <Tab value="CopilotPopup">
+        <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/popup-example.gif" alt="弹出窗口示例" className="w-full rounded-lg my-4" />
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 使用组件
+
+    现在您已经选择了组件，只需导入它并在您的页面中使用即可！
+
+    ```tsx filename="page.tsx"
+    import { CopilotChat, CopilotSidebar, CopilotPopup } from "@copilotkit/react-core/v2";
+
+    return <div>
+      <CopilotChat />
+      <CopilotSidebar />
+      <CopilotPopup />
+    </div>
+    ```
+  </Step>
+</Steps>

@@ -1,0 +1,236 @@
+---
+title: "第 3 步：设置 CopilotKit"
+---
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { GoServer } from "react-icons/go";
+import { FaCloud } from "react-icons/fa";
+
+现在我们已经运行了应用程序和智能体，我们准备通过 CopilotKit 连接两者。在本教程中，我们将安装以下依赖项：
+
+- `@copilotkit/react-core`：CopilotKit 的核心库，包含 CopilotKit 提供程序和有用的钩子。
+- `@copilotkit/react-ui`：CopilotKit 的 UI 库，包含 CopilotKit UI 组件，如侧边栏、聊天弹出框、文本区域等。
+
+## 安装依赖项
+
+导航回 `ui` 目录并安装 CopilotKit 依赖项：
+
+```shell
+pnpm add @copilotkit/react-core @copilotkit/react-ui
+```
+
+## 设置 CopilotKit
+
+有两种设置 CopilotKit 的方式，要么使用 Copilot Cloud，要么自托管。自托管可以让你更好地控制 CopilotKit 的运行时（我们与 LLM 的接口），但也需要你管理运行服务器的额外复杂性。另一方面，Copilot Cloud 是一个完全托管的服务，你只需点击几下即可开始使用。
+
+对于本教程，你可以选择任一选项。
+
+<TailoredContent id="hosting">
+<TailoredContentOption
+  id="copilot-cloud"
+  title="Copilot Cloud（推荐）"
+  icon={<FaCloud />}
+  description="我想通过使用 Copilot Cloud 尽快开始。"
+>
+我们使用 CopiloKit Cloud 作为 CopilotKit 运行时的托管版本。运行时充当应用程序和 LLM（智能体或非智能体）之间的接口。Copilot Cloud 将为我们管理所有复杂性，但作为回报，我们需要提供一个有效的 API 密钥。
+<Steps>
+<Step>
+### 在 Copilot Cloud 上创建账户
+
+首先，你需要在[这里](https://cloud.copilotkit.ai/sign-in)创建一个 Copilot Cloud 账户。你可以使用任何你喜欢的认证方式。
+
+</Step>
+<Step>
+### 获取 Copilot Cloud API 密钥
+
+登录后，你会看到一些指导你获取 Copilot Cloud 公共 API 密钥的步骤。为此，你需要一个 OpenAI API 密钥，因为它是目前唯一支持的提供商（更多提供商即将推出！）。
+
+设置你的 OpenAI API 密钥，点击绿色勾选标记，你会看到 API 密钥在输入框正下方创建。
+
+<Frame>
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/cpkCloudSetup.png" alt="CopilotCloud API 密钥" />
+</Frame>
+
+</Step>
+<Step>
+### 设置环境变量
+
+首先，在 `ui` 目录中创建一个 `.env` 文件。
+
+```shell
+touch ui/.env
+```
+
+然后，将你的 Copilot Cloud API 密钥添加到文件中，如下所示：
+
+```txt title="ui/.env"
+NEXT_PUBLIC_CPK_PUBLIC_API_KEY=...
+```
+
+</Step>
+<Step>
+### 配置 CopilotKit 提供程序
+
+现在我们准备在应用程序中配置 CopilotKit 提供程序。
+
+```tsx title="ui/app/page.tsx" showLineNumbers
+"use client";
+
+import { CopilotKit } from "@copilotkit/react-core"; // [!code ++]
+
+export default function Home() {
+  // [!code ++:5]
+  return (
+    <CopilotKit
+      publicApiKey={process.env.NEXT_PUBLIC_CPK_PUBLIC_API_KEY}
+    >
+      <TooltipProvider>
+        <TripsProvider>
+          <main className="h-screen w-screen">
+            <MapCanvas />
+          </main>
+        </TripsProvider>
+      </TooltipProvider>
+    </CopilotKit> // [!code ++]
+  );
+}
+```
+<Step>
+
+### CopilotKit 聊天弹出框
+
+我们提供了几个即插即用的组件供你与你的助手交互。其中一些是 `<CopilotPopup/>`、`<CopilotSidebar/>` 和 `<CopilotChat/>`。当然，你也可以在无头模式下使用 CopilotKit，并通过 [`useCopilotChat`](/reference/v1/hooks/useCopilotChat) 提供你自己的完全自定义 UI。
+
+在本教程中，我们将使用 `<CopilotSidebar/>` 组件来显示聊天侧边栏。
+
+```tsx title="ui/app/page.tsx" showLineNumbers {6-7,15}
+"use client";
+
+import { TasksList } from "@/components/TasksList";
+import { TasksProvider } from "@/lib/hooks/use-tasks";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code ++]
+import "@copilotkit/react-ui/v2/styles.css"; // [!code ++]
+
+export default function Home() {
+  return (
+    <CopilotKit
+      publicApiKey={process.env.NEXT_PUBLIC_CPK_PUBLIC_API_KEY}
+    >
+      /* [!code ++:9] */
+      <CopilotSidebar
+        defaultOpen={true}
+        clickOutsideToClose={false}
+        labels={{
+          modalHeaderTitle: "旅行规划师",
+          welcomeMessageText: "你好！👋 我是来帮你规划旅行的。我可以帮你管理行程、添加地点，或者和你一起规划新的行程。",
+        }}
+      />
+      <TooltipProvider>
+        <TripsProvider>
+          <main className="h-screen w-screen">
+            <MapCanvas />
+          </main>
+        </TripsProvider>
+      </TooltipProvider>
+    </CopilotKit>
+  );
+}
+```
+
+我们完成了！我们做了什么：
+
+- 我们设置了 Copilot Cloud 账户并获取了 API 密钥。
+- 我们在应用程序中配置了 CopilotKit 提供程序以使用我们的 API 密钥。
+- 我们将 CopilotSidebar 添加到我们的应用程序中。
+</Step>
+
+</Step>
+</Steps>
+</TailoredContentOption>
+<TailoredContentOption
+  id="self-hosted"
+  title="自托管"
+  icon={<GoServer />}
+  description="我想学习如何自托管 CopilotKit，并愿意承担额外的复杂性。"
+>
+<Steps>
+<Step>
+### 设置 Copilot 运行时端点
+<SelfHostingCopilotRuntimeCreateEndpoint components={props.components} />
+</Step>
+<Step>
+
+### 配置 CopilotKit 提供程序
+```tsx title="app/page.tsx" showLineNumbers
+"use client";
+
+import { TasksList } from "@/components/TasksList";
+import { TasksProvider } from "@/lib/hooks/use-tasks";
+import { CopilotKit } from "@copilotkit/react-core"; // [!code ++]
+
+export default function Home() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit"> // [!code ++]
+      <TasksProvider>
+        <TasksList />
+      </TasksProvider>
+    </CopilotKit> // [!code ++]
+  );
+}
+```
+</Step>
+</Steps>
+
+### CopilotKit 聊天弹出框
+
+我们提供了几个即插即用的组件供你与你的助手交互。其中一些是 `<CopilotPopup/>`、`<CopilotSidebar/>` 和 `<CopilotChat/>`。当然，你也可以在无头模式下使用 CopilotKit，并通过 [`useCopilotChat`](/reference/v1/hooks/useCopilotChat) 提供你自己的完全自定义 UI。
+
+在本教程中，我们将使用 `<CopilotSidebar/>` 组件来显示聊天侧边栏。
+
+```tsx title="ui/app/page.tsx" showLineNumbers {6-7,15}
+"use client";
+
+import { TasksList } from "@/components/TasksList";
+import { TasksProvider } from "@/lib/hooks/use-tasks";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-core/v2"; // [!code ++]
+import "@copilotkit/react-ui/v2/styles.css"; // [!code ++]
+
+export default function Home() {
+  return (
+    <CopilotKit
+      publicApiKey={process.env.NEXT_PUBLIC_CPK_PUBLIC_API_KEY}
+    >
+      /* [!code ++:9] */
+      <CopilotSidebar
+        defaultOpen={true}
+        clickOutsideToClose={false}
+        labels={{
+          modalHeaderTitle: "旅行规划师",
+          welcomeMessageText: "你好！👋 我是来帮你规划旅行的。我可以帮你管理行程、添加地点，或者和你一起规划新的行程。",
+        }}
+      />
+      <TooltipProvider>
+        <TripsProvider>
+          <main className="h-screen w-screen">
+            <MapCanvas />
+          </main>
+        </TripsProvider>
+      </TooltipProvider>
+    </CopilotKit>
+  );
+}
+```
+
+我们做了什么：
+
+- 我们从 `@copilotkit/react-ui` 导入了 `<CopilotSidebar />` 组件。
+- 我们用 `<CopilotKit>` 提供程序包裹了页面。
+- 我们从 `@copilotkit/react-ui` 导入了内置样式。
+</TailoredContentOption>
+</TailoredContent>
+
+现在，返回应用程序，你会在页面左侧找到一个聊天侧边栏。此时，你可以开始与你的助手交互了！🎉
+
+这非常令人兴奋！在下一步中，我们将通过使用 LangGraph 使这个助手成为智能体。

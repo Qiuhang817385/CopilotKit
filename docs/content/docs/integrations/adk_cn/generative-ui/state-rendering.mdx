@@ -1,0 +1,190 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染智能体的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+
+{/* TODO: Re-add once the dojo example is updated and works */}
+{/* <IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/> */}
+
+## 这是什么？
+
+所有 ADK 智能体都是有状态的。这意味着随着您的智能体在节点间推进，状态对象会在它们之间传递，
+保留会话的整体状态。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为**智能体生成式 UI**。
+
+## 什么时候应该使用这个？
+
+当希望向用户提供有关会话整体状态的反馈时，在 UI 中渲染智能体的状态非常有用。一个很好的例子是
+用户和智能体一起解决问题的场景。智能体可以在其状态中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 设置带状态的智能体
+
+    创建具有有状态结构的 ADK 智能体。以下是一个跟踪语言选择的完整示例：
+
+    ```python title="agent.py"
+    import json
+    from typing import Dict
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+    from google.adk.agents import LlmAgent
+    from google.adk.tools import ToolContext
+
+
+    class AgentState(BaseModel):
+        """State for the agent."""
+        language: str = "english"
+
+
+    def set_language(tool_context: ToolContext, new_language: str) -> Dict[str, str]:
+        """Sets the language preference for the user.
+
+        Args:
+            tool_context (ToolContext): The tool context for accessing state.
+            new_language (str): The language to save in state.
+
+        Returns:
+            Dict[str, str]: A dictionary indicating success status and message.
+        """
+        tool_context.state["language"] = new_language
+        return {"status": "success", "message": f"Language set to {new_language}"}
+
+
+    agent = LlmAgent(
+        name="my_agent",
+        model="gemini-2.5-flash",
+        instruction="You are a helpful assistant that can change language settings.",
+        tools=[set_language],
+    )
+
+    adk_agent = ADKAgent(
+        adk_agent=agent,
+        app_name="demo_app",
+        user_id="demo_user",
+        session_timeout_seconds=3600,
+        use_in_memory_services=True,
+    )
+
+    app = FastAPI()
+    add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染智能体的状态
+    现在我们可以利用带有 `render` 函数的 `useAgent` 在**聊天中**渲染智能体的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // Define the state of the agent, should match the state of your ADK Agent.
+    type AgentState = {
+      language: string;
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // styles omitted for brevity
+      useAgent({
+        agentId: "my_agent",
+        render: ({ state }) => (
+          <div>
+            Current language: {state.language || 'not set'}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+    您还可以在**聊天外**渲染智能体的状态。当您想在聊天以外的任何地方
+    渲染智能体的状态时，这非常有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // Define the state of the agent, should match the state of your ADK Agent.
+    type AgentState = {
+      language: string;
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:1] */}
+            Current language: {agent.state?.language || 'not set'}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+
+    您现在已创建一个组件，将在聊天中渲染智能体的状态。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

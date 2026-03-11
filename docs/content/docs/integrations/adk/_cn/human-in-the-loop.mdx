@@ -1,0 +1,105 @@
+---
+title: 人机协作
+icon: "lucide/User"
+description: 创建前端工具并在您的 ADK Agent 中使用它们进行人机协作交互。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义客户端函数，供您的 ADK Agent 调用，执行完全在用户的浏览器中进行。当您的 Agent 调用前端工具时，逻辑在客户端运行，让您可以直接访问前端环境。
+
+这可以用于[让您的 Agent 控制 UI](/adk/frontend-tools)、[生成式 UI](/adk/frontend-tools)或人机协作交互。
+
+在本指南中，我们将介绍前端工具在人机协作中的使用。
+
+## 何时使用？
+
+当您需要您的 Agent 与客户端原语交互时，请使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+      ### 运行并连接您的 Agent
+      <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建前端人机协作工具
+
+        前端工具可以以多种方式利用。其中一种方式是建立人机协作流程，工具的响应由用户的决定控制。
+
+        在本示例中，我们将模拟执行命令的"审批"流程。首先，使用 `useHumanInTheLoop` Hook 创建一个提示用户审批的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "offerOptions",
+            description: "给用户提供两个选项之间的选择，并让他们选择一个。",
+            parameters: [
+              {
+                name: "option_1",
+                type: "string",
+                description: "第一个选项",
+                required: true,
+              },
+              {
+                name: "option_2",
+                type: "string",
+                description: "第二个选项",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`${args.option_1} 被选中`)}>{args.option_1}</button>
+                  <button onClick={() => respond(`${args.option_2} 被选中`)}>{args.option_2}</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+
+        就是这样！您的 Agent 将自动访问您在 React 组件中使用 `useHumanInTheLoop` 定义的所有的人机协作工具。
+
+        <Callout type="info">
+          使用 `useHumanInTheLoop` 注册的人机协作工具会通过 AG-UI 协议自动转发给您的 Agent。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试试看！
+
+        您现在已赋予您的 Agent 向用户显示两个选项并让他们选择一个的能力。然后 Agent 将知道用户的选择，并可以在后续步骤中使用它。
+
+        ```
+        你能给我看两个好的餐厅名称选项吗？
+        ```
+    </Step>
+</Steps>

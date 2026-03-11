@@ -1,0 +1,88 @@
+---
+title: "步骤 4：前端工具"
+---
+
+现在是通过启用工具执行来让我们的助手更加有用的时候了。
+
+## 可用工具
+
+让我们再次查看我们应用的状态，在 [`lib/hooks/use-tasks.tsx`](https://github.com/CopilotKit/example-todos-app/blob/base-start-here/lib/hooks/use-tasks.tsx#L19-L33) 文件中。
+
+本质上，我们希望我们的助手能够调用 `addTask`、`setTaskStatus` 和 `deleteTask` 函数。
+
+## `useFrontendTool` Hook
+
+[`useFrontendTool`](/reference/v1/hooks/useFrontendTool) Hook 使工具可用于我们的助手。让我们在 [`lib/hooks/use-tasks.tsx`](https://github.com/CopilotKit/example-todos-app/blob/base-start-here/lib/hooks/use-tasks.tsx) 文件中实现它。
+
+```tsx filename="lib/hooks/use-tasks.tsx" showLineNumbers {3-3,8-22,24-38,40-61}
+// ... 文件的其余部分
+
+import { useCopilotReadable, useFrontendTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { z } from "zod"; // [!code highlight]
+
+export const TasksProvider = ({ children }: { children: ReactNode }) => {
+  const [tasks, setTasks] = useState<Task[]>(defaultTasks);
+
+  // [!code highlight:10]
+  useFrontendTool({
+    name: "addTask",
+    description: "Adds a task to the todo list",
+    parameters: z.object({
+      title: z.string().describe("The title of the task"),
+    }),
+    handler: ({ title }) => {
+      addTask(title);
+      return `Added task: ${title}`;
+    },
+  });
+
+  // [!code highlight:10]
+  useFrontendTool({
+    name: "deleteTask",
+    description: "Deletes a task from the todo list",
+    parameters: z.object({
+      id: z.number().describe("The id of the task"),
+    }),
+    handler: ({ id }) => {
+      deleteTask(id);
+      return `Deleted task ${id}`;
+    },
+  });
+
+  // [!code highlight:11]
+  useFrontendTool({
+    name: "setTaskStatus",
+    description: "Sets the status of a task",
+    parameters: z.object({
+      id: z.number().describe("The id of the task"),
+      status: z.enum(Object.values(TaskStatus) as [string, ...string[]]).describe("The status of the task"),
+    }),
+    handler: ({ id, status }) => {
+      setTaskStatus(id, status);
+      return `Set task ${id} status to ${status}`;
+    },
+  });
+
+  // ... 文件的其余部分
+};
+```
+
+`useFrontendTool` Hook 是一个强大的 Hook，允许我们向助手注册工具。它接受一个具有以下属性的对象：
+
+- `name` 是工具的名称。
+- `description` 是工具的说明。选择一个好的描述很重要，这样我们的助手才能选择正确的工具。
+- `parameters` 是一个 Zod 模式，定义了工具接受的参数。这提供了运行时验证和 TypeScript 类型推断。
+- `handler` 是工具被触发时将调用的函数。多亏了 Zod，它是类型安全的！
+
+您可以在[这里](https://docs.copilotkit.ai/reference/v1/hooks/useFrontendTool)查看 `useFrontendTool` Hook 的完整参考。
+
+## 试试看！
+
+现在，回到应用，让您的助手执行以下任何操作：
+
+- "Create a task about inviting Daniel to my birthday"
+- "Delete all outstanding tasks"
+- "Mark task with ID 2 as done"
+- 等等。
+
+您的助手现在比以往任何时候都更有帮助 💪

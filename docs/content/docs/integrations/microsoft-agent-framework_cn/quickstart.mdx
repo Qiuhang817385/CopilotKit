@@ -1,0 +1,535 @@
+---
+title: 快速入门
+description: 在 10 分钟内将您的 Microsoft Agent Framework 智能体转变为智能体原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { UserIcon, PaintbrushIcon, WrenchIcon, RepeatIcon } from "lucide-react";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- GitHub 个人访问令牌（用于 GitHub Models API - 免费 AI 访问）
+- .NET 9.0 SDK 或更高版本
+- Node.js 20+
+- 您喜欢的包管理器（npm、pnpm、yarn 或 bun）
+
+## 入门
+
+<Steps>
+    <TailoredContent
+        className="step"
+        id="agent"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的起点</p>
+                <p className="text-base">
+                    您可以从我们的入门模板开始，或将 CopilotKit 集成到您现有的 Microsoft Agent Framework 智能体中。
+                </p>
+            </div>
+        }
+    >
+        <TailoredContentOption
+            id="starter"
+            title="从头开始"
+            description="使用我们即开即用的入门应用程序快速开始。"
+        >
+            <Step>
+                ### 运行我们的 CLI
+
+                首先，我们将使用 CLI 为我们创建一个新项目。
+
+                <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+                    <Tab value=".NET">
+                        ```bash
+                        npx copilotkit@latest create -f microsoft-agent-framework-dotnet
+                        ```
+                    </Tab>
+                    <Tab value="Python">
+                        ```bash
+                        npx copilotkit@latest create -f microsoft-agent-framework-py
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+            <Step>
+                ### 安装依赖
+
+                入门程序包含一个 `postinstall` 脚本，自动安装您的 npm 和智能体依赖。
+
+                ```npm
+                npm install
+                ```
+
+                <Callout type="info" title="手动设置">
+                  <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+                    <Tab value=".NET">
+                      如果您遇到 .NET 包自动安装问题，可以手动还原它们：
+                      ```bash
+                      npm run install:agent
+                      ```
+                    </Tab>
+                    <Tab value="Python">
+                      如果您遇到 Python 自动设置问题，可以手动安装智能体依赖：
+                      ```bash
+                      npm run install:agent
+                      # 或手动：
+                      cd agent
+                      uv sync
+                      ```
+                    </Tab>
+                  </Tabs>
+                </Callout>
+            </Step>
+            <Step>
+                ### 配置您的环境
+
+                <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+                    <Tab value=".NET">
+                        入门模板使用 GitHub Models API 免费访问 AI 模型。设置您的 GitHub 令牌：
+
+                        首先，获取您的 GitHub 令牌（需要 [GitHub CLI](https://github.com/cli/cli)）：
+                        ```bash
+                        gh auth token
+                        ```
+
+                        然后导航到智能体目录并将其设置为用户机密：
+                        ```bash
+                        cd agent
+                        dotnet user-secrets set GitHubToken "$(gh auth token)"
+                        cd ..
+                        ```
+
+                        <Callout type="info" title="想使用不同的模型提供商？">
+                          入门模板配置为使用 GitHub Models（免费），但您可以修改它以使用：
+                          - 直接使用 OpenAI
+                          - Azure OpenAI
+                          - Microsoft Agent Framework 支持的任何其他模型
+
+                          检查 `agent/Program.cs` 文件以自定义模型配置。
+                        </Callout>
+                    </Tab>
+                    <Tab value="Python">
+                        在 `agent` 文件夹中创建一个 `.env` 文件，使用以下配置之一：
+
+                        ```bash title="agent/.env (OpenAI)"
+                        OPENAI_API_KEY=sk-...your-openai-key-here...
+                        OPENAI_CHAT_MODEL_ID=gpt-5.2-mini
+                        ```
+
+                        ```bash title="agent/.env (Azure OpenAI)"
+                        AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+                        AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-5.2-mini
+                        # 如果您不依赖 az 登录：
+                        # AZURE_OPENAI_API_KEY=...
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+            <Step>
+                ### 启动开发服务器
+
+                <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                    <Tab value="npm">
+                        ```bash
+                        npm run dev
+                        ```
+                    </Tab>
+                    <Tab value="pnpm">
+                        ```bash
+                        pnpm dev
+                        ```
+                    </Tab>
+                    <Tab value="yarn">
+                        ```bash
+                        yarn dev
+                        ```
+                    </Tab>
+                    <Tab value="bun">
+                        ```bash
+                        bun dev
+                        ```
+                    </Tab>
+                </Tabs>
+
+                这将同时启动 Next.js UI（端口 3000）和智能体服务器（端口 8000）。
+            </Step>
+        </TailoredContentOption>
+        <TailoredContentOption
+            id="bring-your-own"
+            title="使用现有智能体"
+            description="我已经有一个 Microsoft Agent Framework 智能体，想添加 CopilotKit。"
+        >
+            <Step>
+                ### 启动您的 Microsoft Agent Framework 智能体
+
+                确保您的智能体正在运行并暴露 AG-UI 端点。以下是一个最小示例：
+
+                <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+                    <Tab value=".NET">
+                        首先，设置一个新的 .NET 项目：
+                        ```bash
+                        dotnet new web -n AGUIServer
+                        cd AGUIServer
+                        dotnet add package Microsoft.Agents.AI.Hosting.AGUI.AspNetCore --version 1.0.0-preview.251110.1
+                        dotnet add package Microsoft.Extensions.AI.OpenAI --version 9.10.2-preview.1.25552.1
+                        dotnet add package OpenAI --version 2.6.0
+                        dotnet user-secrets init
+                        ```
+
+                        构建一个最小智能体并通过 AG-UI 提供服务：
+
+                        ```csharp title="Program.cs"
+                        using Microsoft.Agents.AI;
+                        # [!code highlight:1]
+                        using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+                        using Microsoft.Extensions.AI;
+                        using OpenAI;
+
+                        var builder = WebApplication.CreateBuilder(args);
+                        # [!code highlight:1]
+                        builder.Services.AddAGUI();
+                        var app = builder.Build();
+
+                        // 获取您的 GitHub 令牌以使用 GitHub Models（免费）
+                        var githubToken = builder.Configuration["GitHubToken"]!;
+                        var openAI = new OpenAIClient(
+                            new System.ClientModel.ApiKeyCredential(githubToken),
+                            new OpenAIClientOptions {
+                                Endpoint = new Uri("https://models.inference.ai.azure.com")
+                            });
+
+                        var chatClient = openAI.GetChatClient("gpt-5.2-mini").AsIChatClient();
+                        var agent = new ChatClientAgent(
+                            chatClient,
+                            name: "MyAgent",
+                            description: "你是一个有用的助手。");
+
+                        # [!code highlight:1]
+                        app.MapAGUI("/", agent);
+                        app.Run("http://localhost:8000");
+                        ```
+
+                        然后只需设置环境并运行您的智能体：
+
+                        ```bash
+                        # 设置您的 GitHub 令牌并运行
+                        dotnet user-secrets set GitHubToken "$(gh auth token)"
+                        dotnet run
+                        ```
+                    </Tab>
+                    <Tab value="Python">
+                        创建一个最小 FastAPI 服务器，通过 AG-UI 暴露 Microsoft Agent Framework 智能体：
+
+                        ```python title="agent/src/byo_agent.py"
+                        from __future__ import annotations
+
+                        import os
+
+                        import uvicorn
+                        from agent_framework import ChatClientProtocol
+                        from azure.identity import DefaultAzureCredential
+                        from agent_framework.azure import AzureOpenAIChatClient
+                        from agent_framework.openai import OpenAIChatClient
+                        from agent_framework import ChatAgent
+                        from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
+                        from dotenv import load_dotenv
+                        from fastapi import FastAPI
+
+
+                        load_dotenv()
+
+
+                        def _build_chat_client() -> ChatClientProtocol:
+                            if bool(os.getenv("AZURE_OPENAI_ENDPOINT")):
+                                deployment_name = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5.2-mini")
+                                return AzureOpenAIChatClient(
+                                    credential=DefaultAzureCredential(),
+                                    deployment_name=deployment_name,
+                                    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                                )
+
+                            if bool(os.getenv("OPENAI_API_KEY")):
+                                return OpenAIChatClient(
+                                    model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.2-mini"),
+                                    api_key=os.getenv("OPENAI_API_KEY"),
+                                )
+
+                            raise RuntimeError(
+                                "缺少凭据。设置 AZURE_OPENAI_ENDPOINT (+ AZURE_OPENAI_CHAT_DEPLOYMENT_NAME) "
+                                "或 OPENAI_API_KEY 作为环境变量。"
+                            )
+
+
+                        chat_client = _build_chat_client()
+
+                        agent = ChatAgent(
+                            name="MyAgent",
+                            instructions="你是一个有用的助手。",
+                            chat_client=chat_client,
+                        )
+
+                        app = FastAPI(title="Microsoft Agent Framework (Python) - 快速入门")
+                        add_agent_framework_fastapi_endpoint(app=app, agent=agent, path="/")
+
+
+                        if __name__ == "__main__":
+                            uvicorn.run("byo_agent:app", host="0.0.0.0", port=8000, reload=True)
+                        ```
+
+                        然后设置您的环境并运行：
+
+                        ```bash
+                        # OpenAI (agent/.env)
+                        OPENAI_API_KEY=sk-...your-openai-key-here...
+                        OPENAI_CHAT_MODEL_ID=gpt-5.2-mini
+                        # 或 Azure OpenAI (agent/.env)
+                        AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+                        AZURE_OPENAI_CHAT_DEPLOYMENT_NAME=gpt-5.2-mini
+                        # (可选) AZURE_OPENAI_API_KEY=...
+
+                        # 运行智能体
+                        cd agent
+                        uv run src/byo_agent.py
+                        ```
+                    </Tab>
+                </Tabs>
+
+            </Step>
+            <Step>
+                ### 前端设置
+                CopilotKit 适用于任何基于 React 的前端。我们将在此示例中使用 Next.js。
+
+                在新的终端窗口中，运行以下命令：
+
+                ```bash
+                npx create-next-app@latest my-copilot-app
+                cd my-copilot-app
+                ```
+            </Step>
+            <Step>
+                ### 安装 CopilotKit 包
+
+                ```npm
+                npm install @copilotkit/react-ui @copilotkit/react-core @copilotkit/runtime @ag-ui/client
+                ```
+            </Step>
+            <Step>
+                ### 设置 Copilot 运行时
+
+                CopilotKit 需要一个 Copilot 运行时端点来安全地与您的智能体通信。这可以在任何 Node.js 可以运行的地方提供服务，但在此示例中我们将使用 Next.js。
+
+                在 `app/api/copilotkit/route.ts` 创建一个新的 API 路由：
+
+                ```tsx title="app/api/copilotkit/route.ts"
+                import {
+                  CopilotRuntime,
+                  ExperimentalEmptyAdapter,
+                  copilotRuntimeNextJSAppRouterEndpoint,
+                } from "@copilotkit/runtime";
+                import { HttpAgent } from "@ag-ui/client";
+                import { NextRequest } from "next/server";
+
+                // 1. 您可以在此处使用任何服务适配器以实现多智能体支持。我们使用
+                //    空适配器，因为我们只使用一个智能体。
+                const serviceAdapter = new ExperimentalEmptyAdapter();
+
+                // 2. 创建 CopilotRuntime 实例并利用 Microsoft Agent Framework
+                //    AG-UI 集成来设置连接。
+                // [!code highlight:5]
+                const runtime = new CopilotRuntime({
+                  agents: {
+                    my_agent: new HttpAgent({ url: "http://localhost:8000/" }),
+                  },
+                });
+
+                // 3. 构建处理 CopilotKit 运行时请求的 Next.js API 路由。
+                export const POST = async (req: NextRequest) => {
+                  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+                    runtime,
+                    serviceAdapter,
+                    endpoint: "/api/copilotkit",
+                  });
+
+                  return handleRequest(req);
+                };
+                ```
+            </Step>
+            <Step>
+                ### 配置 CopilotKit 提供程序
+
+                接下来，用 CopilotKit 提供程序包装您的应用程序，以便 CopilotKit 可以通过 Microsoft Agent Framework 智能体在您的应用程序中实现控制。
+
+                ```tsx title="app/layout.tsx"
+                import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+                import "@copilotkit/react-ui/v2/styles.css";
+
+                export default function RootLayout({ children }: {children: React.ReactNode}) {
+                  return (
+                    <html lang="en">
+                      <body>
+                        {/* [!code highlight:3] */}
+                        <CopilotKit runtimeUrl="/api/copilotkit" agent="my_agent">
+                          {children}
+                        </CopilotKit>
+                      </body>
+                    </html>
+                  );
+                }
+                ```
+            </Step>
+            <Step>
+              ### 添加聊天界面
+
+              将 CopilotSidebar 组件添加到您的页面：
+
+              ```tsx title="app/page.tsx"
+              "use client";
+
+              // [!code highlight:1]
+              import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+              export default function Page() {
+                return (
+                  <main>
+                    {/* [!code highlight:6] */}
+                    <CopilotSidebar
+                      labels={{
+                        modalHeaderTitle: "您的助手",
+                        welcomeMessageText: "嗨！今天我能帮您什么？",
+                      }}
+                    />
+                    <h1>您的应用</h1>
+                  </main>
+                );
+              }
+              ```
+            </Step>
+            <Step>
+              ### 运行并启动您的 Next.js 应用
+              要运行我们刚刚创建的 Next.js 应用，请使用以下命令：
+
+              <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+                  <Tab value="npm">
+                      ```bash
+                      npm run dev
+                      ```
+                  </Tab>
+                  <Tab value="pnpm">
+                      ```bash
+                      pnpm dev
+                      ```
+                  </Tab>
+                  <Tab value="yarn">
+                      ```bash
+                      yarn dev
+                      ```
+                  </Tab>
+                  <Tab value="bun">
+                      ```bash
+                      bun dev
+                      ```
+                  </Tab>
+              </Tabs>
+            </Step>
+        </TailoredContentOption>
+    </TailoredContent>
+    <Step>
+        ### 🎉 开始聊天！
+
+        您的 AI 智能体现在可以使用了！试着问它一些问题：
+
+        ```
+        你能给我讲个笑话吗？
+        ```
+
+        ```
+        你能帮我理解 AI 吗？
+        ```
+
+        ```
+        你觉得 .NET 怎么样？
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                **智能体连接问题**
+                - 如果您看到"我连接到我的工具时遇到问题"，请确保：
+                  - C# 智能体在端口 8000 上运行
+                  - 您的 GitHub 令牌通过用户机密正确设置
+                  - 两个服务器都成功启动（检查终端输出）
+
+                **GitHub 令牌问题**
+                - 如果智能体失败并显示"GitHubToken not found"：
+                  ```bash
+                  cd agent
+                  dotnet user-secrets set GitHubToken "$(gh auth token)"
+                  ```
+
+                **.NET SDK 问题**
+                - 验证 .NET SDK 是否已安装：
+                  ```bash
+                  dotnet --version  # 应为 9.0.x 或更高版本
+                  ```
+                - 如果需要，手动还原包：
+                  ```bash
+                  cd agent
+                  dotnet restore
+                  dotnet run
+                  ```
+
+                **端口冲突**
+                - 如果端口 8000 已被使用，您可以在以下位置更改它：
+                  - `agent/Properties/launchSettings.json` - 更新 `applicationUrl`
+                  - `src/app/api/copilotkit/route.ts` - 更新远程端点 URL
+            </Accordion>
+        </Accordions>
+
+    </Step>
+</Steps>
+
+## 下一步是什么？
+
+现在您已经设置了基本智能体，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="实现人机协同"
+    description="让您的用户和智能体能够协作完成任务。"
+    href="/microsoft-agent-framework/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="利用共享状态"
+    description="了解如何将智能体的状态与 UI 的状态同步，反之亦然。"
+    href="/microsoft-agent-framework/shared-state"
+    icon={<RepeatIcon />}
+  />
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染智能体的进度和输出。"
+    href="/microsoft-agent-framework/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="赋予您的智能体调用前端工具的能力，直接更新您的应用程序。"
+    href="/microsoft-agent-framework/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

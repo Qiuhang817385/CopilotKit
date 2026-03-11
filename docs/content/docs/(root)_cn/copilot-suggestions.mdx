@@ -1,0 +1,34 @@
+---
+title: "聊天建议"
+description: "根据实时应用状态在聊天窗口中自动生成建议。"
+icon: "lucide/CopyCheck"
+hideTOC: true
+---
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+## 这是什么？
+
+聊天建议让您可以根据实时应用状态在聊天窗口中自动生成上下文操作。Agent 会提出用户可以点击立即执行的相关下一步操作。
+
+<Tabs items={['page.tsx']}>
+  <Tab value="page.tsx">
+  ```tsx
+  import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+  export function MyComponent() {
+    useConfigureSuggestions({
+      instructions: "建议最相关的下一步操作。",
+      minSuggestions: 1,
+      maxSuggestions: 2,
+    });
+  }
+  ```
+  </Tab>
+</Tabs>
+
+## 什么时候应该使用？
+
+当您想要执行以下操作时使用聊天建议：
+- 根据当前上下文引导用户执行相关操作
+- 通过提供一键快捷方式减少摩擦
+- 展示用户可能不知道的功能

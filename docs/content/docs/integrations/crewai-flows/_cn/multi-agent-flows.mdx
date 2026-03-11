@@ -1,0 +1,51 @@
+---
+title: 多代理流程
+description: 使用多个代理来编排复杂的流程。
+icon: "lucide/Users"
+---
+import { Callout } from "fumadocs-ui/components/callout";
+
+## 什么是多代理流程？
+
+在构建代理应用程序时，您经常需要编排需要多个代理协调的复杂流程。这在传统上被称为多代理编排。
+
+## 什么时候应该使用它？
+
+当您需要编排需要多个代理协调的复杂流程时，多代理流程非常有用。随着代理应用程序的增长，将子任务委托给其他代理可以帮助您扩展应用程序的关键部分。
+- 将上下文分成更小的块
+- 将子任务委托给其他代理
+- 使用单个代理来编排流程
+
+## CopilotKit 如何支持这一点？
+
+CopilotKit 可以以两种不同模式之一使用：**路由模式**，或 **代理锁定**。默认情况下，CopilotKit
+将使用路由模式，利用您定义的 LLM 在代理之间路由请求。
+
+### 路由模式（默认）
+路由模式在使用 CoAgents 时默认启用。要使用它，请在 `CopilotKit` 提供者组件中指定运行时 URL 属性并省略 `agent` 属性，如下所示：
+```tsx
+<CopilotKit runtimeUrl="<copilot-runtime-url>">
+  {/* 您的应用组件 */}
+</CopilotKit>
+```
+
+在路由模式下，CopilotKit 充当中央枢纽，根据用户输入动态选择和_路由_不同代理或操作之间的请求。这种模式适用于以聊天为优先的体验，其中 LLM 聊天机器人是各种交互的入口点，可以保持在聊天 UI 中或扩展以包括原生 React UI 小部件。
+
+在这种模式下，CopilotKit 将根据上下文和用户输入智能地将请求路由到最合适的代理或操作。
+
+<Callout type="warn">
+    路由模式要求您设置 LLM 适配器。请参阅文档中的["设置 Copilot Runtime"](https://docs.copilotkit.ai/direct-to-llm/guides/quickstart?copilot-hosting=self-hosted#set-up-a-copilot-runtime-endpoint)部分了解如何操作。
+</Callout>
+
+### 代理锁定模式
+要使用代理锁定模式，请在 `CopilotKit` 组件中使用 `agent` 属性指定代理名称：
+```tsx
+// [!code word:agent]
+<CopilotKit runtimeUrl="<copilot-runtime-url>" agent="<代理名称>">
+  {/* 您的应用组件 */}
+</CopilotKit>
+```
+
+在这种模式下，CopilotKit 配置为与特定代理独占工作。当您想专注于特定任务或领域时，此模式很有用。与在路由模式下 LLM 和 CopilotKit 的路由器可以在代理之间自由切换以处理用户请求不同，在代理锁定模式下，所有请求将保持在单个工作流图内，确保对工作流的精确控制。
+
+使用最适合您的应用体验的模式！另外，请注意，虽然您不能嵌套 `CopilotKit` 提供者，但您可以在应用程序的不同区域使用不同的代理或模式 — 例如，您可能希望在路由器模式下使用一个聊天机器人，它可以调用任何代理或工具，但也可能希望在别处集成一个特定的代理以实现更集中的工作流。

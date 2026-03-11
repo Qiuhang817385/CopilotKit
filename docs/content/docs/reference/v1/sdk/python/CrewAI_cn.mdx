@@ -1,0 +1,101 @@
+---
+title: "CrewAI SDK"
+description: "适用于 Python 的 CopilotKit CrewAI SDK 允许你使用 CopilotKit 构建和运行 CrewAI agents。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * sdk-python/copilotkit/crewai/crewai_sdk.py
+  */
+}
+## copilotkit_predict_state
+
+将工具调用作为状态流式传输到 CopilotKit。
+
+    要将工具调用作为流式 CrewAI 状态发出，请在状态中传递目标键、
+    工具名称和可选的工具参数。（如果你不传递参数名称，
+    所有参数都会在状态键下发出。）
+
+    ```python
+    from copilotkit.crewai import copilotkit_predict_state
+
+    await copilotkit_predict_state(
+        {
+            "steps": {
+                "tool_name": "SearchTool",
+                "tool_argument": "steps",
+            },
+        }
+    )
+    ```
+
+### 参数
+
+<PropertyReference name="config" type="Dict[str, CopilotKitPredictStateConfig]" required> 
+预测状态的配置。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>
+
+## copilotkit_emit_message
+
+手动向 CopilotKit 发出消息。在运行时间较长的节点中更新用户时很有用。
+    重要：你仍然需要从节点返回消息。
+
+    ### 示例
+
+    ```python
+    from copilotkit.crewai import copilotkit_emit_message
+
+    message = "第 1 步已完成，共 10 步"
+    await copilotkit_emit_message(message)
+
+    # 从节点返回消息
+    return {
+        "messages": [AIMessage(content=message)]
+    }
+    ```
+
+### 参数
+
+<PropertyReference name="message" type="str" required> 
+要发出的消息。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>
+
+## copilotkit_emit_tool_call
+
+手动向 CopilotKit 发出工具调用。
+
+    ```python
+    from copilotkit.crewai import copilotkit_emit_tool_call
+
+    await copilotkit_emit_tool_call(name="SearchTool", args={"steps": 10})
+    ```
+
+### 参数
+
+<PropertyReference name="name" type="str" required> 
+要发出的工具名称。
+</PropertyReference>
+
+<PropertyReference name="args" type="Dict[str, Any]" required> 
+要发出的参数。
+</PropertyReference>
+
+### 返回值
+
+<PropertyReference name="returns" type="Awaitable[bool]">
+始终返回 True。
+</PropertyReference>

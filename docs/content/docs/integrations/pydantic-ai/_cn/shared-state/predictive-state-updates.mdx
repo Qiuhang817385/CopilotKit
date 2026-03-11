@@ -1,0 +1,205 @@
+---
+title: "预测性状态更新"
+icon: "lucide/Podcast"
+description: 将进行中的 Agent 状态更新流式传输到前端。
+---
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { FaWrench } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="predictive-state-updates-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/pydantic-ai/feature/shared_state) 中的预测性状态更新。
+</Callout>
+
+## 这是什么？
+
+Pydantic AI Agent 的状态更新是不连续的；仅在流程中的函数转换之间发生。
+但即使是流程中的_单个函数_也经常需要很多秒才能运行，并且包含用户感兴趣的子步骤。
+
+**原生 Agent 应用程序**会尽可能连续地向最终用户反映 Agent 正在做什么。
+
+CopilotKit 通过其**_预测性状态更新_**概念实现了这一点。
+
+## 何时使用此功能？
+
+当您想向用户提供有关 Agent 正在做什么的反馈时，可以使用此功能，特别是用于：
+
+- **保持用户参与**，避免长时间的加载指示器
+- **建立信任**，展示 Agent 正在处理什么
+- 启用 **Agent 引导** - 允许用户在需要时纠正 Agent 的方向
+
+## 重要说明
+
+当 Pydantic AI Agent 中的函数完成执行时，**其返回的状态将成为唯一真实来源**。
+虽然中间状态更新对于实时反馈很有用，但您想要持久化的任何更改都必须明确包含在函数的最终返回状态中。否则，它们将在函数完成时被覆盖。
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 定义状态
+
+        使用有状态结构创建您的 Pydantic AI Agent。以下是一个跟踪观察步骤的完整示例：
+
+        ```python title="agent.py"
+        from pydantic import BaseModel
+        from pydantic_ai import Agent
+        from pydantic_ai.ag_ui import StateDeps
+
+
+        class AgentState(BaseModel):
+            """Agent 的状态。"""
+            observed_steps: list[str] = []
+
+
+        agent = Agent('openai:gpt-5.2-mini', deps_type=StateDeps[AgentState])
+        app = agent.to_ag_ui(deps=StateDeps(AgentState()))
+
+
+        if __name__ == "__main__":
+            import uvicorn
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+        ```
+    </Step>
+    <Step>
+        ### 发射中间状态
+        <TailoredContent
+            className="step"
+            id="state-emission"
+            header={
+                <div>
+                    <p className="text-xl font-semibold">您希望如何发射状态更新？</p>
+                    <p className="text-base">
+                        您可以手动发射状态更新，或配置特定工具调用以发射更新。
+                    </p>
+                </div>
+            }
+        >
+            <TailoredContentOption
+                id="manual-emission"
+                title="手动预测性状态更新"
+                description="手动发射状态更新，以最大限度地控制更新发生的时间。"
+                icon={<FaArrowUp />}
+            >
+                对于长时间运行的任务，您可以逐步发射状态更新作为最终状态的预测。在此示例中，我们创建一个更新观察步骤的工具：
+
+                ```python title="agent.py"
+                import asyncio
+                from ag_ui.core import StateSnapshotEvent, EventType
+                from pydantic_ai import Agent
+                from pydantic_ai.ag_ui import StateDeps
+
+
+                @agent.tool_plain
+                async def update_steps(steps: list[str]) -> StateSnapshotEvent:
+                    """更新 Agent 的步骤。"""
+                    return StateSnapshotEvent(
+                        type=EventType.STATE_SNAPSHOT,
+                        snapshot={
+                            "observed_steps": steps
+                        }
+                    )
+                ```
+            </TailoredContentOption>
+
+            <TailoredContentOption
+                id="tool-emission"
+                title="基于工具的预测性状态更新"
+                description="配置特定工具调用以自动发射中间状态更新。"
+                icon={<FaWrench />}
+            >
+                对于长时间运行的任务，您可以将 CopilotKit 配置为在进行特定工具调用时自动预测状态更新。在此示例中，我们将配置 CopilotKit 在 LLM 调用步骤进度工具时预测状态更新：
+
+                ```python title="agent.py"
+                from ag_ui.core import CustomEvent, EventType
+
+
+                @agent.tool_plain
+                def enable_document_prediction() -> CustomEvent:
+                    """启用文档状态预测。"""
+                    return CustomEvent(
+                        type=EventType.CUSTOM,
+                        name='PredictState',
+                        value=[{
+                            'state_key': 'observed_steps',
+                            'tool': 'update_steps',
+                            'tool_argument': 'steps',
+                        }]
+                    )
+                ```
+            </TailoredContentOption>
+        </TailoredContent>
+    </Step>
+    <Step>
+        ### 观察预测
+        这些预测将在 Agent 运行时发射，允许您在最终状态确定之前跟踪其进度。
+
+        ```tsx title="ui/app/page.tsx"
+        import { useAgent } from "@copilotkit/react-core/v2";
+
+        // ...
+
+        const YourMainContent = () => {
+            // 获取对预测状态和最终状态的访问权限
+            const { agent } = useAgent({ agentId: "my_agent" });
+
+            // 添加状态渲染器以观察预测
+            useAgent({
+                agentId: "my_agent",
+                render: ({ state }) => {
+                    if (!state.observed_steps?.length) return null;
+                    return (
+                        <div>
+                            <h3>当前进度：</h3>
+                            <ul>
+                                {state.observed_steps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    );
+                },
+            });
+
+            return (
+                <div>
+                    <h1>Agent 进度</h1>
+                    {agent.state?.observed_steps?.length > 0 && (
+                        <div>
+                            <h3>最终步骤：</h3>
+                            <ul>
+                                {agent.state.observed_steps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )
+        }
+        ```
+
+        <Callout type="warn" title="重要">
+          `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如快速入门中的 `my_agent`）。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试一试！
+        现在您会注意到，状态预测会在 Agent 取得进展时发射，让您在最终状态确定之前了解其工作。
+        您可以将此模式应用于 Agent 中的任何长时间运行的任务。
+    </Step>
+
+</Steps>

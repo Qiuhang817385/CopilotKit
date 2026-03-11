@@ -1,0 +1,118 @@
+---
+title: "代理上下文"
+icon: "lucide/BookA"
+description: "与您的内置代理共享应用特定的上下文。"
+---
+
+使用 `useAgentContext` 钩子与内置代理共享应用程序的状态和上下文。代理自动接收此上下文 —— 无需后端配置。
+
+## 这是什么？
+
+`useAgentContext` 钩子允许您注册将被包含在代理上下文中的应用程序特定数据。这可以是当前用户、页面内容、购物车商品或任何有助于代理提供相关响应的数据。
+
+## 何时使用？
+
+- 您希望代理了解应用程序的当前状态
+- 您需要代理引用用户特定数据（姓名、偏好、角色）
+- 代理应该知道用户所在的页面或视图
+- 您想提供特定领域的数据，而无需将其硬编码到系统提示中
+
+## 实现
+
+<Steps>
+<Step>
+### 在组件中注册上下文
+
+使用 `useAgentContext` 与代理共享任何数据：
+
+```tsx title="components/Dashboard.tsx"
+"use client"; // 仅 Next.js App Router 需要 // [!code highlight]
+import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { useState } from "react";
+
+export function Dashboard() {
+  const [user] = useState({
+    name: "Jane Smith",
+    role: "Engineering Manager",
+    team: "Platform",
+  });
+
+  const [projects] = useState([
+    { id: 1, name: "Auth Redesign", status: "in-progress" },
+    { id: 2, name: "API v2", status: "planning" },
+  ]);
+
+  // 与代理共享用户信息
+  // [!code highlight:4]
+  useAgentContext({
+    description: "The currently logged-in user",
+    value: user,
+  });
+
+  // 与代理共享项目数据
+  // [!code highlight:4]
+  useAgentContext({
+    description: "The user's active projects",
+    value: projects,
+  });
+
+  return <div>{/* Your dashboard UI */}</div>;
+}
+```
+</Step>
+
+<Step>
+### 就是这样 —— 无需后端设置
+
+与 LangGraph 不同，在 LangGraph 中您需要配置代理状态以接收上下文，内置代理会自动处理此问题。您注册的上下文将包含在代理的系统提示中，因此它可以立即引用您的应用程序数据。
+
+```
+User: "What projects am I working on?"
+Agent: "You're working on two projects:
+  1. Auth Redesign (in progress)
+  2. API v2 (planning)"
+```
+</Step>
+</Steps>
+
+## 多个上下文
+
+您可以在不同的组件中多次调用 `useAgentContext`。所有注册的上下文将被合并并发送给代理：
+
+```tsx title="components/UserInfo.tsx"
+useAgentContext({
+  description: "Current user profile",
+  value: { name: "Jane", role: "Manager" },
+});
+```
+
+```tsx title="components/PageContext.tsx"
+useAgentContext({
+  description: "The page the user is currently viewing",
+  value: { page: "settings", section: "notifications" },
+});
+```
+
+代理会看到两个上下文，并可以在响应时引用其中任何一个。
+
+## 动态上下文
+
+当底层数据更改时，上下文会自动更新：
+
+```tsx
+export function TaskList() {
+  const [tasks, setTasks] = useState([]);
+
+  // 每当任务更改时上下文更新 // [!code highlight]
+  useAgentContext({
+    description: "The user's current task list",
+    value: tasks,
+  });
+
+  return (
+    <div>
+      {/* 当添加/删除任务时，代理会看到更新后的列表 */}
+    </div>
+  );
+}
+```

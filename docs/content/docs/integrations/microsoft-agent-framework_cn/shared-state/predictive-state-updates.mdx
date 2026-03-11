@@ -1,0 +1,292 @@
+---
+title: "预测性状态更新"
+icon: "lucide/Podcast"
+description: 将正在进行的智能体状态更新流式传输到前端。
+---
+import { IframeSwitcher } from "@/components/content"
+import { TailoredContent, TailoredContentOption } from "@/components/react/tailored-content.tsx";
+import { FaWrench } from "react-icons/fa";
+
+<IframeSwitcher
+  id="predictive-state-updates-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/predictive_state_updates?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/predictive_state_updates?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了 CopilotKit 功能查看器中的预测性状态更新。
+</Callout>
+
+## 这是什么？
+
+Microsoft Agent Framework 智能体可以在 LLM 生成工具参数时通过 AG-UI 流式传输状态更新。CopilotKit 在 UI 中呈现这些更新，实现乐观、实时的渲染。我们称之为预测性状态更新。
+
+## 何时使用？
+
+当您想要实现以下目标时使用预测性状态更新：
+- 在长时间运行的操作中保持用户参与度
+- 显示逐步进度
+- 通过展示智能体当前正在做什么来建立信任，而不仅仅是在结束时展示
+- 启用智能体引导（用户可以在需要时介入）
+
+<Callout type="info" title="真实数据来源">
+当工具完成时，智能体会发出最终状态快照。任何预测性更新都应反映在最终状态中，否则将被覆盖。
+</Callout>
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 定义状态
+    我们将定义一个 `observed_steps` 数组，在智能体执行长时间运行任务时进行更新。
+
+    <Tabs groupId="language" items={[".NET", "Python"]}>
+      <Tab value=".NET">
+        ```csharp title="agent/Program.cs (节选)"
+        using System.Text.Json.Serialization;
+        public class AgentStateSnapshot
+        {
+            [JsonPropertyName("observed_steps")]
+            public List<string> ObservedSteps { get; set; } = new();
+        }
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```python title="agent/src/agent.py (节选)"
+        from typing import Dict
+
+        STATE_SCHEMA: Dict[str, object] = {
+            "observed_steps": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "已完成步骤的数组"
+            }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### 发出中间状态（基于工具的预测性更新）
+    配置 AG-UI 状态管理，将工具参数视为对 `observed_steps` 的预测性更新。随着 LLM 为工具调用流式传输参数，AG-UI 会立即发出状态增量事件。
+
+    <Tabs groupId="language" items={[".NET", "Python"]}>
+      <Tab value=".NET">
+        ```csharp title="agent/Program.cs (节选)"
+        using System.ComponentModel;
+        using System.Text.Json;
+        using System.Text.Json.Serialization;
+        using Azure.AI.OpenAI;
+        using Azure.Identity;
+        using Microsoft.Agents.AI;
+        using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+        using Microsoft.AspNetCore.Http.Json;
+        using Microsoft.Extensions.AI;
+        using Microsoft.Extensions.DependencyInjection;
+        using Microsoft.Extensions.Options;
+
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddAGUI();
+        // 注册源生成序列化上下文以实现快速、类型化的 JSON
+        builder.Services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.TypeInfoResolverChain.Add(AGUIDojoServerSerializerContext.Default));
+
+        var app = builder.Build();
+
+        string endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]!;
+        string deployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT_NAME"]!;
+
+        // 定义一个工具，LLM 可以在进度中调用以报告部分步骤
+        [Description("报告当前步骤进度。")]
+        static string StepProgress([Description("到目前为止已完成的步骤")] string[] steps)
+            => "进度已接收。";
+
+        // 使用报告工具创建基础智能体
+        var baseAgent = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+            .GetChatClient(deployment)
+            .CreateAIAgent(
+                name: "AGUIAssistant",
+                instructions: "你是一个有用的助手，可以调用 'step_progress' 工具来报告中间步骤。",
+                tools: [AIFunctionFactory.Create(StepProgress)]);
+
+        // 使用流式中间件包装，该中间件发出临时状态快照（类型化、源生成）。
+        // 有关读取流式更新并发出带有 AgentStateSnapshot 的 DataContent 的 DelegatingAIAgent 的完整示例，请参阅 Agent State 指南中的"从智能体流式传输状态"部分。
+        var jsonOptions = app.Services.GetRequiredService<IOptions<JsonOptions>>();
+        AIAgent agent = new StateStreamingAgent(baseAgent, jsonOptions.Value.SerializerOptions);
+
+        app.MapAGUI("/", agent);
+        await app.RunAsync();
+
+        // 示例：发出状态快照的流式智能体包装器（简化）
+        internal sealed class StateStreamingAgent : DelegatingAIAgent
+        {
+            private readonly JsonSerializerOptions _jsonOptions;
+            public StateStreamingAgent(AIAgent inner, JsonSerializerOptions jsonOptions) : base(inner)
+            {
+                _jsonOptions = jsonOptions;
+            }
+
+            public override async IAsyncEnumerable<AgentRunResponseUpdate> RunStreamingAsync(
+                IEnumerable<ChatMessage> messages,
+                AgentThread? thread = null,
+                AgentRunOptions? options = null,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                var observedSteps = new List<string>();
+                await foreach (var update in this.InnerAgent.RunStreamingAsync(messages, thread, options, cancellationToken))
+                {
+                    // 检查流式内容中的函数调用，并在到达时收集步骤参数
+                    foreach (var content in update.Contents)
+                    {
+                        if (content is FunctionCallContent f
+                            && string.Equals(f.Name, "step_progress", StringComparison.OrdinalIgnoreCase)
+                            && f.Arguments is JsonElement args)
+                        {
+                            if (args.TryGetProperty("steps", out var stepsElement))
+                            {
+                                if (stepsElement.Deserialize(_jsonOptions.GetTypeInfo(typeof(string[]))) is string[] steps)
+                                {
+                                    observedSteps.Clear();
+                                    foreach (var s in steps)
+                                    {
+                                        observedSteps.Add(s);
+                                    }
+                                    // 将类型化的状态快照发送到 AG-UI 流中
+                                    var snapshot = new AgentStateSnapshot { Steps = observedSteps };
+                                    byte[] stateBytes = JsonSerializer.SerializeToUtf8Bytes(
+                                        snapshot,
+                                        _jsonOptions.GetTypeInfo(typeof(AgentStateSnapshot)));
+                                    yield return new AgentRunResponseUpdate
+                                    {
+                                        Contents = [ new DataContent(stateBytes, "application/json") ]
+                                    };
+                                }
+                            }
+                        }
+                    }
+
+                    // 始终转发原始更新（文本增量 / 最终工具结果等）
+                    yield return update;
+                }
+            }
+        }
+
+        // 用于源生成 JSON 的类型化状态快照
+        internal sealed class AgentStateSnapshot
+        {
+            [JsonPropertyName("observed_steps")]
+            public List<string> Steps { get; set; } = new();
+        }
+
+        // 源生成序列化上下文（通过 ConfigureHttpJsonOptions 在上面注册）
+        [JsonSerializable(typeof(AgentStateSnapshot))]
+        [JsonSerializable(typeof(string[]))]
+        internal sealed partial class AGUIDojoServerSerializerContext : JsonSerializerContext;
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```python title="agent/src/agent.py (节选)"
+        from __future__ import annotations
+        from typing import Annotated, Dict
+        from agent_framework import ChatAgent, ChatClientProtocol, ai_function
+        from agent_framework_ag_ui import AgentFrameworkAgent
+        from pydantic import Field
+
+        # 1) 为 AG-UI 定义状态模式
+        STATE_SCHEMA: Dict[str, object] = {
+            "observed_steps": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "已完成步骤的数组"
+            }
+        }
+
+        # 2) 预测性状态映射：observed_steps <- step_progress.steps
+        PREDICT_STATE_CONFIG: Dict[str, Dict[str, str]] = {
+            "observed_steps": {
+                "tool": "step_progress",
+                "tool_argument": "steps",
+            }
+        }
+
+        # 3) LLM 将使用步骤更新调用的工具
+        @ai_function(
+            name="step_progress",
+            description="报告当前步骤进度。"
+        )
+        def step_progress(
+            steps: Annotated[list[str], Field(description="到目前为止已完成的步骤")]
+        ) -> str:
+            return "进度已接收。"
+
+        def create_agent(chat_client: ChatClientProtocol) -> AgentFrameworkAgent:
+            base = ChatAgent(
+                name="sample_agent",
+                instructions="你是一个任务执行者。使用 step_progress 报告进度。",
+                chat_client=chat_client,
+                tools=[step_progress],
+            )
+            return AgentFrameworkAgent(
+                agent=base,
+                name="CopilotKitMicrosoftAgentFrameworkAgent",
+                description="带有观察步骤预测性状态更新的智能体。",
+                state_schema=STATE_SCHEMA,
+                predict_state_config=PREDICT_STATE_CONFIG,
+                require_confirmation=False,
+            )
+        ```
+      </Tab>
+    </Tabs>
+    <Callout>
+      使用此配置，AG-UI 在模型流式传输工具参数时立即发出预测性状态更新，无需等待工具完成。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### 在客户端上观察预测
+    添加状态渲染器以在预测性 `observed_steps` 更新流式传输时观察它们。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2";
+
+    type AgentState = {
+      observed_steps: string[];
+    };
+
+    export default function Page() {
+      // 访问预测性和最终状态
+      const { agent } = useAgent({ agentId: "sample_agent" });
+
+      // 观察预测（在聊天中渲染）
+      useAgent({
+        agentId: "sample_agent",
+        render: ({ state }) => {
+          if (!state.observed_steps?.length) return null;
+          return (
+            <div>
+              <h3>当前进度：</h3>
+              <ul>
+                {state.observed_steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        },
+      });
+
+      return <div>...</div>;
+    }
+    ```
+  </Step>
+  <Step>
+    ### 试一试！
+    要求智能体执行多步骤任务（例如，"写一个简短的大纲并报告每一步的进度"）。您会看到 `observed_steps` 在工具参数流式传输时实时更新。
+  </Step>
+</Steps>
+
+

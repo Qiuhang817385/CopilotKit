@@ -1,0 +1,128 @@
+---
+title: 前端工具
+icon: "lucide/Wrench"
+description: 创建前端操作并在您的 Agent 中使用它们。
+---
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/frontend-actions-demo.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  本视频展示了将[实现](#实现)部分应用于 `npx copilotkit@latest init` 的结果。
+</Callout>
+
+## 这是什么？
+
+前端操作是强大的工具，允许您的 AI Agent 直接交互并更新应用程序的用户界面。将它们视为连接 Agent 决策能力与前端交互元素的桥梁。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 什么时候应该使用它？
+
+当您想创建真正交互式的 AI 应用程序时，前端操作是必不可少的，您的 Agent 需要：
+
+- 动态更新 UI 元素
+- 触发前端动画或过渡效果
+- 显示警告或通知
+- 修改应用程序状态
+- 以编程方式处理用户交互
+
+没有前端操作，Agent 仅限于处理和返回数据。通过实现前端操作，您可以创建丰富的交互式体验，让您的 Agent 主动驱动用户界面。
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 设置 CopilotKit
+
+        要使用前端操作，您需要先设置 CopilotKit。为简洁起见，我们在这里不介绍它。
+
+        查看我们的[快速入门指南](/ag2/quickstart)，设置完成后返回这里。
+    </Step>
+
+    <Step>
+        ### 创建前端操作
+
+        首先，您需要使用 [useFrontendTool](/reference/v1/hooks/useFrontendTool) Hook 创建一个前端操作。这里有一个简单的示例来帮助您入门，
+        用于向用户问好。
+
+        ```tsx title="page.tsx"
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          // [!code highlight:13]
+          useFrontendTool({
+            name: "sayHello",
+            description: "向用户问好",
+            available: "remote", // 可选，使其仅通过 AG-UI 对 AG2 后端可用
+            parameters: z.object({
+              name: z.string().describe("要问候的用户名称"),
+            }),
+            handler: async ({ name }) => {
+              alert(`你好，${name}！`);
+              return `已向 ${name} 问好！`;
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ###  修改您的 Agent
+        现在，我们需要修改 Agent 以访问这些前端操作。打开您的 AG2 后端文件并继续操作。
+    </Step>
+    <Step>
+        ### 通过 AG-UI 设置您的 AG2 后端
+
+        AG2 可以通过标准的 <code>/chat</code> 端点调用前端操作，通过 AG-UI 工具事件：
+
+        <Tabs groupId="language" items={['Python']} default="Python">
+            <Tab value="Python">
+                ```python title="agent.py"
+                from fastapi import FastAPI, Header
+                from fastapi.responses import StreamingResponse
+                from autogen import ConversableAgent, LLMConfig
+                from autogen.ag_ui import AGUIStream, RunAgentInput
+
+                agent = ConversableAgent(
+                    name="assistant",
+                    system_message="你是一个有用的助手。",
+                    llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+                )
+
+                stream = AGUIStream(agent)
+                app = FastAPI()
+
+                @app.post("/chat")
+                async def run_agent(
+                    message: RunAgentInput,
+                    accept: str | None = Header(None),
+                ):
+                    return StreamingResponse(
+                        stream.dispatch(message, accept=accept),
+                        media_type=accept or "text/event-stream",
+                    )
+                ```
+            </Tab>
+        </Tabs>
+
+        就是这样。您的 AG2 后端现在可以通过 AG-UI 接收 CopilotKit 发出的前端操作工具定义。
+    </Step>
+    <Step>
+        ### 试一试
+        您现在赋予了 Agent 直接调用您定义的任何 CopilotActions 的能力。这些操作将作为工具对 Agent 可用，可以在需要时使用。
+    </Step>
+
+</Steps>

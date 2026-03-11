@@ -1,0 +1,56 @@
+---
+title: 概述
+icon: "lucide/Plane"
+---
+import { YouTubeVideo } from "@/components/react/youtube-video";
+import { FaGithub } from "react-icons/fa";
+import { PiMonitor } from "react-icons/pi";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+# AI 旅行智能体助手教程
+
+<div>
+  <div>**完成时间：** 20 分钟</div>
+  <div>**难度：** 中等</div>
+</div>
+
+<br />
+
+<YouTubeVideo videoId="9v3kXiOY3vg" defaultPlaybackRate={1.25} />
+
+## 你将学到什么
+
+在本教程中，你将使用一个智能体助手来增强一个简单的旅行应用程序。你将学习：
+
+- 💡 什么是智能体助手以及如何使用它来增强你的应用程序
+- 💡 如何使用 `useCoAgent` 在 UI 和智能体执行之间实现共享状态
+- 💡 如何使用 `useCoAgentStateRender` 实现人机协同工作流
+- 💡 如何渲染智能体执行的中间状态
+
+<Frame>
+  <video controls autoPlay muted loop 
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/demo.mp4"
+    alt="旅行应用演示" 
+    className="w-full h-full [h-800px] shadow-xl">
+  </video>
+</Frame>
+
+<div className="flex flex-row gap-2">
+  <Button size="lg" asChild className="flex gap-2 items-center">
+    <Link href="https://github.com/CopilotKit/CopilotKit/tree/main/examples/coagents-travel?ref=travel-tutorial" className="no-underline" target="_blank">
+      <FaGithub className="w-6 h-6 mr-2" />
+      <span>在 GitHub 上查看</span>
+    </Link>
+  </Button>
+
+  <Button size="lg" asChild className="flex gap-2 items-center">
+    <Link href="https://examples-coagents-ai-travel-app.vercel.app/" className="no-underline" target="_blank">
+      <PiMonitor className="w-6 h-6 mr-2" />
+      <span>查看实时应用</span>
+    </Link>
+  </Button>
+</div>
+
+
+在下一步中，我们将检出代码库、安装依赖项并在本地启动项目。

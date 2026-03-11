@@ -1,0 +1,78 @@
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import {
+    TailoredContent,
+    TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+
+
+<TailoredContent
+    className="step"
+    id="impl"
+>
+    <TailoredContentOption
+        id="graph"
+        title="自定义图谱"
+        description="我正在使用自定义图谱，自己定义节点和边。"
+    >
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                async def agent_node(state: YourAgentState, config: RunnableConfig):
+                # 从 copilotkit 属性访问工具
+
+                tools = state.get("copilotkit", {}).get("actions", []) # [!code highlight]
+                model = ChatOpenAI(model="gpt-5.2").bind_tools(tools)
+
+                # ...
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript title="agent-js/src/agent.ts"
+                async function agentNode(state: YourAgentState, config: RunnableConfig): Promise<YourAgentState> {
+                // 从 copilotkit 属性访问工具
+
+                const tools = state.copilotkit?.actions; // [!code highlight]
+                const model = ChatOpenAI({ model: 'gpt-5.2' }).bindTools(tools);
+
+                // ...
+                }
+                ```
+            </Tab>
+        </Tabs>
+    </TailoredContentOption>
+    <TailoredContentOption
+        id="prebuilt"
+        title="预构建智能体"
+        description={`我正在使用预构建的智能体，例如 LangGraph 的 "create_agent"`}
+    >
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from langchain.agents import create_agent
+                from copilotkit import CopilotKitMiddleware, CopilotKitState # [!code highlight]
+
+                graph = create_agent( # 同样适用于 "create_react_agent" 或类似选项
+                    model="openai:gpt-5.2",
+                    tools=[],  # 后端工具放在这里
+                    middleware=[CopilotKitMiddleware()], # [!code highlight]
+                    system_prompt="You are a helpful assistant.",
+                    state_schema=CopilotKitState # [!code highlight]
+                )
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript title="agent-js/src/agent.ts"
+                import { createAgent } from "langchain";
+                import { copilotkitMiddleware } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+                export const agenticChatGraph = createAgent({ // 同样适用于 "create_react_agent" 或类似选项
+                    model: "openai:gpt-5.2",
+                    tools: [],  // 后端工具放在这里
+                    middleware: [copilotkitMiddleware], // [!code highlight]
+                    systemPrompt: "You are a helpful assistant.",
+                });
+                ```
+            </Tab>
+        </Tabs>
+    </TailoredContentOption>
+</TailoredContent>

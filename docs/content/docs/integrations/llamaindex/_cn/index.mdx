@@ -1,0 +1,58 @@
+---
+title: 介绍
+icon: "custom/llamaindex"
+description: 通过 AG-UI 使用 CopilotKit 将您的 LlamaIndex 智能体带给用户。
+hideHeader: true
+---
+import { customIcons } from "@/lib/icons/custom-icons";
+import { FrameworkOverview } from "@/components/content/landing-pages/framework-overview";
+
+<FrameworkOverview
+  frameworkName="LlamaIndex"
+  frameworkIcon={<customIcons.llamaindex className="h-10 w-10 text-foreground" />}
+  header="将您的 LlamaIndex 智能体带给用户"
+  subheader="使用 CopilotKit 和 AG-UI 为您的 LlamaIndex 智能体提供真实的用户交互性。构建丰富、交互式、智能体驱动的应用程序。"
+  bannerVideo="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/overview.mp4"
+  guideLink="/llamaindex/quickstart"
+  initCommand="npx copilotkit@latest init"
+  featuresLink="https://feature-viewer.copilotkit.ai/llama-index/feature/agentic_chat"
+  supportedFeatures={[
+    // TODO: Re-add once the dojo example is updated and works
+    /*{
+      title: "Generative UI",
+      description: "Render your agent's state, progress, outputs, and tool calls with custom UI components in real-time. Bridges the gap between AI agents and user interfaces.",
+      documentationLink: "/llamaindex/generative-ui",
+      demoLink: "https://feature-viewer.copilotkit.ai/llama-index/feature/tool_based_generative_ui",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/haiku.mp4"
+    },*/
+    {
+      title: "人机协同",
+      description: "在关键检查点使用户能够引导智能体。结合 AI 和人类判断的最佳优势，实现更可靠和可控的智能体行为。",
+      documentationLink: "/llamaindex/human-in-the-loop",
+      demoLink: "https://examples-coagents-ai-travel-app.vercel.app/",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+    },
+    {
+      title: "共享状态",
+      description: "保持您的智能体和应用程序同步。您的智能体可以看到应用程序中的所有内容，您的应用程序可以实时响应您的智能体。",
+      documentationLink: "/llamaindex/shared-state",
+      demoLink: "https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+    }
+  ]}
+  architectureImage="https://cdn.copilotkit.ai/docs/copilotkit/images/generic-agui-architecture.png"
+  liveDemos={[
+    {
+      type: "saas",
+      title: "SaaS Copilot",
+      description: "一个由 AI 智能体增强的传统 SaaS 应用程序。这些 Copilot 无缝集成到现有工作流中，为特定业务流程提供智能协助。非常适合客户服务、销售自动化、项目管理和领域特定任务，在这些任务中用户需要引导的、分步的 AI 协助。",
+      iframeUrl: "https://examples-coagents-ai-travel-app.vercel.app?copilotOpen=true"
+    },
+    {
+      type: "canvas",
+      title: "Canvas Copilot",
+      description: "一个无限画布界面，用户在其中与 AI 智能体在空间、视觉环境中协作。这些 Copilot 擅长研究、头脑风暴、内容创作和复杂问题解决，在这些场景中信息需要以非线性、创造性的方式组织、连接和探索。",
+      iframeUrl: "https://examples-coagents-research-canvas-ui.vercel.app/"
+    }
+  ]}
+/>

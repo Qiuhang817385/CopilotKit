@@ -1,0 +1,156 @@
+---
+title: 读取代理状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时代理状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra-agent-local/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra-agent-local/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/mastra/feature/shared_state) 中演示从共享状态读取。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 以及原生应用程序 UX 中使用实时代理状态。
+
+<Callout type="info" title="重要">
+  本指南假设您将 Mastra 代理嵌入到 Copilot Runtime 中，如下所示。
+
+  ```ts
+  const runtime = new CopilotRuntime({
+    agents: MastraAgent.getLocalAgents({ mastra }),
+  });
+  ```
+
+  如果您使用的是**远程 Mastra 代理**，此功能将**无法工作**。
+</Callout>
+
+## 何时应该使用此功能？
+
+当您想向用户提供关于工作内存的反馈时，可以使用此功能。随着代理状态的更新，您可以在应用程序中本地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义代理状态
+    Mastra 有高级的[工作内存概念](https://mastra.ai/en/docs/memory/working-memory)来为您的代理提供有状态性。CopilotKit 利用 Mastra 的工作内存概念，让您能够实现代理和应用程序之间的共享状态。
+
+    为代理提供工作内存就像为其提供 Zod 模式一样简单。
+
+    ```ts title="mastra/agents/language-agent.ts"
+    import { openai } from "@ai-sdk/openai";
+    import { Agent } from "@mastra/core/agent";
+    import { LibSQLStore } from "@mastra/libsql";
+    import { z } from "zod";
+    import { Memory } from "@mastra/memory";
+
+    // [!code highlight:4]
+    // 1. 定义代理状态模式
+    export const AgentStateSchema = z.object({
+      language: z.enum(["english", "spanish"]),
+    });
+
+    // 2. 从模式推断代理状态类型
+    export const AgentState = z.infer<typeof AgentStateSchema>;
+
+    // 3. 创建代理
+    export const languageAgent = new Agent({
+      name: "Language Agent",
+      model: openai("gpt-5.2"),
+      instructions: "Always communicate in the preferred language of the user as defined in your working memory. Do not communicate in any other language.",
+      memory: new Memory({
+        storage: new LibSQLStore({ id: "mastra-storage", url: ":memory:" }),
+        options: {
+          // [!code highlight:4]
+          workingMemory: {
+            enabled: true,
+            schema: AgentStateSchema,
+          },
+        },
+      }),
+    });
+    ```
+  </Step>
+  <Step>
+    ### 使用 `useAgent` 钩子
+    代理连接并运行后，剩下要做的就是调用 `useAgent` 钩子，传递代理名称，并可选择提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    import { AgentState } from "@/mastra/agents/language-agent";
+
+    function YourMainContent() {
+      // [!code highlight:5]
+      const { agent } = useAgent({
+        agentId: "your-mastra-agent-name",
+        // 可选地提供类型安全的初始状态
+        initialState: { language: "english" }
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见，省略了样式
+        <div>
+          <h1>Your main content</h1>
+          {/* [!code highlight:1] */}
+          <p>Language: {agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当工作内存变化时会自动更新。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    随着代理状态更新，您的 `state` 变量会自动随之更新！在这种情况下，您会看到语言设置为 "english"，因为这是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染代理状态
+
+您还可以在聊天 UI 中渲染工作内存。这对于以更情境化的方式向用户告知工作内存很有用。为此，您可以使用带有 `render` 函数的 `useAgent` 钩子。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义代理状态类型，应与代理的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+}
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "your-mastra-agent-name",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>Language: {state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当工作内存变化时会自动更新。
+</Callout>

@@ -1,0 +1,85 @@
+---
+title: "第 5 步：人机协同"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+现在我们已经能够与智能体聊天，我们可以继续实现人机协同功能。这是用户可以审查智能体输出并提供反馈的地方。我们将通过允许用户在开展研究之前审查和批准大纲来在我们的应用程序中实现这一点。
+
+<Steps>
+<Step>
+## 了解人机协同
+
+在 LangGraph 中，当前建议的实现人机协同的方式是使用 [interrupt](https://docs.langchain.com/oss/python/langgraph/interrupts) 方法。调用此函数将在调用站点暂停节点，并使用用户的决策重新运行节点。你可以在[这里](https://docs.langchain.com/langsmith/interrupt-concurrent)了解更多关于 interrupt 的信息。
+
+总而言之，这个过程看起来像这样：
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-hitl-infographic.png" alt="人机协同" />
+</Frame>
+
+所有这一切的实现实际上相当简单，但了解它们如何组合在一起是关键。
+</Step>
+<Step>
+## 向前端添加 `useLangGraphInterrupt`
+
+如果你还记得我们启动智能体的时候，interrupt 会在需要审查提议的研究大纲时停止节点。
+
+CopilotKit 允许我们渲染一个 UI 来获取用户对此 interrupt 的决策，并通过 `useLangGraphInterrupt` 钩子做出相应的响应。
+
+在我们的 `page.tsx` 文件中，添加以下代码。
+```tsx title="frontend/src/app/page.tsx"
+// ...
+import { useLangGraphInterrupt } from "@copilotkit/react-core/v2"; // [!code ++]
+// ...
+
+export default function HomePage() {
+    // ...
+    const { state: researchState, setResearchState } = useResearch()
+
+    const streamingSection = useStreamingContent(researchState);
+
+    // [!code ++:12]
+    useLangGraphInterrupt<Proposal>({
+      render: ({ resolve, event }) => {
+        return <ProposalViewer
+          proposal={event.value}
+          onSubmit={(approved, proposal) => resolve(
+            JSON.stringify({
+              ...proposal,
+              approved,
+            })
+          )}
+        />
+      }
+    })
+    // ...
+}
+```
+
+现在，当 LangGraph 被中断时，`ProposalViewer` 组件将向用户渲染，显示 `event.value` 作为提议。提交时，将调用钩子的 `resolve` 函数并传入用户的决策。
+
+<Callout>
+在 `frontend/src/components/ProposalViewer.tsx` 文件中查看 `ProposalViewer` 组件代码以获取更多关于渲染的详细信息。
+
+它只是一个带有样式、表单和提交按钮的标准 React 组件。
+</Callout>
+</Step>
+</Steps>
+
+## 回顾
+真的就这么简单！现在，我们已经为我们的智能体实现了人机协同功能。回顾一下，我们做了以下工作：
+- 了解了 LangGraph 中的人机协同。
+- 在我们的应用程序中添加了 `useLangGraphInterrupt` 钩子。
+- 向用户渲染了一个 `ProposalViewer` 组件在聊天中
+
+尝试让智能体研究一些东西，比如狗。最终你会看到它向你询问关于提议的反馈。
+
+```
+请研究一下狗！
+```
+
+<Frame className="mt-0">
+  <ImageZoom className="mt-0" src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-5-finish.png" alt="CopilotCloud API 密钥" height={1000} width={1000} />
+</Frame>
+
+现在，我们可以从头到尾完整地运行我们的智能体来开展研究。但是，你可能会注意到研究完成时并没有在右侧窗口中显示。在下一步中，我们将利用 CoAgent 的共享状态概念来在右侧窗口中显示研究内容。

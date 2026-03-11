@@ -1,0 +1,209 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染代理的状态。
+---
+
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  此视频演示了应用于我们的 [coagents 入门
+  项目](https://github.com/CopilotKit/CopilotKit/tree/main/examples/coagents-starter-crewai-flows)的
+  [实现](#实现)部分。
+</Callout>
+
+## 这是什么？
+
+所有 CrewAI Flow 代理都是有状态的。这意味着随着您的代理在节点之间推进，一个状态对象在它们之间传递，保留
+会话的整体状态。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为**代理生成式 UI**。
+
+## 什么时候应该使用它？
+
+在 UI 中渲染代理的状态在您想向用户提供有关会话整体状态的反馈时很有用。一个很好的例子是
+用户和代理一起解决问题的情况。代理可以在其状态中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并将您的 CrewAI Flow 连接到 CopilotKit
+    首先，您需要确保有一个正在运行的 CrewAI Flow。如果您还没有这样做，可以按照[入门指南](/crewai-flows/quickstart)进行操作
+
+    本指南使用 [CoAgents 入门仓库](https://github.com/CopilotKit/CopilotKit/tree/main/examples/coagents-starter-crewai-flows)作为起点。
+
+  </Step>
+  <Step>
+    ### 定义您的代理状态
+    如果您不熟悉 CrewAI，您的流程是有状态的。当您通过函数推进时，一个状态对象在它们之间更新。CopilotKit
+    允许您轻松地在应用程序中渲染此状态。
+
+    为了本指南的目的，假设我们的状态在我们的代理中看起来像这样。
+
+    <Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+        <Tab value="Python">
+          ```python title="agent.py"
+          # ...
+          from copilotkit.crewai import CopilotKitState # 继承自 MessagesState
+          # ...
+
+          # 这是代理的状态。
+          # 它继承了来自 CopilotKit 的 CopilotKitState 属性。
+          class AgentState(CopilotKitState):
+              searches: list[dict]
+          ```
+        </Tab>
+    </Tabs>
+
+  </Step>
+  <Step>
+    ### 模拟状态更新
+    接下来，让我们在代理中编写一些逻辑来模拟发生的状态更新。
+
+    <Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from crewai.flow.flow import start
+        from litellm import completion
+        from copilotkit.crewai import copilotkit_stream, CopilotKitState, copilotkit_emit_state
+        import asyncio
+        from typing import TypedDict
+
+        class Searches(TypedDict):
+            query: str
+            done: bool
+
+        class AgentState(CopilotKitState):
+            searches: list[Searches] = [] # [!code highlight]
+
+        @start
+        async def chat(self):
+            self.state.searches = [
+                {"query": "初始研究", "done": False},
+                {"query": "检索来源", "done": False},
+                {"query": "形成答案", "done": False},
+            ]
+            await copilotkit_emit_state(self.state)
+
+            # 模拟状态更新 # [!code highlight:4]
+            for search in self.state.searches:
+                await asyncio.sleep(1)
+                search["done"] = True
+                await copilotkit_emit_state(self.state)
+
+            # 运行模型以生成响应
+            response = await copilotkit_stream(
+                completion(
+                    model="openai/gpt-5.2",
+                    messages=[
+                        {"role": "system", "content": "你是一个有帮助的助手。"},
+                        *self.state.get("messages", [])
+                    ],
+                    stream=True
+                )
+            )
+        ```
+      </Tab>
+    </Tabs>
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染代理的状态
+    现在我们可以利用带有 `render` 函数的 `useAgent` 在**聊天中**渲染代理的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义代理的状态，应与您的 Flow 中代理的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略了样式
+      useAgent({
+        agentId: "sample_agent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天之外渲染状态
+    您还可以在**聊天之外**渲染代理的状态。当您想在聊天之外的任何其他地方渲染代理的状态时，这很有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义代理的状态，应与您的 Flow 中代理的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+  </Step>
+  <Step>
+    ### 试一试！
+
+    您现在已经创建了一个将在聊天中渲染代理状态的组件。
+
+  </Step>
+</Steps>

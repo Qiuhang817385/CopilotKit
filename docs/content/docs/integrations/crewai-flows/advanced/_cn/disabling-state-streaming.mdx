@@ -1,0 +1,57 @@
+---
+title: "禁用状态流式传输"
+icon: "lucide/Cog"
+description: "精细控制向前端流式传输的内容。"
+---
+
+## 这是什么？
+
+默认情况下，当您使用 `copilotkit_stream` 时，CopilotKit 会将您的消息和工具调用流式传输到前端。您可以通过选择何时使用 `copilotkit_stream` 与直接调用 `completion` 来禁用此功能。
+
+## 什么时候应该使用它？
+
+有时，您想暂时禁用流式传输——例如，LLM 可能正在做一些当前用户不应该看到的事情，比如发出与 HR 系统中其他员工相关的工具调用或问题。
+
+## 实现
+
+### 禁用所有流式传输
+
+您可以通过选择性地将调用 `completion` 的代码包装在 `copilotkit_stream` 中来控制是否流式传输消息或工具调用。
+
+<Tabs groupId="language_crewai-flows_agent" items={['Python']} default="Python" persist>
+    <Tab value="Python">
+        ```python
+        from copilotkit.crewai import copilotkit_stream
+        from typing import cast, Any
+        from litellm import completion
+
+        @start()
+        async def start(self):
+
+            # 1) 不发出消息或工具调用，保持 LLM 调用的私密性。
+            response = completion(
+                model="openai/gpt-5.2",
+                messages=[
+                    {"role": "system", "content": "你是一个有用的助手"},
+                    *self.state.messages
+                ],
+            )
+            message = response.choices[0].message
+
+            # 2) 或者使用 `copilotkit_stream` 包装 LLM 调用以流式传输消息令牌。
+            #    注意我们将 `stream=True` 传递给内部的 `completion` 调用。
+            response = await copilotkit_stream(
+                completion(
+                    model="openai/gpt-5.2",
+                    messages=[
+                        {"role": "system", "content": "你是一个有用的助手"},
+                        *self.state.messages
+                    ],
+                    stream=True
+                )
+            )
+            message = cast(Any, response).choices[0]["message"]
+        ```
+    </Tab>
+
+</Tabs>

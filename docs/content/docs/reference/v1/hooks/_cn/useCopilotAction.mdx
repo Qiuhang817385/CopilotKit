@@ -1,0 +1,196 @@
+---
+title: "useCopilotAction"
+description: "useCopilotAction 钩子允许您的 Copilot 在应用程序中执行操作。"
+---
+
+<Callout type="warning">
+  `useCopilotAction` 仍然受支持，但我们建议迁移到 v2 API 的 [`useFrontendTool`](/reference/v2/hooks/useFrontendTool)。
+</Callout>
+
+<br />
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/use-copilot-action/useCopilotAction.gif" width="500" />
+
+`useCopilotAction` 是一个 React 钩子，您可以在应用程序中使用它来提供
+可由 AI 调用的自定义操作。本质上，它允许 Copilot 根据用户的交互
+和需求在聊天期间上下文地执行这些操作。
+
+其工作原理如下：
+
+使用 `useCopilotAction` 设置 Copilot 可以调用的操作。为了向 Copilot 提供更多上下文，您可以为其提供 `description`（例如解释操作的作用、在什么条件下可以调用等）。
+
+然后定义操作的参数，可以是简单的，例如字符串或数字等原始类型，
+或复杂的，例如对象或数组。
+
+最后，提供一个接收参数并返回结果的 `handler` 函数。
+CopilotKit 自动处理参数类型推断，因此您可以免费获得类型安全
+和自动完成。
+
+要为操作渲染自定义 UI，您可以提供 `render()` 函数。此函数
+允许您渲染自定义组件或返回要显示的字符串。
+
+## 用法
+
+### 简单用法
+
+```tsx
+useCopilotAction({
+  name: "sayHello",
+  description: "Say hello to someone.",
+  parameters: [
+    {
+      name: "name",
+      type: "string",
+      description: "name of the person to say greet",
+    },
+  ],
+  handler: async ({ name }) => {
+    alert(`Hello, ${name}!`);
+  },
+});
+```
+
+## 生成式 UI
+
+此钩子使您能够动态生成 UI 元素并在 Copilot 聊天中渲染它们。有关更多信息，请查看 [生成式 UI](/generative-ui/your-components/display-only) 页面。
+
+## 参数
+
+<PropertyReference name="action" type="Action" required>
+  提供给 Copilot 的函数。参见 [Action](#action)。
+
+    <PropertyReference name="name" type="string" required>
+      操作的名称。
+    </PropertyReference>
+
+    <PropertyReference name="handler" type="(args) => Promise<any>" required>
+      操作的处理程序。
+    </PropertyReference>
+
+    <PropertyReference name="description" type="string">
+      操作的描述。用于指导 Copilot 如何使用
+      该操作。
+    </PropertyReference>
+
+    <PropertyReference name="available" type="'enabled' | 'disabled' | 'remote'">
+      使用此属性控制操作何时对 Copilot 可用。设置为 `"remote"` 时，操作
+      仅对远程 Agent 可用。
+    </PropertyReference>
+
+    <PropertyReference name="followUp" type="boolean" default="true">
+        是否将函数调用的结果报告给 LLM，然后 LLM 将提供后续响应。传递 `false` 以禁用
+    </PropertyReference>
+
+    <PropertyReference name="parameters" type="Parameter[]">
+      操作的参数。参见 [Parameter](#parameter)。
+
+      <PropertyReference name="name" type="string" required>
+        参数的名称。
+      </PropertyReference>
+
+      <PropertyReference
+        name="type"
+        type="string"
+        required
+      >
+        参数的类型。其中之一：
+        - `"string"`
+        - `"number"`
+        - `"boolean"`
+        - `"object"`
+        - `"object[]"`
+        - `"string[]"`
+        - `"number[]"`
+        - `"boolean[]"`
+      </PropertyReference>
+
+      <PropertyReference name="description" type="string">
+        参数的描述。用于指导 Copilot 了解
+        此参数的用途。
+      </PropertyReference>
+
+      <PropertyReference name="enum" type="string[]">
+        对于字符串参数，您可以提供可能的值数组。
+      </PropertyReference>
+
+      <PropertyReference name="required" type="boolean">
+        参数是否必需。默认为 true。
+      </PropertyReference>
+
+      <PropertyReference name="attributes">
+      如果参数是复杂类型，即 `object` 或 `object[]`，此字段
+      允许您定义对象的属性。例如：
+      ```js
+      {
+        name: "addresses",
+        description: "The addresses extracted from the text.",
+        type: "object[]",
+        attributes: [
+          {
+            name: "street",
+            type: "string",
+            description: "The street of the address.",
+          },
+          {
+            name: "city",
+            type: "string",
+            description: "The city of the address.",
+          },
+          // ...
+        ],
+      }
+      ````
+      </PropertyReference>
+    </PropertyReference>
+
+    <PropertyReference name="render" type="string | (props: ActionRenderProps<T>) => string">
+      Render 允许您定义要渲染的自定义组件或字符串，而不是
+      默认值。您可以传入字符串或接收以下 props 的函数：
+
+      <div className="ml-8">
+        <PropertyReference name="status" type="'inProgress' | 'executing' | 'complete'">
+          - `"inProgress"`：参数动态流式传输到函数，允许您实时调整 UI。
+          - `"executing"`：操作处理程序正在执行。
+          - `"complete"`：操作处理程序已完成执行。
+        </PropertyReference>
+
+        <PropertyReference name="args" type="T">
+          实时传递给操作的参数。当状态为 `"inProgress"` 时，它们
+          可能不完整。
+        </PropertyReference>
+
+        <PropertyReference name="result" type="any">
+          操作返回的结果。仅在状态为 `"complete"` 时可用。
+        </PropertyReference>
+      </div>
+    </PropertyReference>
+
+    <PropertyReference name="renderAndWaitForResponse" type="(props: ActionRenderPropsWait<T>) => React.ReactElement">
+      这与 `render` 类似，但在 props 中提供了一个 `respond` 函数，您必须使用用户的响应调用该函数。该组件将保持渲染状态，直到调用 `respond`。响应将作为结果传递给操作处理程序。
+      <div className="ml-8">
+        <PropertyReference name="status" type="'inProgress' | 'executing' | 'complete'">
+          - `"inProgress"`：参数动态流式传输到函数，允许您实时调整 UI。
+          - `"executing"`：操作处理程序正在执行。
+          - `"complete"`：操作处理程序已完成执行。
+        </PropertyReference>
+
+        <PropertyReference name="args" type="T">
+          实时传递给操作的参数。当状态为 `"inProgress"` 时，它们
+          可能不完整。
+        </PropertyReference>
+
+        <PropertyReference name="respond" type="(result: any) => void">
+          必须使用用户的响应调用的函数。响应将作为结果传递给操作处理程序。
+          仅在状态为 `"executing"` 时可用。
+        </PropertyReference>
+
+        <PropertyReference name="result" type="any">
+          操作返回的结果。仅在状态为 `"complete"` 时可用。
+        </PropertyReference>
+      </div>
+    </PropertyReference>
+
+</PropertyReference>
+
+<PropertyReference name="dependencies" type="any[]">
+  可选的依赖项数组。
+</PropertyReference>

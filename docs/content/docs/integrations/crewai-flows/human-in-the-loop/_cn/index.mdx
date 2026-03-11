@@ -1,0 +1,61 @@
+---
+title: Human in the Loop (HITL)
+icon: "lucide/User"
+description: 让您的智能体和用户在复杂任务上进行协作。
+---
+
+import { CTACards } from "@/components/react/cta-cards";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+{/* TODO-DOCS-CREWAI-FLOWS: Add Travel App Example */}
+{/* <Callout>
+This video shows an example of our [AI Travel App](/langgraph/tutorials/ai-travel-app) using HITL to get user feedback.
+
+</Callout> */}
+
+## 什么是 Human-in-the-Loop (HITL)？
+
+Human-in-the-loop (HITL) 允许智能体在执行过程中请求人工输入或批准，使 AI 系统更加可靠和可信。这种模式对于构建需要处理复杂决策或需要人类判断的行动的 AI 应用程序至关重要。
+
+<Frame className="my-0">
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-hitl-infographic.png"
+    alt="Agentic Copilot Human in the Loop"
+    className="mt-4 mb-0 shadow-md"
+  />
+</Frame>
+
+## 什么时候应该使用它？
+
+HITL 将 AI 的效率与人类的判断相结合，创建一个既强大又可靠的系统。主要优势包括：
+
+- **质量控制**：在关键决策点进行人工监督
+- **边缘情况**：优雅地处理低置信度情况
+- **专家输入**：在需要时利用人类专业知识
+- **可靠性**：更强大的现实世界应用系统
+
+## 如何使用？
+
+详细了解 CrewAI Flows 中的 HITL 方法。
+
+<CTACards
+  columns={1}
+  cards={[
+    {
+      iconKey: "share2",
+      title: "基于 Flow",
+      description:
+        "利用 CrewAI Flows 创建 Human-in-the-Loop 工作流。",
+      href: "/crewai-flows/human-in-the-loop/flow",
+    },
+  ]}
+/>

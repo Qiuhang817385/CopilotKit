@@ -1,0 +1,120 @@
+---
+title: "第 2 步：LangGraph 智能体"
+---
+
+在我们开始集成 LangGraph 智能体之前，让我们先了解它的工作原理。
+
+为了本教程的目的，我们不会从头开始构建 LangGraph。
+相反，我们将使用在 `agent/` 目录中构建的 LangGraph。
+
+<Callout>
+如果你对构建 LangGraph 智能体的分步指南感兴趣，可以查看
+[LangGraph 快速入门指南](https://docs.langchain.com/oss/python/langgraph/quickstart)。
+</Callout>
+
+让我们先了解一下 LangGraph 智能体的工作原理，然后再将其集成到应用程序中。
+
+<Steps>
+<Step>
+### 安装 LangGraph Studio
+
+LangGraph Studio 是一个用于可视化和调试 LangGraph 工作流的工具。使用 CopilotKit 并不需要它，但强烈建议用于了解 LangGraph 的工作原理。
+
+要安装 LangGraph Studio，请查看[设置指南](https://studio.langchain.com/)。
+
+</Step>
+<Step>
+### 获取 API 密钥
+
+对于此应用程序，我们需要两个 API 密钥：
+- OpenAI API 密钥：你可以在[这里](https://platform.openai.com/api-keys)的 OpenAI 控制台获取 API 密钥。
+- Google Maps API 密钥：这可以从[这里](https://developers.google.com/maps/documentation/places/web-service/get-api-key#creating-api-keys)的 Google Cloud 控制台获取。
+
+</Step>
+<Step>
+### 设置 .env 文件
+
+在一个新的终端中，导航到 agent 目录。
+
+```shell
+cd examples/coagents-travel/agent
+```
+
+现在在那里创建一个 .env 文件。
+
+```shell
+touch .env
+```
+
+创建完成后，我们将把你的 OPENAI_API_KEY 和 GOOGLE_MAPS_API_KEY 添加到文件中。
+
+```txt title=".env"
+OPENAI_API_KEY=<你的-openai-api-密钥>
+GOOGLE_MAPS_API_KEY=<你的-google-maps-api-密钥>
+```
+
+</Step>
+<Step>
+### 可视化 LangGraph 智能体
+
+安装 LangGraph Studio 后，你可以在 Studio 中打开 `examples/coagents-travel/agent/` 目录来运行和可视化 LangGraph 智能体。
+
+智能体需要一些时间来加载，因为要进行设置，但完成后看起来会像这样。
+
+![LangGraph Studio](https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/lgs-overview.png)
+
+
+</Step>
+<Step>
+
+### 了解 LangGraph 智能体
+
+当我们将这个智能体构建为智能体体验时，我们需要了解它的工作原理。这里涉及的关键概念是：
+
+- **状态**：状态是智能体用于做出和传达决策的数据。你可以在屏幕左下角看到所有状态变量。
+- **节点**：节点是 LangGraph 智能体的构建块。它们是智能体完成任务将采取的步骤。在这种情况下，我们有用于**聊天**、**搜索**和对行程进行**操作**的节点。
+- **边**：边是连接节点的箭头。它们定义了智能体如何从一个节点移动到下一个节点的逻辑。它们在代码中定义，条件逻辑通过 `route` 函数处理。
+- **中断**：中断是一种允许用户与智能体一起工作并审查其决策的方式。在这种情况下，我们在 **trips_node** 之前有一个**中断**，阻止智能体继续执行，直到用户批准智能体的操作。
+
+</Step>
+<Step>
+### 测试 LangGraph 智能体
+
+你可以通过向 `messages` 状态变量添加一条消息，然后点击"提交"来向智能体发送消息。
+
+你会看到智能体在聊天中响应，并通过各个节点适当引导。在这种情况下，你应该注意到智能体调用 `search_node`，一旦收到响应，就会通过 `trips_node` 根据其发现向状态添加新行程。
+
+</Step>
+<Step>
+### 了解断点
+智能体助手的一个非常重要的概念是[人机协同](/langgraph/human-in-the-loop)。这是指智能体应该能够暂停并等待人工审查和批准其决策。
+LangGraph 通过使用**断点**来实现这一点。让我们看看实际操作中的样子。
+
+首先，点击 `trips_node` 并选择 `interrupt_after` 选项。
+
+现在，尝试让智能体再次创建新行程。你会注意到它现在通过 `continue` 按钮在继续之前请求批准。
+
+![LangGraph Studio 进度](https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/lgs-progress.png)
+
+在继续之前，确保移除 `interrupt_after` 选项，如果不这样做，稍后会出问题。
+
+</Step>
+<Step>
+### 保持 LangGraph Studio 运行
+
+为了创建一个智能体助手，你需要在某个地方运行你的 LangGraph 智能体。在我们的例子中，LangGraph Studio 在本地为我们运行它。我们可以通过查看应用程序左下角的 URL 来看到这一点。
+
+![LangGraph Studio URL](https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/ai-travel-app/lgs-url.png)
+
+在本教程的后面，我们将使用此 URL 将 CopilotKit 连接到 LangGraph 智能体。
+
+</Step>
+</Steps>
+我们做了什么：
+- 安装了 LangGraph Studio
+- 设置了 .env 文件
+- 可视化了 LangGraph 智能体
+- 测试了 LangGraph 智能体
+- 保持 LangGraph Studio 运行
+
+在下一步中，我们将把 LangGraph 智能体集成到应用程序中作为智能体助手。

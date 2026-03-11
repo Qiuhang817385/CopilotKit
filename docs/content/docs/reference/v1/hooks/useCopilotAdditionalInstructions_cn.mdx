@@ -1,0 +1,69 @@
+---
+title: "useCopilotAdditionalInstructions"
+description: "useCopilotAdditionalInstructions Hook 允许你向 Agent 提供额外的指令。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-core/src/hooks/use-copilot-additional-instructions.ts
+  */
+}
+
+<Callout type="warning">
+  `useCopilotAdditionalInstructions` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useAgentContext`](/reference/v2/hooks/useAgentContext)。
+</Callout>
+
+`useCopilotAdditionalInstructions` 是一个 React Hook，可向 Copilot 提供额外的指令。
+ 
+## 用法
+ 
+### 简单用法
+ 
+在最基本的用法中，useCopilotAdditionalInstructions 接受一个字符串参数，
+表示要添加到 Copilot 的指令。
+ 
+```tsx
+import { useCopilotAdditionalInstructions } from "@copilotkit/react-core";
+ 
+export function MyComponent() {
+  useCopilotAdditionalInstructions({
+    instructions: "不要回答有关天气的问题。",
+  });
+}
+```
+ 
+### 条件用法
+ 
+你还可以根据应用的状态有条件地添加指令。
+ 
+```tsx
+import { useCopilotAdditionalInstructions } from "@copilotkit/react-core";
+ 
+export function MyComponent() {
+  const [showInstructions, setShowInstructions] = useState(false);
+ 
+  useCopilotAdditionalInstructions({
+    available: showInstructions ? "enabled" : "disabled",
+    instructions: "不要回答有关天气的问题。",
+  });
+}
+```
+
+## 参数
+
+<PropertyReference name="instructions" type="string" required > 
+要添加到 Copilot 的指令。将按如下方式添加到指令中：
+ 
+  ```txt
+  你是一个有用的助手。
+  此外，请遵循以下指令：
+  - 不要回答有关天气的问题。
+  - 不要回答有关股市的问题。
+  ```
+</PropertyReference>
+
+<PropertyReference name="available" type="'enabled' | 'disabled'"  > 
+指令是否对 Copilot 可用。
+</PropertyReference>

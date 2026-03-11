@@ -1,0 +1,166 @@
+---
+title: 人机协同
+icon: "lucide/User"
+description: 创建前端工具并在您的智能体框架智能体中使用它们。
+---
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/microsoft-agent-framework/run-and-connect.mdx"
+
+{/* TODO: 将链接替换为 Microsoft Agent Framework 链接，一旦 Microsoft Agent Framework 正式添加到功能查看器中 */}
+<IframeSwitcher
+  id="frontend-tools-based-hitl-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+前端工具使您能够定义客户端函数，您的 Microsoft Agent Framework 智能体可以调用这些函数，执行完全发生在用户的浏览器中。当您的智能体调用前端工具时，逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于让[您的智能体控制 UI](/microsoft-agent-framework/frontend-tools)、[驱动生成式 UI](/microsoft-agent-framework/frontend-tools) 或支持人机协同交互。
+
+在本指南中，我们介绍将前端工具用于人机协同。
+
+## 何时使用？
+
+当您需要智能体与客户端原语交互时使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的智能体
+        <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式利用。其中一种方式是具有人机协同流程，工具响应由用户的决定控制。
+
+        在此示例中，我们将模拟执行命令的"审批"流程。首先，使用 `useHumanInTheLoop` 钩子创建一个提示用户批准的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "humanApprovedCommand",
+            description: "询问人类是否批准运行命令。",
+            parameters: [
+              {
+                name: "command",
+                type: "string",
+                description: "要运行的命令",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  <pre>{args.command}</pre>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`命令已批准`)}>批准</button>
+                  <button onClick={() => respond(`命令已拒绝`)}>拒绝</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ### 在您的 AG-UI 服务器中接收前端工具
+
+        使用 `useHumanInTheLoop` 注册的前端工具会转发到您的 AG-UI 服务器，并通过 AgentRunOptions 传递给底层智能体。默认情况下，它们会自动供底层聊天客户端使用。
+
+        <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+          <Tab value=".NET">
+            ```csharp title="Program.cs"
+            using Azure.AI.OpenAI;
+            using Azure.Identity;
+            using Microsoft.Agents.AI;
+            using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+
+            var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddAGUI();
+            var app = builder.Build();
+
+            string endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"]!;
+            string deployment = builder.Configuration["AZURE_OPENAI_DEPLOYMENT_NAME"]!;
+
+            // 创建智能体 - 前端工具自动可用
+            var agent = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+                .GetChatClient(deployment)
+                .CreateAIAgent(name: "AGUIAssistant", instructions: "你是一个有用的助手。");
+
+            // 映射 AG-UI 端点
+            app.MapAGUI("/", agent);
+            await app.RunAsync();
+            ```
+          </Tab>
+          <Tab value="Python">
+            ```python title="agent/src/agent.py"
+            from __future__ import annotations
+            import os
+            from fastapi import FastAPI
+            from dotenv import load_dotenv
+            from agent_framework import ChatAgent
+            from agent_framework import ChatClientProtocol
+            from agent_framework.azure import AzureOpenAIChatClient
+            from agent_framework.openai import OpenAIChatClient
+            from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
+            from azure.identity import DefaultAzureCredential
+
+            load_dotenv()
+
+            def _build_chat_client() -> ChatClientProtocol:
+                if bool(os.getenv("AZURE_OPENAI_ENDPOINT")):
+                    return AzureOpenAIChatClient(
+                        credential=DefaultAzureCredential(),
+                        deployment_name=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", "gpt-5.2-mini"),
+                        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                    )
+                if bool(os.getenv("OPENAI_API_KEY")):
+                    return OpenAIChatClient(
+                        model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.2-mini"),
+                        api_key=os.getenv("OPENAI_API_KEY"),
+                    )
+                raise RuntimeError("在 agent/.env 中设置 AZURE_OPENAI_* 或 OPENAI_API_KEY")
+
+            chat_client = _build_chat_client()
+            # 使用 useHumanInTheLoop 注册的前端工具自动可用
+            agent = ChatAgent(
+                name="sample_agent",
+                instructions="你是一个有用的助手。",
+                chat_client=chat_client,
+            )
+
+            app = FastAPI(title="AG-UI 服务器 (Python)")
+            add_agent_framework_fastapi_endpoint(app=app, agent=agent, path="/")
+            ```
+          </Tab>
+        </Tabs>
+
+        <Callout type="info">
+          使用 `useHumanInTheLoop` 定义的前端工具通过 AG-UI 协议自动转发到您的智能体。工具执行和渲染发生在前端，提供无缝的人机协同交互。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试一试！
+        您现在赋予了您的智能体直接调用您定义的任何前端工具的能力。这些工具将在需要时供智能体使用。
+    </Step>
+</Steps>

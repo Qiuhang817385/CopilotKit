@@ -1,0 +1,152 @@
+---
+title: 读取智能体状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时智能体状态。
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import RunAndConnect from "@/snippets/integrations/microsoft-agent-framework/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+{/* TODO: 将链接替换为 Microsoft Agent Framework 链接，一旦 Microsoft Agent Framework 正式添加到功能查看器中 */}
+<IframeSwitcher
+  id="shared-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/microsoft-agent-framework-dotnet/feature/shared_state) 中从共享状态读取。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在聊天 UI 中使用实时智能体状态，也可以在原生应用程序 UX 中使用。
+
+## 何时使用？
+
+当您想向用户提供有关智能体状态的反馈时使用此功能。随着智能体状态的更新，您可以在应用程序中实时反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+    决定您希望在 UI 中反映智能体状态的哪些部分。
+
+    <Tabs groupId="language_microsoft-agent-framework_agent" items={['.NET', 'Python']} persist>
+      <Tab value=".NET">
+        ```csharp title="agent/Program.cs (节选)"
+        public class AgentStateSnapshot
+        {
+            public string Language { get; set; } = "english";
+        }
+        ```
+      </Tab>
+      <Tab value="Python">
+        ```python title="agent/src/agent.py (节选)"
+        STATE_SCHEMA: dict[str, object] = {
+            "language": {
+                "type": "string",
+                "enum": ["english", "spanish"],
+                "description": "首选语言。"
+            }
+        }
+        ```
+      </Tab>
+    </Tabs>
+
+    ```ts title="ui/app/page.tsx"
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+    ```
+  </Step>
+  <Step>
+    ### 使用 `useAgent` 钩子
+    连接并运行智能体后，剩下要做的就是调用 `useAgent` 钩子，传递智能体的名称，并可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见，省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言：{agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是响应式的，当智能体状态更改时会自动更新。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    随着智能体状态的更新，您的 `state` 变量也会自动更新！在这种情况下，您会看到语言设置为 "english"，因为这是我们设置的初始状态。
+
+    <Frame>
+      <ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/microsoft-agent-framework/read-agent-state.png" alt="读取智能体状态" width={1000} height={1000} className="my-0"/>
+    </Frame>
+
+    <Callout type="info">
+      上图是应用了实现部分的 [智能体启动器](https://github.com/copilotkit/copilotkit/tree/main/examples/agents-starter)！
+    </Callout>
+  </Step>
+</Steps>
+
+## 在聊天中渲染智能体状态
+
+您还可以在聊天 UI 中渲染智能体的状态。这对于以更情境化的方式向用户通知智能体的状态非常有用。为此，您可以使用带有 `render` 函数的 `useAgent` 钩子。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义智能体状态类型，应与智能体的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+}
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "sample_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言：{state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是响应式的，当智能体状态更改时会自动更新。
+</Callout>
+
+## 高级：发出中间状态
+
+默认情况下，智能体状态更新会在智能体执行期间的自然检查点到达。对于在长时间运行操作期间更细粒度的实时更新，您可以从智能体逻辑中发出状态快照。有关在执行期间流式传输自定义状态事件的模式，请参阅 [Microsoft Agent Framework 文档](https://learn.microsoft.com/en-us/agent-framework/user-guide/overview)。

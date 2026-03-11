@@ -1,0 +1,590 @@
+---
+title: 声明式 (A2UI)
+icon: "lucide/Bot"
+description: 使用 A2UI 以声明方式生成用户界面。
+---
+import Image from "next/image"
+
+构建 A2A 代理，配置它以使用 A2UI，使用 A2UI 编辑器生成小部件，并在您由 CopilotKit 驱动的应用程序中渲染它们。
+  <div>
+    <video src="https://cdn.copilotkit.ai/a2ui/demo.mp4" autoPlay controls loop muted playsInline className="rounded-xl shadow-lg mx-auto mt-auto w-5/6" />
+    <div className="text-center text-sm text-muted-foreground mt-4">
+      <a href="https://a2ui-editor.ag-ui.com">A2UI 编辑器</a> 演示 - 由 CopilotKit 提供支持<br />
+    </div>
+  </div>
+
+## 开始使用
+
+<Steps>
+  <Step>
+    ### 克隆 A2A 入门模板
+
+    ```bash
+    git clone https://github.com/copilotkit/with-a2a-a2ui.git
+    ```
+
+    入门模板中的代理和应用程序已经配置为使用 A2UI，但下面包含了详细信息以确保完整性。
+  </Step>
+  <Step>
+    ### 安装依赖
+
+    ```
+    pnpm install
+    ```
+
+  </Step>
+  <Step>
+    ### 运行并连接您的代理
+
+    ```
+    pnpm dev
+    ```
+
+  </Step>
+
+  <Step>
+    ### 配置您的代理以使用 A2UI
+
+  </Step>
+
+
+  <Step>
+    ### 使用组件设置您的代理
+
+    入门模板已经配置为使用 A2UI，但让我们看看如何添加您自己的组件。
+
+    ```python title="agent/restaurant_finder/prompt_builder.py"
+      RESTAURANT_UI_EXAMPLES = """
+      ...
+      ---BEGIN SINGLE_COLUMN_LIST_EXAMPLE---
+      [
+        {{ "beginRendering": {{ "surfaceId": "default", "root": "root-column", "styles": {{ "primaryColor": "#FF0000", "font": "Roboto" }} }} }},
+        {{ "surfaceUpdate": {{
+          "surfaceId": "default",
+          "components": [
+            {{ "id": "root-column", "component": {{ "Column": {{ "children": {{ "explicitList": ["title-heading", "item-list"] }} }} }} }},
+            {{ "id": "title-heading", "component": {{ "Text": {{ "usageHint": "h1", "text": {{ "literalString": "热门餐厅" }} }} }} }},
+            {{ "id": "item-list", "component": {{ "List": {{ "direction": "vertical", "children": {{ "template": {{ "componentId": "item-card-template", "dataBinding": "/items" }} }} }} }} }},
+            {{ "id": "item-card-template", "component": {{ "Card": {{ "child": "card-layout" }} }} }},
+            {{ "id": "card-layout", "component": {{ "Row": {{ "children": {{ "explicitList": ["template-image", "card-details"] }} }} }} }},
+            {{ "id": "template-image", weight: 1, "component": {{ "Image": {{ "url": {{ "path": "imageUrl" }} }} }} }},
+            {{ "id": "card-details", weight: 2, "component": {{ "Column": {{ "children": {{ "explicitList": ["template-name", "template-rating", "template-detail", "template-link", "template-book-button"] }} }} }} }},
+            {{ "id": "template-name", "component": {{ "Text": {{ "usageHint": "h3", "text": {{ "path": "name" }} }} }} }},
+            {{ "id": "template-rating", "component": {{ "Text": {{ "text": {{ "path": "rating" }} }} }} }},
+            {{ "id": "template-detail", "component": {{ "Text": {{ "text": {{ "path": "detail" }} }} }} }},
+            {{ "id": "template-link", "component": {{ "Text": {{ "text": {{ "path": "infoLink" }} }} }} }},
+            {{ "id": "template-book-button", "component": {{ "Button": {{ "child": "book-now-text", "primary": true, "action": {{ "name": "book_restaurant", "context": [ {{ "key": "restaurantName", "value": {{ "path": "name" }} }}, {{ "key": "imageUrl", "value": {{ "path": "imageUrl" }} }}, {{ "key": "address", "value": {{ "path": "address" }} }} ] }} }} }} }},
+            {{ "id": "book-now-text", "component": {{ "Text": {{ "text": {{ "literalString": "立即预订" }} }} }} }}
+          ]
+        }} }},
+        {{ "dataModelUpdate": {{
+          "surfaceId": "default",
+          "path": "/",
+          "contents": [
+            {{ "key": "items", "valueMap": [
+              {{ "key": "item1", "valueMap": [
+                {{ "key": "name", "valueString": "The Fancy Place" }},
+                {{ "key": "rating", "valueNumber": 4.8 }},
+                {{ "key": "detail", "valueString": "Fine dining experience" }},
+                {{ "key": "infoLink", "valueString": "https://example.com/fancy" }},
+                {{ "key": "imageUrl", "valueString": "https://example.com/fancy.jpg" }},
+                {{ "key": "address", "valueString": "123 Main St" }}
+              ] }},
+              {{ "key": "item2", "valueMap": [
+                {{ "key": "name", "valueString": "Quick Bites" }},
+                {{ "key": "rating", "valueNumber": 4.2 }},
+                {{ "key": "detail", "valueString": "Casual and fast" }},
+                {{ "key": "infoLink", "valueString": "https://example.com/quick" }},
+                {{ "key": "imageUrl", "valueString": "https://example.com/quick.jpg" }},
+                {{ "key": "address", "valueString": "456 Oak Ave" }}
+              ] }}
+            ] }} // 用餐厅数据填充此项
+          ]
+        }} }}
+      ]
+      ---END SINGLE_COLUMN_LIST_EXAMPLE---
+      # ... 下面有更多示例
+      ```
+
+    小部件被注入到代理的提示中，在本例中使用 `RESTAURANT_UI_EXAMPLES` 变量。
+    小部件通过它们应该输出的 json 数组示例为代理定义，并包装在注释块中。
+    - 指示示例开始的注释
+    - beginRendering：小部件渲染的开始
+    - surfaceUpdate：小部件的 json 结构示例
+    - dataModelUpdate：用于填充小部件的数据示例
+    - 指示示例结束的注释
+
+    在示例仓库中，所有小部件都在 prompt_builder.py 文件中定义在一个变量中，但您可以根据需要组织它们，
+    它们只需要以清晰划分的方式注入到代理的提示中即可。
+  </Step>
+  <Step>
+    ### 使用 A2UI 编辑器生成组件
+    如果您想要一种简单的方式来生成组件，可以使用 A2UI 编辑器。
+    访问 https://a2ui-composer.ag-ui.com/ 创建您自己的组件。
+    编辑器将为您生成 json 规范，您只需将其复制并粘贴到代理的提示中即可。
+    <a href="https://a2ui-editor.ag-ui.com/gallery" target="_blank" rel="noopener noreferrer">
+      <Image 
+        src="/images/a2ui-composer.png" 
+        alt="代理式后端到代理式应用程序" 
+        width={4096} 
+        height={2304}
+        className="mx-auto w-1/2"
+      />
+    </a>
+  </Step>
+  <Step>
+    ### 配置您的应用程序以渲染 A2UI
+    AG-UI 负责与您的 a2a 代理通信，并将 a2ui 消息作为 `ActivityMessage` 对象来回传递。
+    为了在前端中渲染它们，您需要配置活动消息渲染。
+
+    Copilotkit 为 A2UI 消息提供了一个渲染器，您只需使用主题实例化它并将其传递给您的 CopilotKitProvider 即可。
+
+    ```tsx title="app/page.tsx"
+    "use client";
+
+    import { CopilotChat, CopilotKitProvider } from "@copilotkitnext/react";
+    import { createA2UIMessageRenderer } from "@copilotkitnext/a2ui-renderer";
+    import { theme } from "./theme";
+
+    // 禁用此页面的静态优化
+    export const dynamic = "force-dynamic";
+
+    const A2UIMessageRenderer = createA2UIMessageRenderer({ theme });
+
+    export default function Home() {
+      return (
+        <CopilotKitProvider
+          runtimeUrl="/api/copilotkit"
+          showDevConsole="auto"
+          renderActivityMessages={[A2UIMessageRenderer]}
+        >
+          <main
+            className="flex min-h-screen flex-1 flex-col overflow-hidden"
+            style={{ minHeight: "100dvh" }}
+          >
+            <Chat />
+          </main>
+        </CopilotKitProvider>
+      );
+    }
+
+    function Chat() {
+      return (
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <CopilotChat style={{ flex: 1, minHeight: "100%" }} />
+        </div>
+      );
+    }
+    ```
+
+    ```tsx title="app/theme.ts"
+    import { v0_8 } from "@google/a2ui";
+
+    /** 元素 */
+
+    const a = {
+      "typography-f-sf": true,
+      "typography-fs-n": true,
+      "typography-w-500": true,
+      "layout-as-n": true,
+      "layout-dis-iflx": true,
+      "layout-al-c": true,
+    };
+
+    const audio = {
+      "layout-w-100": true,
+    };
+
+    const body = {
+      "typography-f-s": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-mt-0": true,
+      "layout-mb-2": true,
+      "typography-sz-bm": true,
+      "color-c-n10": true,
+    };
+
+    const button = {
+      "typography-f-sf": true,
+      "typography-fs-n": true,
+      "typography-w-500": true,
+      "layout-pt-3": true,
+      "layout-pb-3": true,
+      "layout-pl-5": true,
+      "layout-pr-5": true,
+      "layout-mb-1": true,
+      "border-br-16": true,
+      "border-bw-0": true,
+      "border-c-n70": true,
+      "border-bs-s": true,
+      "color-bgc-s30": true,
+      "color-c-n100": true,
+      "behavior-ho-80": true,
+    };
+
+    const heading = {
+      "typography-f-sf": true,
+      "typography-fs-n": true,
+      "typography-w-500": true,
+      "layout-mt-0": true,
+      "layout-mb-2": true,
+      "color-c-n10": true,
+    };
+
+    const h1 = {
+      ...heading,
+      "typography-sz-tl": true,
+    };
+
+    const h2 = {
+      ...heading,
+      "typography-sz-tm": true,
+    };
+
+    const h3 = {
+      ...heading,
+      "typography-sz-ts": true,
+    };
+
+    const iframe = {
+      "behavior-sw-n": true,
+    };
+
+    const input = {
+      "typography-f-sf": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-pl-4": true,
+      "layout-pr-4": true,
+      "layout-pt-2": true,
+      "layout-pb-2": true,
+      "border-br-6": true,
+      "border-bw-1": true,
+      "color-bc-s70": true,
+      "border-bs-s": true,
+      "layout-as-n": true,
+      "color-c-n10": true,
+    };
+
+    const p = {
+      "typography-f-s": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-m-0": true,
+      "typography-sz-bm": true,
+      "layout-as-n": true,
+      "color-c-n10": true,
+    };
+
+    const orderedList = {
+      "typography-f-s": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-m-0": true,
+      "typography-sz-bm": true,
+      "layout-as-n": true,
+    };
+
+    const unorderedList = {
+      "typography-f-s": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-m-0": true,
+      "typography-sz-bm": true,
+      "layout-as-n": true,
+    };
+
+    const listItem = {
+      "typography-f-s": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "layout-m-0": true,
+      "typography-sz-bm": true,
+      "layout-as-n": true,
+    };
+
+    const pre = {
+      "typography-f-c": true,
+      "typography-fs-n": true,
+      "typography-w-400": true,
+      "typography-sz-bm": true,
+      "typography-ws-p": true,
+      "layout-as-n": true,
+    };
+
+    const textarea = {
+      ...input,
+      "layout-r-none": true,
+      "layout-fs-c": true,
+    };
+
+    const video = {
+      "layout-el-cv": true,
+    };
+
+    const aLight = v0_8.Styles.merge(a, { "color-c-n5": true });
+    const inputLight = v0_8.Styles.merge(input, { "color-c-n5": true });
+    const textareaLight = v0_8.Styles.merge(textarea, { "color-c-n5": true });
+    const buttonLight = v0_8.Styles.merge(button, { "color-c-n100": true });
+    const h1Light = v0_8.Styles.merge(h1, { "color-c-n5": true });
+    const h2Light = v0_8.Styles.merge(h2, { "color-c-n5": true });
+    const h3Light = v0_8.Styles.merge(h3, { "color-c-n5": true });
+    const bodyLight = v0_8.Styles.merge(body, { "color-c-n5": true });
+    const pLight = v0_8.Styles.merge(p, { "color-c-n35": true });
+    const preLight = v0_8.Styles.merge(pre, { "color-c-n35": true });
+    const orderedListLight = v0_8.Styles.merge(orderedList, {
+      "color-c-n35": true,
+    });
+    const unorderedListLight = v0_8.Styles.merge(unorderedList, {
+      "color-c-n35": true,
+    });
+    const listItemLight = v0_8.Styles.merge(listItem, {
+      "color-c-n35": true,
+    });
+
+    export const theme: v0_8.Types.Theme = {
+      additionalStyles: {
+        Button: {
+          "--n-35": "var(--n-100)",
+        },
+      },
+      components: {
+        AudioPlayer: {},
+        Button: {
+          "layout-pt-2": true,
+          "layout-pb-2": true,
+          "layout-pl-3": true,
+          "layout-pr-3": true,
+          "border-br-12": true,
+          "border-bw-0": true,
+          "border-bs-s": true,
+          "color-bgc-p30": true,
+          "color-c-n100": true,
+          "behavior-ho-70": true,
+        },
+        Card: { "border-br-9": true, "color-bgc-p100": true, "layout-p-4": true },
+        CheckBox: {
+          element: {
+            "layout-m-0": true,
+            "layout-mr-2": true,
+            "layout-p-2": true,
+            "border-br-12": true,
+            "border-bw-1": true,
+            "border-bs-s": true,
+            "color-bgc-p100": true,
+            "color-bc-p60": true,
+            "color-c-n30": true,
+            "color-c-p30": true,
+          },
+          label: {
+            "color-c-p30": true,
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-flx-1": true,
+            "typography-sz-ll": true,
+          },
+          container: {
+            "layout-dsp-iflex": true,
+            "layout-al-c": true,
+          },
+        },
+        Column: {
+          "layout-g-2": true,
+        },
+        DateTimeInput: {
+          container: {
+            "typography-sz-bm": true,
+            "layout-w-100": true,
+            "layout-g-2": true,
+            "layout-dsp-flexhor": true,
+            "layout-al-c": true,
+          },
+          label: {
+            "layout-flx-0": true,
+          },
+          element: {
+            "layout-pt-2": true,
+            "layout-pb-2": true,
+            "layout-pl-3": true,
+            "layout-pr-3": true,
+            "border-br-12": true,
+            "border-bw-1": true,
+            "border-bs-s": true,
+            "color-bgc-p100": true,
+            "color-bc-p60": true,
+            "color-c-n30": true,
+            "color-c-p30": true,
+          },
+        },
+        Divider: {},
+        Image: {
+          all: {
+            "border-br-5": true,
+            "layout-el-cv": true,
+            "layout-w-100": true,
+            "layout-h-100": true,
+          },
+          avatar: {},
+          header: {},
+          icon: {},
+          largeFeature: {},
+          mediumFeature: {},
+          smallFeature: {},
+        },
+        Icon: {},
+        List: {
+          "layout-g-4": true,
+          "layout-p-2": true,
+        },
+        Modal: {
+          backdrop: { "color-bbgc-p60_20": true },
+          element: {
+            "border-br-2": true,
+            "color-bgc-p100": true,
+            "layout-p-4": true,
+            "border-bw-1": true,
+            "border-bs-s": true,
+            "color-bc-p80": true,
+          },
+        },
+        MultipleChoice: {
+          container: {},
+          label: {},
+          element: {},
+        },
+        Row: {
+          "layout-g-4": true,
+        },
+        Slider: {
+          container: {},
+          label: {},
+          element: {},
+        },
+        Tabs: {
+          container: {},
+          controls: { all: {}, selected: {} },
+          element: {},
+        },
+        Text: {
+          all: {
+            "layout-w-100": true,
+            "layout-g-2": true,
+            "color-c-p30": true,
+          },
+          h1: {
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-m-0": true,
+            "layout-p-0": true,
+            "typography-sz-tl": true,
+          },
+          h2: {
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-m-0": true,
+            "layout-p-0": true,
+            "typography-sz-tm": true,
+          },
+          h3: {
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-m-0": true,
+            "layout-p-0": true,
+            "typography-sz-ts": true,
+          },
+          h4: {
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-m-0": true,
+            "layout-p-0": true,
+            "typography-sz-bl": true,
+          },
+          h5: {
+            "typography-f-sf": true,
+            "typography-v-r": true,
+            "typography-w-400": true,
+            "layout-m-0": true,
+            "layout-p-0": true,
+            "typography-sz-bm": true,
+          },
+          body: {},
+          caption: {},
+        },
+        TextField: {
+          container: {
+            "typography-sz-bm": true,
+            "layout-w-100": true,
+            "layout-g-2": true,
+            "layout-dsp-flexhor": true,
+            "layout-al-c": true,
+          },
+          label: {
+            "layout-flx-0": true,
+          },
+          element: {
+            "typography-sz-bm": true,
+            "layout-pt-2": true,
+            "layout-pb-2": true,
+            "layout-pl-3": true,
+            "layout-pr-3": true,
+            "border-br-12": true,
+            "border-bw-1": true,
+            "border-bs-s": true,
+            "color-bgc-p100": true,
+            "color-bc-p60": true,
+            "color-c-n30": true,
+            "color-c-p30": true,
+          },
+        },
+        Video: {
+          "border-br-5": true,
+          "layout-el-cv": true,
+        },
+      },
+      elements: {
+        a: aLight,
+        audio,
+        body: bodyLight,
+        button: buttonLight,
+        h1: h1Light,
+        h2: h2Light,
+        h3: h3Light,
+        iframe,
+        input: inputLight,
+        p: pLight,
+        pre: preLight,
+        textarea: textareaLight,
+        video,
+      },
+      markdown: {
+        p: [...Object.keys(pLight)],
+        h1: [...Object.keys(h1Light)],
+        h2: [...Object.keys(h2Light)],
+        h3: [...Object.keys(h3Light)],
+        h4: [],
+        h5: [],
+        h6: [],
+        ul: [...Object.keys(unorderedListLight)],
+        ol: [...Object.keys(orderedListLight)],
+        li: [...Object.keys(listItemLight)],
+        a: [...Object.keys(aLight)],
+        strong: [],
+        em: [],
+      },
+    };
+    ```
+
+  </Step>
+  <Step>
+    ### 试试看！
+
+    就是这样！当您的代理生成 A2UI 消息时，它将在您的前端中渲染。
+    A2UI 操作（如按钮点击）会通过 AG-UI 自动发送回您的代理。
+  </Step>
+</Steps>

@@ -1,0 +1,182 @@
+## 概述
+
+CopilotKit 1.10.X 引入了新的无头 UI 系统和简化的消息格式。大多数现有代码将继续工作，但您可能需要更新自定义消息处理。
+
+**您需要了解的：**
+- 消息格式从类更改为普通对象
+- 新的无头 UI 钩子可用于高级用例
+- 为大多数功能保持向后兼容性
+
+## 关键改进和变更
+
+### 增强的消息格式
+
+消息现在使用普通对象而不是类，以获得更好的性能和更简单的处理。
+
+#### 之前
+```tsx
+const message = new TextMessage({
+  role: MessageRole.Assistant,
+  content: "你好，你好吗？",
+})
+```
+
+#### 之后
+```tsx
+const message = { 
+  role: "assistant", 
+  content: "你好，你好吗？" 
+}
+```
+
+### 简化的消息类型检查
+
+消息类型检查已简化，以获得更好的开发者体验。您现在可以检查消息的 `role` 属性，而不是使用之前的 `isTextMessage` 或相邻方法。
+
+#### 之前
+```tsx
+if (message.isTextMessage()) {
+  if (message.role === "assistant") {
+    console.log(message.content)
+  }
+  if (message.role === "user") {
+    console.log(message.content)
+  }
+}
+
+if (message.isImageMessage()) {
+  console.log(message.image)
+}
+
+if (message.isActionExecutionMessage()) {
+  console.log(message.toolCalls)
+}
+
+// 等等...
+```
+
+#### 之后
+```tsx
+if (message.role === "assistant") {
+  console.log(
+    message.content,
+    message.toolCalls,
+    message.image,
+  )
+}
+
+if (message.role === "user") {
+  console.log(
+    message.content,
+    message.image,
+  )
+}
+```
+
+### 自定义助手消息
+以前，您必须使用 `subComponent` 属性来渲染自定义助手消息。现在您可以使用 `generativeUI` 属性代替。
+
+**重要！** 两者都将继续工作。
+
+#### 之前
+
+```tsx
+import { AssistantMessageProps } from "@copilotkit/react-core/v2";
+
+export const AssistantMessage = (props: AssistantMessageProps) => {
+  const { message, subComponent } = props;
+
+  return (
+    <div style={{ marginBottom: "0.5rem" }}>{subComponent}</div>
+  );
+};
+```
+
+#### 之后
+
+```tsx
+import { AssistantMessageProps } from "@copilotkit/react-core/v2";
+
+export const AssistantMessage = (props: AssistantMessageProps) => {
+  const { message } = props;
+
+  return (
+    <div style={{ marginBottom: "0.5rem" }}>{message.generativeUI}</div>
+  );
+};
+```
+
+#### 向后兼容性
+
+- 自定义子组件仍然完全支持
+- `subComponent`（旧版）和 `generativeUI`（新版）属性都有效
+- 现有的 `useCopilotChat` 代码继续运行
+
+## 新功能
+
+### 高级无头 UI 钩子
+
+新的 `useCopilotChatHeadless_c` 钩子提供对聊天 UI 的完全控制：
+
+**功能：**
+- 完全控制聊天 UI 渲染
+- 内置生成式 UI 支持
+- 高级建议管理
+- 人机交互工作流的中断处理
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/full-headless-chat.mp4"
+  className="rounded-xl shadow-lg border"
+  loop
+  playsInline
+  autoPlay
+  muted
+/>
+
+您可能如何使用新的无头 UI 钩子的示例：
+
+```tsx
+const { messages, suggestions, interrupt } = useCopilotChatHeadless_c();
+
+return (
+  <div>
+    {suggestions.map((suggestion) => (
+      <div key={suggestion.id}>{suggestion.title}</div>
+    ))}
+
+    {interrupt}
+
+    {messages.map((message) => {
+      switch (message.role) {
+        case "assistant":
+          if (message.generativeUI) return message.generativeUI
+          return <div key={message.id}>{message.content}</div>
+        case "user":
+          return <div key={message.id}>{message.content}</div>
+      }
+    })}
+  </div>
+)
+```
+
+[阅读更多关于新的无头 UI 钩子并开始使用](/premium/headless-ui)。
+
+## `useCopilotChat` 呢？
+
+随着新的无头 UI 钩子的引入，我们开始弃用 `useCopilotChat`。虽然它将在维护模式下继续支持几个月，但所有新的无头 UI 功能都将添加到 `useCopilotChatHeadless_c`。
+
+我们建议在新项目中迁移到新的钩子。但是，请随意继续使用 `useCopilotChat`，直到您准备好迁移。
+
+### 何时迁移
+
+**如果以下情况，请继续使用 `useCopilotChat`：**
+- 您当前的实现运行良好
+- 您不需要高级无头功能
+- 您更喜欢逐步迁移
+
+**如果以下情况，请迁移到 `useCopilotChatHeadless_c`：**
+- 开始新项目
+- 构建新的无头 UI 实现
+- 需要生成式 UI 功能
+- 想要访问高级建议和中断
+- 构建完全自定义的聊天体验

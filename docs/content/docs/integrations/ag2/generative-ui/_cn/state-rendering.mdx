@@ -1,0 +1,216 @@
+---
+title: 状态渲染
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染代理的状态。
+---
+## 这是什么？
+
+AG2 代理可以通过 `ContextVariables` 在整个会话中维护状态。CopilotKit 可以使用自定义 UI 组件在您的应用程序中渲染此状态，我们称之为**代理式生成式 UI**。
+
+<Callout type="info">
+  CopilotKit 消费 AG2 通过 <code>/chat</code> 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 何时使用？
+
+在 UI 中渲染代理的状态在您想向用户提供有关会话整体状态的反馈时非常有用。一个很好的例子是用户和代理一起解决问题的场景。代理可以在其状态中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    启动您的 AG2 后端，并在 `/chat` 上启用 AG-UI 流式传输。
+  </Step>
+  <Step>
+    ### 设置带状态的代理
+
+    使用 `ContextVariables` 创建您的 AG2 代理，并发出 `StateSnapshotEvent` 更新：
+
+    ```python title="agent.py"
+    from typing import Annotated
+
+    from ag_ui.core import EventType, StateSnapshotEvent
+    from fastapi import FastAPI, Header
+    from fastapi.responses import StreamingResponse
+    from pydantic import BaseModel, Field
+    from autogen import ContextVariables, ConversableAgent, LLMConfig
+    from autogen.ag_ui import AGUIStream, RunAgentInput
+
+
+    class Search(BaseModel):
+        query: str
+        done: bool
+
+
+    class AgentState(BaseModel):
+        searches: list[Search] = Field(default_factory=list)
+
+
+    def read_state(context: ContextVariables) -> AgentState:
+        raw_state = context.get("agent_state", {"searches": []})
+        return AgentState.model_validate(raw_state)
+
+
+    def write_state(context: ContextVariables, state: AgentState) -> StateSnapshotEvent:
+        snapshot = state.model_dump()
+        context["agent_state"] = snapshot
+        return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=snapshot)
+
+
+    agent = ConversableAgent(
+        name="assistant",
+        system_message=(
+            "You are a helpful assistant for storing searches. "
+            "Use `add_search` once per query, then call `run_searches`."
+        ),
+        llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+    )
+
+
+    @agent.register_for_llm(description="Add a search to the state.")
+    def add_search(
+        context: ContextVariables,
+        new_query: Annotated[str, "The query to add to state"],
+    ) -> StateSnapshotEvent:
+        state = read_state(context)
+        state.searches.append(Search(query=new_query, done=False))
+        return write_state(context, state)
+
+
+    @agent.register_for_llm(description="Run the queued searches and mark them done.")
+    def run_searches(context: ContextVariables) -> StateSnapshotEvent:
+        state = read_state(context)
+        for search in state.searches:
+            search.done = True
+        return write_state(context, state)
+
+
+    agent.register_for_execution(name="add_search")(add_search)
+    agent.register_for_execution(name="run_searches")(run_searches)
+
+    stream = AGUIStream(agent)
+    app = FastAPI()
+
+
+    @app.post("/chat")
+    async def run_agent(
+        message: RunAgentInput,
+        accept: str | None = Header(None),
+    ):
+        return StreamingResponse(
+            stream.dispatch(message, accept=accept),
+            media_type=accept or "text/event-stream",
+        )
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染代理状态
+    现在我们可以使用 `useAgent` 和 `render` 函数在**聊天中**渲染代理的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义代理的状态，应与您的 AG2 后端流式传输的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略样式
+      useAgent({
+        agentId: "my_agent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的代理名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+    您还可以在**聊天外**渲染代理的状态。当您想在聊天以外的任何地方渲染代理的状态时，这非常有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义代理的状态，应与您的 AG2 后端流式传输的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "my_agent", // 必须与 CopilotRuntime 中的代理名称匹配
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `agentId` 参数必须与您在 CopilotRuntime 配置中定义的代理名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看
+
+    您现在已经创建了一个组件，它将在聊天中渲染代理的状态。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

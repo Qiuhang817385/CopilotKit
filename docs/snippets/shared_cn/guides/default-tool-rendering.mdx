@@ -1,0 +1,39 @@
+`useDefaultRenderTool` 为**任何**没有特定 `useRenderToolCall` 定义的工具提供包罗万象的渲染器。这对于以下情况很有用：
+
+- 在开发期间显示所有工具调用
+- 渲染 MCP（模型上下文协议）工具
+- 为意外工具提供通用回退 UI
+
+```tsx title="app/page.tsx"
+import { useDefaultRenderTool } from "@copilotkit/react-core/v2"; // [!code highlight]
+// ...
+
+const YourMainContent = () => {
+  // ...
+  // [!code highlight:15]
+  useDefaultRenderTool({
+    render: ({ name, args, status, result }) => {
+      return (
+        <div style={{ color: "black" }}>
+          <span>
+            {status === "complete" ? "✓" : "⏳"}
+            {name}
+          </span>
+          {status === "complete" && result && (
+            <pre>{JSON.stringify(result, null, 2)}</pre>
+          )}
+        </div>
+      );
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="info">
+  与针对特定名称的工具的 `useRenderToolCall` 不同，`useDefaultRenderTool` 捕获**所有**没有专用渲染器的工具。
+</Callout>
+
+<Callout type="info">
+  在 v2 中，使用 [`useDefaultRenderTool`](/reference/v2/hooks/useDefaultRenderTool) 进行通配符回退渲染，使用 [`useRenderTool`](/reference/v2/hooks/useRenderTool) 进行命名或通配符渲染器注册。
+</Callout>

@@ -1,0 +1,46 @@
+---
+title: "第 1 步：检出代码库"
+---
+
+<Steps>
+<Step>
+### 检出起始分支
+我们将使用 CopilotKit 仓库，具体使用名为 `coagents-travel-tutorial-start` 的分支。该分支包含我们旅行应用教程的起始代码。
+
+```shell
+git clone -b coagents-travel-tutorial-start https://github.com/CopilotKit/CopilotKit.git
+cd CopilotKit
+```
+
+教程代码位于 `examples/coagents-travel` 目录中，其中包含：
+- `ui/`：我们将在其中集成 LangGraph 智能体的 NextJS 应用程序
+- `agent/`：我们将要增强的基于 Python 的 LangGraph 智能体
+
+继续导航到示例目录：
+
+```shell
+cd examples/coagents-travel
+```
+</Step>
+<Step>
+### 安装依赖项
+首先，让我们设置 NextJS 应用程序。导航到 `ui` 目录并安装依赖项：
+
+```shell
+cd ui
+pnpm install
+```
+</Step>
+<Step>
+### 启动项目
+启动开发服务器：
+
+```shell
+pnpm run dev
+```
+
+访问 [http://localhost:3000](http://localhost:3000) 查看旅行应用的运行情况。花一些时间探索界面并熟悉其功能。
+</Step>
+</Steps>
+
+接下来，让我们了解 LangGraph 智能体及其工作原理。

@@ -1,0 +1,30 @@
+内置的 Copilot UI 可以通过多种方式进行自定义——既可以通过 CSS，也可以通过传入自定义子组件。
+
+CopilotKit 还通过 `useCopilotChat` 钩子提供**完全自定义的无头 UI**。使用内置 UI 构建的所有内容（以及更多）都可以通过无头 UI 实现，提供深度的可定制性。
+
+```tsx
+import { useCopilotChat } from "@copilotkit/react-core/v2";
+import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
+
+export function CustomChatInterface() {
+  const {
+    visibleMessages,
+    appendMessage,
+    setMessages,
+    deleteMessage,
+    reloadMessages,
+    stopGeneration,
+    isLoading,
+  } = useCopilotChat();
+
+  const sendMessage = (content: string) => {
+    appendMessage(new TextMessage({ content, role: Role.User }));
+  };
+
+  return (
+    <div>
+      {/* 在此处实现您的自定义聊天 UI */}
+    </div>
+  );
+}
+```

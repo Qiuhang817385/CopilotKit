@@ -1,0 +1,265 @@
+---
+title: 程序化控制
+icon: "lucide/SendHorizontal"
+description: 使用 CopilotKit 的 UI 组件与 Agent 聊天。
+---
+
+import {
+  MessageCircle,
+  Database,
+  Zap,
+  AlertCircle,
+  BookOpen,
+  Play,
+  Settings,
+} from "lucide-react"
+
+## 概述
+
+`useAgent` Hook 提供从任何 React 组件直接访问您的 LangGraph Agent 的权限。它让您实时访问 Agent 的状态、消息、执行状态，并允许您订阅自定义事件，如中断。
+
+这使您能够构建自定义 Agent 仪表板、监控工具和响应 Agent 行为的交互功能。
+
+## 导航
+
+本页涵盖您需要了解的有关将 `useAgent` 与 LangGraph 一起使用的所有内容。在下方选择您想要开始的位置。
+
+<Cards className="gap-6">
+  <Card
+    icon={<MessageCircle className="text-primary" />}
+    className="p-6 rounded-xl text-base md:col-span-2"
+    title="入门"
+    description="学习访问 Agent 和显示其属性的基础知识。"
+    href="#getting-started"
+  />
+  <Card
+    icon={<Play className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="运行 Agent"
+    description="使用 copilotkit.runAgent() 以编程方式触发您的 Agent。"
+    href="#running-the-agent-programmatically"
+  />
+  <Card
+    icon={<Database className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="使用状态"
+    description="在您的应用和 Agent 之间访问和更新共享状态。"
+    href="#working-with-state"
+  />
+  <Card
+    icon={<Zap className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="Agent 事件"
+    description="订阅 Agent 生命周期事件和自定义事件。"
+    href="#subscribing-to-agent-events"
+  />
+  <Card
+    icon={<AlertCircle className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="LangGraph 中断"
+    description="处理来自 LangGraph Agent 的 interrupt() 调用。"
+    href="#handling-langgraph-interrupts"
+  />
+  <Card
+    icon={<Settings className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="完全无头 UI"
+    description="使用 CopilotKit 的无头 Hook 从头开始构建完全自定义的聊天界面。"
+    href="custom-look-and-feel/headless-ui"
+  />
+  <Card
+    icon={<BookOpen className="text-primary" />}
+    className="p-6 rounded-xl text-base"
+    title="参考"
+    description="useAgent 的完整 API 参考文档。"
+    href="/reference/v2/hooks/useAgent"
+  />
+</Cards>
+
+## 入门
+
+让我们从构建一个简单的显示 Agent 信息的组件开始。
+
+import UseAgentSnippet from "@/snippets/use-agent.mdx";
+
+<UseAgentSnippet components={props.components} />
+
+### 节点特定状态
+
+如果您的 LangGraph Agent 跟踪它所在的节点，您可以显示上下文 UI：
+
+```tsx title="page.tsx"
+export function NodeStatus() {
+  const { agent } = useAgent();
+
+  // [!code highlight:1]
+  const currentNode = agent.state.currentNode;
+
+  return (
+    <div>
+      {/* [!code highlight:6] */}
+      {currentNode === "research_node" && (
+        <div className="alert">Agent 正在研究您的查询...</div>
+      )}
+      {currentNode === "summarize_node" && (
+        <div className="alert">Agent 正在总结发现...</div>
+      )}
+    </div>
+  );
+}
+```
+
+## 以编程方式运行 Agent
+
+使用 `copilotkit.runAgent()` 从任何组件触发您的 Agent —— 无需聊天 UI。这与 CopilotKit 内置的 `<CopilotChat />` 内部使用的方法相同。
+
+```tsx title="page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2";
+import { useCopilotKit } from "@copilotkit/react-core/v2";
+import { randomUUID } from "@copilotkit/shared/v2";
+
+export function AgentTrigger() {
+  const { agent } = useAgent();
+  // [!code highlight:1]
+  const { copilotkit } = useCopilotKit();
+
+  const handleRun = async () => {
+    // 向 Agent 的对话添加用户消息
+    agent.addMessage({
+      id: randomUUID(),
+      role: "user",
+      content: "总结最新的销售数据",
+    });
+
+    // [!code highlight:2]
+    // 运行 Agent —— 处理工具执行、跟进和流式传输
+    await copilotkit.runAgent({ agent });
+  };
+
+  return <button onClick={handleRun}>运行 Agent</button>;
+}
+```
+
+### `copilotkit.runAgent()` vs `agent.runAgent()`
+
+两种方法都会触发 Agent，但它们在操作层面有所不同：
+
+- **`copilotkit.runAgent({ agent })`** —— 推荐的方法。编排完整的 Agent 生命周期：执行前端工具、处理工具请求时的跟进运行，并通过订阅者系统管理错误。
+- **`agent.runAgent()`** —— Agent 实例上的底层方法。将请求发送到运行时，但**不**执行前端工具或处理跟进。仅在您需要对 Agent 执行进行直接控制时使用（例如，使用 `forwardedProps` 从中断恢复）。
+
+### 停止运行
+
+您可以使用 `copilotkit.stopAgent()` 停止正在运行的 Agent：
+
+```tsx title="page.tsx"
+const handleStop = () => {
+  copilotkit.stopAgent({ agent });
+};
+```
+
+## 处理 LangGraph 中断
+
+LangGraph 的 `interrupt()` 函数发出您可以捕获并响应的自定义事件。
+
+### 简单的中断处理程序
+
+```tsx title="page.tsx"
+import { useEffect } from "react";
+import { useAgent } from "@copilotkit/react-core/v2";
+import type { AgentSubscriber } from "@ag-ui/client";
+
+export function InterruptHandler() {
+  const { agent } = useAgent();
+
+  useEffect(() => {
+    const subscriber: AgentSubscriber = {
+      // [!code highlight:12]
+      onCustomEvent: ({ event }) => {
+        if (event.name === "on_interrupt") {
+          // LangGraph interrupt() 被调用
+          const response = prompt(event.value);
+
+          if (response) {
+            // 使用用户响应恢复 Agent
+            agent.runAgent({
+              forwardedProps: {
+                command: { resume: response },
+              },
+            });
+          }
+        }
+      },
+    };
+
+    const { unsubscribe } = agent.subscribe(subscriber);
+    return () => unsubscribe();
+  }, []);
+
+  return null;
+}
+```
+
+### 自定义中断 UI
+
+对于更复杂的 UI，您可以渲染自定义组件：
+
+```tsx title="page.tsx"
+import { useEffect, useState } from "react";
+import { useAgent } from "@copilotkit/react-core/v2";
+import type { AgentSubscriber } from "@ag-ui/client";
+
+export function CustomInterruptHandler() {
+  const { agent } = useAgent();
+  const [interrupt, setInterrupt] = useState<{ message: string } | null>(null);
+
+  useEffect(() => {
+    const subscriber: AgentSubscriber = {
+      onCustomEvent: ({ event }) => {
+        // [!code highlight:3]
+        if (event.name === "on_interrupt") {
+          setInterrupt({ message: event.value });
+        }
+      },
+    };
+
+    const { unsubscribe } = agent.subscribe(subscriber);
+    return () => unsubscribe();
+  }, []);
+
+  const handleResponse = (response: string) => {
+    // [!code highlight:5]
+    agent.runAgent({
+      forwardedProps: {
+        command: { resume: response },
+      },
+    });
+    setInterrupt(null);
+  };
+
+  if (!interrupt) return null;
+
+  return (
+    <div className="interrupt-modal">
+      <h3>Agent 需要您的输入</h3>
+      <p>{interrupt.message}</p>
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        handleResponse(formData.get("response") as string);
+      }}>
+        <input type="text" name="response" placeholder="您的响应" />
+        <button type="submit">提交</button>
+      </form>
+    </div>
+  );
+}
+```
+
+对于更具声明性的方法，请参阅 [useInterrupt](/reference/v1/hooks/useInterrupt)。
+
+## 另请参阅
+
+- [共享状态](/langgraph/shared-state) - 深入探讨状态管理
+- [Human-in-the-Loop](/langgraph/human-in-the-loop) - 审批工作流
+- [Agent 应用上下文](/langgraph/agent-app-context) - 将上下文传递给您的 Agent
+- [useAgent API 参考](/reference/v2/hooks/useAgent) - 完整的 API 文档

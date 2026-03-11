@@ -1,0 +1,37 @@
+---
+title: "概述"
+description: "将 CopilotKit 的内置 Agent 与任何模型一起使用。"
+---
+
+import { Sparkles, Wrench, Server, Plug, ArrowLeftRight, Cpu, BookA, Cog } from "lucide-react";
+
+**内置 Agent** 是 CopilotKit 最简单的 Agent 选项，即您"开箱即用"得到的功能。它直接连接到 LLM，完全支持工具、生成式 UI、共享状态以及所有 CopilotKit 功能——无需外部 Agent 框架。
+
+它开箱即用地支持来自 OpenAI、Anthropic、Google 和 AI-SDK 定义模型的大多数流行模型。
+
+## 何时使用内置 Agent
+
+- **快速设置** — 无需配置或部署外部 Agent 框架
+- **聊天 + 工具** — 您的用例主要是对话式的，带有前端和服务器工具
+- **直接模型访问** — 您想直接使用 OpenAI、Anthropic、Google 或 AI-SDK 模型
+
+<Callout type="info">
+如果您需要对 Agent 循环进行更多控制，请考虑改用 [Agent 框架](/#explore-by-ai-backend)。
+</Callout>
+
+## 功能
+
+<Cards>
+  <Card title="生成式 UI" href="/built-in-agent/generative-ui/tool-rendering" description="在聊天中渲染丰富的 React 组件。" icon={<Sparkles className="text-primary" />} />
+  <Card title="前端工具" href="/built-in-agent/frontend-tools" description="让 Agent 使用前端工具与您的 UI 交互。" icon={<Wrench className="text-primary" />} />
+  <Card title="服务器工具" href="/built-in-agent/server-tools" description="定义带有 Zod 模式的后端工具，供 Agent 调用。" icon={<Server className="text-primary" />} />
+  <Card title="MCP 服务器" href="/built-in-agent/mcp-servers" description="连接 MCP 服务器以扩展工具功能。" icon={<Plug className="text-primary" />} />
+  <Card title="共享状态" href="/built-in-agent/shared-state" description="您的应用和 Agent 之间的双向状态共享。" icon={<ArrowLeftRight className="text-primary" />} />
+  <Card title="模型选择" href="/built-in-agent/model-selection" description="从 OpenAI、Anthropic 和 Google 模型中选择——或自带模型。" icon={<Cpu className="text-primary" />} />
+  <Card title="Agent 上下文" href="/built-in-agent/agent-app-context" description="自动与 Agent 共享应用特定的上下文。" icon={<BookA className="text-primary" />} />
+  <Card title="高级配置" href="/built-in-agent/advanced-configuration" description="微调温度、工具选择、多步调用等。" icon={<Cog className="text-primary" />} />
+</Cards>
+
+## 入门
+
+前往[快速入门](/built-in-agent/quickstart)，在几分钟内设置一个可工作的内置 Agent。

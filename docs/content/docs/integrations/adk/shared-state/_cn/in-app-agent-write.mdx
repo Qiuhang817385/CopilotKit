@@ -1,0 +1,190 @@
+---
+title: 写入智能体状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入智能体的状态。
+---
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="shared-state-write-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/adk-middleware/feature/shared_state) 中写入共享状态。
+</Callout>
+
+## 这是什么？
+
+本指南向您展示如何从应用程序写入智能体的状态。
+
+## 什么时候使用它？
+
+当您想要向用户提供有关智能体正在做什么的反馈时，可以使用此功能，特别是
+当您的智能体正在调用工具时。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+
+    创建具有有状态结构的 ADK 智能体。这里有一个完整的示例，跟踪语言：
+
+    ```python title="agent.py"
+    from typing import Dict
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+    from google.adk.agents import LlmAgent
+    from google.adk.tools import ToolContext
+
+
+    class AgentState(BaseModel):
+        """智能体的状态。"""
+        language: str = "english"
+
+
+    def set_language(tool_context: ToolContext, new_language: str) -> Dict[str, str]:
+        """设置用户的语言偏好。
+
+        Args:
+            tool_context (ToolContext): 用于访问状态的工具上下文。
+            new_language (str): 要保存在状态中的语言。
+
+        Returns:
+            Dict[str, str]: 表示成功状态和消息的字典。
+        """
+        tool_context.state["language"] = new_language
+        return {"status": "success", "message": f"语言已设置为 {new_language}"}
+
+
+    agent = LlmAgent(
+        name="my_agent",
+        model="gemini-2.5-flash",
+        instruction="""
+        你是一个有用的助手。帮助用户回答他们的问题。
+        请在回复用户时使用状态中指定的语言。
+        你可以使用 set_language 工具设置状态中的语言。
+        """,
+        tools=[set_language],
+    )
+
+    adk_agent = ADKAgent(
+        adk_agent=agent,
+        app_name="demo_app",
+        user_id="demo_user",
+        session_timeout_seconds=3600,
+        use_in_memory_services=True,
+    )
+
+    app = FastAPI()
+    add_adk_fastapi_endpoint(app, adk_agent, path="/")
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 从 `useAgent` hook 调用 `agent.setState`
+    `useAgent` 返回一个带有 `setState` 方法的 `agent` 对象，您可以使用它来更新智能体状态。调用此方法
+    将更新智能体状态并触发任何依赖于智能体状态的内容重新渲染。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    // 在伪 React 组件中的示例用法
+    function YourMainContent() {
+      const { agent } = useAgent({ // [!code highlight]
+        agentId: "my_agent",
+        initialState: { language: "english" }  // 可选提供初始状态
+      });
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: agent.state?.language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:2] */}
+          <p>语言: {agent.state?.language}</p>
+          <button onClick={toggleLanguage}>切换语言</button>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+    您现在可以使用 `agent.setState` 更新智能体状态，并使用 `agent.state` 读取它。尝试切换语言按钮
+    并与您的智能体交谈。您会看到语言更改为与智能体的状态匹配。
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用关于已更改内容的提示重新运行智能体
+
+新的智能体状态将在下次智能体运行时使用。
+如果您想手动重新运行它，请使用 `copilotkit.runAgent()`。
+
+智能体将使用最新的更新状态重新运行。您还可以在重新运行之前添加提示消息。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "my_agent",
+  });
+  const { copilotkit } = useCopilotKit(); // [!code highlight]
+
+  // 设置为在应用程序中发生某些事件时调用
+  const toggleLanguage = async () => {
+    const newLanguage = agent.state?.language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // 添加提示消息并重新运行智能体
+    // [!code highlight:7]
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `语言已更新为 ${newLanguage}`,
+    });
+    await copilotkit.runAgent({ agent });
+  };
+
+  return (
+    // ...
+  );
+}
+```

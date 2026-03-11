@@ -1,0 +1,224 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染 Agent 的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import RunAndConnect from "@/snippets/integrations/pydantic-ai/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+所有 Pydantic AI Agent 都是有状态的。这意味着随着您的 Agent 在节点之间推进，状态对象会在它们之间传递，保留会话的整体状态。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为**原生生成式 UI**。
+
+## 何时使用此功能？
+
+当用户和 Agent 一起解决问题时，在 UI 中渲染 Agent 的状态非常有用。一个很好的例子是用户和 Agent 一起解决问题的场景。Agent 可以在其状态中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 使用状态设置您的 Agent
+
+    使用有状态结构创建您的 Pydantic AI Agent。以下是一个跟踪搜索的完整示例：
+
+    ```python title="agent.py"
+    import asyncio
+    from textwrap import dedent
+    from pydantic import BaseModel, Field
+    from pydantic_ai import Agent, RunContext
+    from pydantic_ai.ag_ui import StateDeps
+    from ag_ui.core import StateSnapshotEvent, EventType
+
+
+    class Search(BaseModel):
+        query: str
+        done: bool
+
+
+    class AgentState(BaseModel):
+        searches: list[Search] = Field(default_factory=list)
+
+
+    agent = Agent("openai:gpt-5.2-mini", deps_type=StateDeps[AgentState])
+
+
+    @agent.tool
+    async def add_search(
+        ctx: RunContext[StateDeps[AgentState]], new_query: str
+    ) -> StateSnapshotEvent:
+        """将搜索添加到 Agent 的搜索列表中。"""
+        new_search = Search(query=new_query, done=False)
+        searches = ctx.deps.state.searches
+        searches.append(new_search)
+        agent_state = AgentState(searches=searches)
+        ctx.deps.state = agent_state
+
+        return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=agent_state)
+
+
+    @agent.tool
+    async def run_searches(ctx: RunContext[StateDeps[AgentState]]) -> StateSnapshotEvent:
+        """运行 Agent 状态中的搜索。"""
+        searches = ctx.deps.state.searches
+
+        for search in searches:
+            await asyncio.sleep(1)
+            search.done = True
+
+        agent_state = AgentState(searches=searches)
+        ctx.deps.state = agent_state
+
+        return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=agent_state)
+
+
+    @agent.instructions()
+    async def search_instructions(ctx: RunContext[StateDeps[AgentState]]) -> str:
+        """搜索 Agent 的指令。"""
+        return dedent(
+            f"""
+            您是一个用于存储搜索的有用助手。
+
+            重要：
+            - 使用 `add_search` 工具将搜索添加到 Agent 的状态
+            - 使用 `add_search` 工具后，您必须始终使用 `run_searches` 工具来运行搜索
+            - 对于给定查询，仅使用 `add_search` 工具一次
+
+            当前搜索：
+            {ctx.deps.state.model_dump_json(indent=2)}
+            """
+        )
+
+
+    app = agent.to_ag_ui(deps=StateDeps(AgentState()))
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染 Agent 状态
+    现在我们可以利用带有 `render` 函数的 `useAgent` 在**聊天中**渲染我们 Agent 的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义 Agent 的状态，应与您的 Pydantic AI Agent 的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略了样式
+      useAgent({
+        agentId: "my_agent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+    您还可以在**聊天外**渲染您的 Agent 状态。当您想在聊天以外的任何地方渲染 Agent 状态时，这非常有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义 Agent 的状态，应与您的 Pydantic AI Agent 的状态匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如快速入门中的 `my_agent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+
+    您现在创建了一个将在聊天中渲染 Agent 状态的组件。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

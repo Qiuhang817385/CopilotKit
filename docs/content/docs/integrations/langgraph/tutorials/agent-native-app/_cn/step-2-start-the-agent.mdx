@@ -1,0 +1,88 @@
+---
+title: "第 2 步：启动智能体"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom'
+
+在我们开始集成 LangGraph 智能体之前，让我们先了解它的工作原理。
+
+为了本教程的目的，我们不会从头开始构建 LangGraph。
+相反，我们将使用在 `agent/` 目录中构建的 LangGraph。它包含了我们构建研究 ANA 所需的所有逻辑，除了 CopilotKit 功能，这些功能我们将一起添加。
+
+<Callout>
+如果你对构建 LangGraph 智能体的分步指南感兴趣，可以查看
+[LangGraph 快速入门指南](https://docs.langchain.com/oss/python/langgraph/quickstart)。
+</Callout>
+
+让我们先了解一下 LangGraph 智能体的工作原理，然后再将其集成到应用程序中。
+
+<Steps>
+<Step>
+### 获取 API 密钥
+你需要两个 API 密钥：
+- [OpenAI API 密钥](https://platform.openai.com/api-keys)
+- [Tavily API 密钥](https://tavily.com/)
+
+</Step>
+<Step>
+### 设置 `.env` 文件
+创建并配置智能体的环境：
+
+```shell
+cd agent
+touch .env
+```
+
+添加你的 API 密钥：
+```txt title=".env"
+OPENAI_API_KEY=<你的-openai-api-密钥>
+TAVILY_API_KEY=<你的-tavily-api-密钥>
+```
+
+</Step>
+<Step>
+### 启动智能体
+安装并运行 LangGraph CLI：
+
+```shell
+pip install -r requirements.txt # 安装依赖项
+brew install langgraph-cli # 安装 LangGraph CLI
+langgraph dev --host localhost --port 8000 # 启动智能体
+```
+
+这将在你的浏览器中打开 LangGraph Studio，你可以在其中可视化和与你的智能体交互。
+
+<Callout>
+智能体将在 https://localhost:8000 上可用，供后续步骤使用。
+</Callout>
+
+<ImageZoom src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/lgs-overview.png" height={1000} width={1000} className="rounded-lg shadow-lg"/>
+
+</Step>
+<Step>
+
+### 了解 LangGraph 智能体
+
+当我们将这个智能体构建为智能体体验时，我们需要了解它的工作原理。这里涉及的关键概念是：
+
+- **状态**：状态是智能体用于做出和传达决策的数据。你可以在屏幕左下角看到所有状态变量。**状态仅在节点转换之间更新。**
+- **节点**：节点是 LangGraph 智能体的构建块。它们是智能体完成任务将采取的步骤。在这种情况下，我们有用于**智能体**、**工具**、**人工输入**和**处理反馈**的节点。
+- **边**：边是连接节点的箭头。它们定义了智能体如何从一个节点移动到下一个节点的逻辑。它们在代码中定义，条件逻辑通过 `route` 函数处理。
+- **中断**：中断是一种允许用户与智能体一起工作并审查其决策的方式。在这种情况下，我们在 **human** 节点之后有一个**中断**，阻止智能体继续执行，直到用户提供反馈。
+
+</Step>
+<Step>
+### 测试 LangGraph 智能体
+
+你可以通过向 `messages` 状态变量添加一条消息，然后点击"提交"来向智能体发送消息。这个智能体为此教程进行了简化，旨在代表一个简单的研究智能体。
+
+我们将在后面的步骤中使其变得花哨，但现在你可以让它做一些研究，看看我们将要集成到应用程序中的行为。
+</Step>
+</Steps>
+
+## 回顾
+现在我们有了一个运行中的智能体！它将在 `https://localhost:8000` 上可用。我们做了什么：
+- 安装了 LangGraph Studio
+- 设置了 `.env` 文件
+- 启动、可视化和测试了 LangGraph 智能体
+
+在下一步中，我们将把 LangGraph 智能体集成到应用程序中作为 Copilot 智能体 (CoAgent)。

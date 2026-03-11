@@ -1,0 +1,76 @@
+---
+title: "退出代理循环"
+icon: "lucide/DoorOpen"
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+
+在您的代理完成工作流后，您通常会希望通过在代理代码中调用 CopilotKit 退出方法来显式结束该循环。
+
+退出代理的效果因模式而异：
+
+- **路由器模式**：退出代理将处理输入的责任交还给路由器，路由器可以启动聊天、调用操作、其他代理等。路由器可以稍后返回到此代理（启动新循环）以满足用户请求。
+
+- **代理锁定模式**：退出代理将重新启动当前代理的工作流循环。
+
+在这个来自[我们的邮件发送应用](https://github.com/copilotkit/copilotkit/tree/main/examples/coagents-qa)的示例中，`send_email` 节点显式退出，然后手动将响应作为 `ToolMessage` 发送回用户：
+
+<Steps>
+    <Step>
+        ### 安装 CopilotKit SDK
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+
+    <Step>
+        ### 退出代理循环
+        这将在当前 LangGraph 运行完成后退出代理会话，无论是通过断点还是到达 `END` 节点。
+
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python
+                from copilotkit.langgraph import (copilotkit_exit)
+                # ...
+                async def send_email_node(state: EmailAgentState, config: RunnableConfig):
+                    """发送邮件。"""
+
+                    await copilotkit_exit(config) # [!code highlight]
+
+                    # 获取最后一条消息并转换为 ToolMessage
+                    last_message = cast(ToolMessage, state["messages"][-1])
+                    if last_message.content == "CANCEL":
+                        return {
+                            "messages": [AIMessage(content="❌ 已取消发送邮件。")],
+                        }
+                    else:
+                        return {
+                            "messages": [AIMessage(content="✅ 已发送邮件。")],
+                        }
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript
+                import { copilotkitExit } from "@copilotkit/sdk-js/langgraph";
+
+                // ...
+
+                async function sendEmailNode(state: EmailAgentState, config: RunnableConfig): Promise<{ messages: any[] }> {
+                    // 发送邮件。
+
+                    await copilotkitExit(config); // [!code highlight]
+
+                    // 获取最后一条消息并转换为 ToolMessage
+                    const lastMessage = state.messages[state.messages.length - 1] as ToolMessage;
+                    if (lastMessage.content === "CANCEL") {
+                        return {
+                            messages: [new AIMessage(content="❌ 已取消发送邮件。")],
+                        }
+                    } else {
+                        return {
+                            messages: [new AIMessage(content="✅ 已发送邮件。")],
+                        }
+                    }
+                }
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+</Steps>

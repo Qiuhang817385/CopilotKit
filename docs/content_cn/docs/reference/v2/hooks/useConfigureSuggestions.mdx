@@ -1,0 +1,200 @@
+---
+title: "useConfigureSuggestions"
+description: "用于配置聊天建议的 React Hook"
+---
+
+## 概述
+
+`useConfigureSuggestions` 是一个向 CopilotKit 核心注册建议配置的 React Hook。它支持两种模式：**静态** 建议（固定列表）和 **动态** 建议（基于指令由 Agent 生成）。
+
+配置在挂载时自动注册，在卸载时移除。配置更改时，建议会自动重新加载。
+
+## 签名
+
+```tsx
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function useConfigureSuggestions(
+  config: SuggestionsConfigInput | null | undefined,
+  deps?: ReadonlyArray<unknown>
+): void
+```
+
+## 参数
+
+<PropertyReference name="config" type="SuggestionsConfigInput | null | undefined">
+  建议配置。传递 `null` 或 `undefined` 以禁用建议。可以是 `DynamicSuggestionsConfig` 或 `StaticSuggestionsConfigInput`。
+
+  ### 动态配置
+
+  当建议应由 Agent 在运行时生成时使用。
+
+  <PropertyReference name="instructions" type="string" required>
+    用于模型生成建议的提示或指令。这是区分动态配置和静态配置的关键。
+  </PropertyReference>
+
+  <PropertyReference name="minSuggestions" type="number" default="1">
+    要生成的最小建议数。
+  </PropertyReference>
+
+  <PropertyReference name="maxSuggestions" type="number" default="3">
+    要生成的最大建议数。
+  </PropertyReference>
+
+  <PropertyReference name="available" type="SuggestionAvailability" default='"after-first-message"'>
+    建议何时可用。选项：
+    - `"before-first-message"` -- 在发送任何消息之前显示建议。
+    - `"after-first-message"` -- 在第一条消息后显示建议（动态默认）。
+    - `"always"` -- 始终显示建议。
+    - `"disabled"` -- 禁用建议。
+  </PropertyReference>
+
+  <PropertyReference name="providerAgentId" type="string" default='"default"'>
+    生成建议的提供程序的 Agent ID。
+  </PropertyReference>
+
+  <PropertyReference name="consumerAgentId" type="string" default='"*"'>
+    显示建议的消费者的 Agent ID。默认为 `"*"`（所有 Agent）。
+  </PropertyReference>
+
+  ### 静态配置
+
+  当建议是预定义列表时使用。
+
+  <PropertyReference name="suggestions" type="StaticSuggestionInput[]" required>
+    建议对象数组。每个建议有：
+    - `title: string` -- 建议的短显示标题。
+    - `message: string` -- 选择时发送的消息内容。
+    - `isLoading?: boolean` -- 可选的加载状态（默认为 `false`）。
+  </PropertyReference>
+
+  <PropertyReference name="available" type="SuggestionAvailability" default='"before-first-message"'>
+    建议何时可用。与动态配置相同的选项。
+  </PropertyReference>
+
+  <PropertyReference name="consumerAgentId" type="string" default='"*"'>
+    显示建议的消费者的 Agent ID。默认为 `"*"`（所有 Agent）。
+  </PropertyReference>
+</PropertyReference>
+
+<PropertyReference name="deps" type="ReadonlyArray<unknown>">
+  可选的依赖数组。当此数组中的任何值更改时，建议会重新加载。这对于依赖外部状态的动态建议很有用。
+</PropertyReference>
+
+## 用法
+
+### 静态建议
+
+```tsx
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function WelcomeSuggestions() {
+  useConfigureSuggestions({
+    suggestions: [
+      { title: "开始使用", message: "帮助我开始我的项目" },
+      { title: "显示示例", message: "给我看一些示例用例" },
+      { title: "文档", message: "在哪里可以找到文档？" },
+    ],
+    available: "before-first-message",
+  });
+
+  return null;
+}
+```
+
+### 动态建议
+
+```tsx
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function SmartSuggestions() {
+  useConfigureSuggestions({
+    instructions:
+      "根据对话到目前为止建议后续问题。" +
+      "关注用户可能想要采取的可操作下一步。",
+    maxSuggestions: 3,
+    minSuggestions: 1,
+    available: "after-first-message",
+  });
+
+  return null;
+}
+```
+
+### 带依赖项的动态建议
+
+```tsx
+import { useState } from "react";
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function ContextualSuggestions() {
+  const [topic, setTopic] = useState("general");
+
+  useConfigureSuggestions(
+    {
+      instructions: `生成与主题相关的建议：${topic}`,
+      maxSuggestions: 3,
+    },
+    [topic],
+  );
+
+  return (
+    <select value={topic} onChange={(e) => setTopic(e.target.value)}>
+      <option value="general">通用</option>
+      <option value="technical">技术</option>
+      <option value="business">业务</option>
+    </select>
+  );
+}
+```
+
+### 有条件地禁用建议
+
+```tsx
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function ConditionalSuggestions({ enabled }: { enabled: boolean }) {
+  useConfigureSuggestions(
+    enabled
+      ? {
+          suggestions: [
+            { title: "帮助", message: "我需要帮助" },
+          ],
+        }
+      : null,
+  );
+
+  return null;
+}
+```
+
+### 针对特定 Agent
+
+```tsx
+import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
+
+function AgentSpecificSuggestions() {
+  useConfigureSuggestions({
+    instructions: "建议用户可以执行的数据分析任务。",
+    maxSuggestions: 4,
+    providerAgentId: "analyst",
+    consumerAgentId: "analyst",
+    available: "always",
+  });
+
+  return null;
+}
+```
+
+## 行为
+
+- **自动注册**：配置在挂载时与核心注册，在卸载时移除。这确保生命周期管理干净。
+- **变更检测**：Hook 将配置序列化为 JSON 进行比较。如果序列化值更改，旧配置被移除，新配置被注册，触发重新加载。
+- **依赖跟踪**：提供 `deps` 数组时，其值中的任何更改都会触发建议重新加载，即使序列化配置本身未更改。
+- **配置区分**：Hook 通过检查 `instructions` 属性的存在来区分动态和静态配置。如果存在 `instructions`，则视为动态配置。
+- **禁用状态**：传递 `null`、`undefined` 或 `available: "disabled"` 的配置将移除任何先前注册的配置且不生成建议。
+- **isLoading 规范化**：对于静态建议，如果未显式提供，`isLoading` 字段默认为 `false`。
+
+## 相关
+
+- [`useSuggestions`](/reference/v2/hooks/useSuggestions) -- 读取和交互配置的建议

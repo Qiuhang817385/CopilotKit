@@ -1,0 +1,139 @@
+---
+title: "useDefaultTool"
+description: "useDefaultTool 钩子启用默认 UI 的渲染，捕获任何没有特定渲染器的工具。"
+---
+
+<Callout type="warning">
+  `useDefaultTool` 仍然受支持，但我们建议迁移到 v2 API 的 [`useFrontendTool`](/reference/v2/hooks/useFrontendTool)。
+</Callout>
+
+`useDefaultTool` 是一个 React 钩子，允许您为任何没有特定渲染器的工具调用渲染自定义 UI
+
+## 用法
+
+```tsx
+import { useDefaultTool } from "@copilotkit/react-core";
+
+useDefaultTool({
+  render: ({ name, args, status, result }) => {
+    return (
+      <div className="p-4 border rounded my-2">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold">{name}</h4>
+          <span className="text-sm text-gray-500">
+            {status === "inProgress" && "Running..."}
+            {status === "executing" && "Executing..."}
+            {status === "complete" && "Complete"}
+          </span>
+        </div>
+
+        {Object.keys(args).length > 0 && (
+          <div className="mb-2">
+            <p className="text-sm font-medium text-gray-600">Parameters:</p>
+            <pre className="text-xs bg-gray-100 p-2 rounded mt-1">
+              {JSON.stringify(args, null, 2)}
+            </pre>
+          </div>
+        )}
+
+        {status === "complete" && result && (
+          <div>
+            <p className="text-sm font-medium text-gray-600">Result:</p>
+            <pre className="text-xs bg-gray-100 p-2 rounded mt-1">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    );
+  },
+});
+```
+
+### 渲染模型上下文协议 (MCP) 工具
+
+```tsx
+import { useDefaultTool } from "@copilotkit/react-core";
+
+// 使用自定义 UI 渲染任何 MCP 工具调用
+useDefaultTool({
+  render: ({ name, args, status, result }) => {
+    // MCP 工具的自定义渲染
+    if (name.startsWith("mcp_")) {
+      return <MCPToolRenderer name={name} args={args} status={status} result={result} />;
+    }
+
+    // 其他工具的默认渲染
+    return <DefaultToolRenderer name={name} args={args} status={status} result={result} />;
+  },
+});
+```
+
+## 参数
+
+<PropertyReference name="tool" type="ReactRenderToolCall<T>" required>
+  工具渲染配置对象。
+    <PropertyReference name="render" type="React.ComponentType<RenderProps>">
+      渲染工具调用 UI 的 React 组件。该组件接收以下 props：
+
+      <div className="ml-8">
+        <PropertyReference name="status" type="'inProgress' | 'executing' | 'complete'">
+          - `"inProgress"`：工具正在准备或参数正在流式传输。
+          - `"executing"`：工具正在积极运行。
+          - `"complete"`：工具执行已完成。
+        </PropertyReference>
+
+        <PropertyReference name="args" type="Partial<T> | T | any">
+          传递给工具的参数。如果提供了参数模式，则类型安全。
+          对于捕获所有渲染器（`name: "*"`），这将是 `any`。
+        </PropertyReference>
+
+        <PropertyReference name="result" type="any">
+          工具返回的结果。仅在状态为 `"complete"` 时可用。
+        </PropertyReference>
+
+        <PropertyReference name="name" type="string">
+          正在执行的工具的实际名称。对于
+          捕获所有渲染器特别有用，可以知道正在渲染哪个工具。
+        </PropertyReference>
+
+        <PropertyReference name="description" type="string">
+          正在执行的工具的描述。
+        </PropertyReference>
+      </div>
+    </PropertyReference>
+</PropertyReference>
+
+<PropertyReference name="dependencies" type="any[]">
+  可选的依赖项数组。
+</PropertyReference>
+
+## 常见用例
+
+1. **后端工具可视化**：显示长时间运行的后端操作的进度和结果
+2. **通用工具渲染**：为任何没有特定渲染的工具提供回退 UI
+3. **MCP 工具集成**：渲染来自各种来源的模型上下文协议工具
+4. **调试**：在开发过程中显示所有工具调用
+5. **分析**：跟踪和显示工具使用情况
+
+## 从 useCopilotAction 迁移
+
+如果您要从只有 `render` 函数的 `useCopilotAction` 迁移：
+
+```tsx
+// 之前使用 useCopilotAction
+useCopilotAction({
+  render: ({ name, args, status, result }) => (
+    <GenericToolCall name={name} args={args} status={status} result={result} />
+  ),
+});
+
+// 之后使用 useDefaultTool
+useDefaultTool({
+  render: ({ name, args, status, result }) => (
+    <GenericToolCall name={name} args={args} status={status} result={result} />
+  ),
+});
+```
+
+迁移很简单 - 只需更改钩子名称。渲染 props 保持不变。

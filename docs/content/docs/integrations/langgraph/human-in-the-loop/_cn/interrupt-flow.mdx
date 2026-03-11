@@ -1,0 +1,404 @@
+---
+title: 中断
+description: 学习如何使用基于中断的流程实现人机协作 (HITL)。
+icon: "lucide/CirclePause"
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import RunAndConnectAgentSnippet from "@/snippets/coagents/run-and-connect-agent.mdx"
+import { MessageCircle, PanelsTopLeft } from "lucide-react";
+import { IframeSwitcher } from "@/components/content"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<IframeSwitcher
+  id="human-in-the-loop-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/human_in_the_loop?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/human_in_the_loop?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  本示例展示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/langgraph/feature/human_in_the_loop) 中基于中断的人机协作 (HITL)。
+</Callout>
+
+## 这是什么？
+
+[LangGraph 的中断流程](https://docs.langchain.com/oss/python/langgraph/interrupts) 提供了一种直观的方式来实现人机协作工作流。
+
+本指南将向您展示如何使用 `interrupt` 以及如何将其与 CopilotKit 集成。
+
+## 什么时候应该使用这个功能？
+
+人机协作是实现生产就绪复杂工作流的一种强大方式。通过在循环中加入人工，
+您可以确保代理始终做出正确的决策，并最终朝着正确的方向发展。
+
+基于中断的流程是实现 HITL 的一种非常直观的方式。节点可以在执行过程中被中断以允许用户输入，而不是在执行之前或之后等待用户输入。
+权衡是代理不会意识到交互的发生，然而 [CopilotKit 的 SDK 提供了辅助函数来缓解这个问题](#让您的代理意识到中断)。
+
+## 实现
+
+<Steps>
+<Step>
+  ### 运行并连接您的代理
+  <RunAndConnect components={props.components} />
+</Step>
+<Step>
+  ### 安装 CopilotKit SDK
+  <InstallSDKSnippet components={props.components} />
+</Step>
+<Step>
+### 设置您的代理状态
+我们将让代理要求我们为它命名，因此我们需要一个状态属性来存储名称。
+
+<Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+    <Tab value="Python">
+        ```python title="agent.py"
+        # ...
+        from copilotkit import CopilotKitState # 扩展 MessagesState
+        # ...
+
+        # 这是代理的状态。
+        # 它继承了 CopilotKit 的 CopilotKitState 属性。
+        class AgentState(CopilotKitState):
+            agent_name: str
+        ```
+    </Tab>
+    <Tab value="TypeScript">
+        ```typescript title="agent-js/src/agent.ts"
+        // ...
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+        // ...
+
+        // 这是代理的状态。
+        // 它继承了 CopilotKit 的 CopilotKitState 属性。
+        export const AgentStateAnnotation = Annotation.Root({
+          agentName: Annotation<string>,
+          ...CopilotKitStateAnnotation.spec,
+        });
+        export type AgentState = typeof AgentStateAnnotation.State;
+        ```
+    </Tab>
+</Tabs>
+
+</Step>
+<Step>
+    ### 在您的 LangGraph 代理中调用 `interrupt`
+    现在我们可以在 LangGraph 代理中调用 `interrupt`。
+
+    <Callout type="info">
+        默认情况下，您的代理不会意识到 `interrupt` 交互的发生。
+
+        如果您想要这种行为，请参阅 [下面的章节](#让您的代理意识到中断)。
+    </Callout>
+
+    <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+        <Tab value="Python">
+            ```python title="agent.py"
+            from langgraph.types import interrupt # [!code highlight]
+            from langchain_core.messages import SystemMessage
+            from langchain_openai import ChatOpenAI
+            from copilotkit import CopilotKitState
+
+            # 从上一步添加代理状态定义
+            class AgentState(CopilotKitState):
+                agent_name: str
+
+            def chat_node(state: AgentState, config: RunnableConfig):
+                if not state.get("agent_name"):
+                    # 中断并等待用户回复一个名称
+                    state["agent_name"] = interrupt("在我们开始之前，您想叫我什么名字？") # [!code highlight]
+
+                # 告诉代理它的名字
+                system_message = SystemMessage(
+                    content=f"你是一个有帮助的助手，名叫 {state.get('agent_name')}..."
+                )
+
+                response = ChatOpenAI(model="gpt-5.2").invoke(
+                    [system_message, *state["messages"]],
+                    config
+                )
+
+                return {
+                    **state,
+                    "messages": response,
+                }
+            ```
+        </Tab>
+        <Tab value="TypeScript">
+            ```typescript title="agent-js/src/agent.ts"
+            import { interrupt } from "@langchain/langgraph"; // [!code highlight]
+            import { SystemMessage } from "@langchain/core/messages";
+            import { ChatOpenAI } from "@langchain/openai";
+
+            // 从上一步添加代理状态定义
+            export const AgentStateAnnotation = Annotation.Root({
+                agentName: Annotation<string>,
+                ...CopilotKitStateAnnotation.spec,
+            });
+            export type AgentState = typeof AgentStateAnnotation.State;
+
+            async function chat_node(state: AgentState, config: RunnableConfig) {
+                const agentName = state.agentName
+                ?? interrupt("在我们开始之前，您想叫我什么名字？"); // [!code highlight]
+
+                // 告诉代理它的名字
+                const systemMessage = new SystemMessage({
+                    content: `你是一个有帮助的助手，名叫 ${agentName}...`,
+                });
+
+                const response = await new ChatOpenAI({ model: "gpt-5.2" }).invoke(
+                    [systemMessage, ...state.messages],
+                    config
+                );
+
+                return {
+                    ...state,
+                    agentName,
+                    messages: response,
+                };
+            }
+            ```
+        </Tab>
+    </Tabs>
+</Step>
+<Step>
+    ### 在前端处理中断
+    此时，您的 LangGraph 代理的 `interrupt` 将被调用。但是，我们目前没有处理在前端渲染或响应中断的逻辑。
+
+    为此，我们将使用 `useInterrupt` 钩子，给它一个组件来渲染，然后使用用户的响应调用 `resolve`。
+
+    ```tsx title="app/page.tsx"
+    import { useInterrupt } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    const YourMainContent = () => {
+    // ...
+    // [!code highlight:15]
+    // 样式为简洁起见已省略
+    useInterrupt({
+        render: ({ event, resolve }) => (
+            <div>
+                <p>{event.value}</p>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    resolve((e.target as HTMLFormElement).response.value);
+                }}>
+                    <input type="text" name="response" placeholder="输入您的回复" />
+                    <button type="submit">提交</button>
+                </form>
+            </div>
+        )
+    });
+    // ...
+
+    return <div>{/* ... */}</div>
+    }
+    ```
+
+</Step>
+<Step>
+### 试试看！
+尝试与您的代理交谈，您会看到它现在暂停执行并等待您回复！
+<video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/interrupt-flow.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+</Step>
+</Steps>
+
+## 高级用法
+
+### 条件 UI 执行
+
+当在代理中渲染多个 `interrupt` 事件时，UI 中多个 `useInterrupt` 钩子调用之间可能会发生冲突。
+因此，该钩子可以接受一个 `enabled` 参数，以有条件地应用它：
+
+<Steps>
+    <Step>
+        ### 定义多个中断
+        首先，让我们定义两个不同的中断。我们将包含一个 "type" 属性来区分它们。
+        <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from langgraph.types import interrupt # [!code highlight]
+                from langchain_core.messages import SystemMessage
+                from langchain_openai import ChatOpenAI
+
+                # ... 您的完整状态定义
+
+                def chat_node(state: AgentState, config: RunnableConfig):
+
+                  state["approval"] = interrupt({ "type": "approval", "content": "请批准" }) # [!code highlight]
+
+                  if not state.get("agent_name"):
+                    # 中断并等待用户回复一个名称
+                    state["agent_name"] = interrupt({ "type": "ask", "content": "在我们开始之前，您想叫我什么名字？" }) # [!code highlight]
+
+                  # 告诉代理它的名字
+                  system_message = SystemMessage(
+                    content=f"你是一个有帮助的助手..."
+                  )
+
+                  response = ChatOpenAI(model="gpt-5.2").invoke(
+                    [system_message, *state["messages"]],
+                    config
+                  )
+
+                  return {
+                    **state,
+                    "messages": response,
+                  }
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```typescript title="agent-js/src/agent.ts"
+                import { interrupt } from "@langchain/langgraph"; // [!code highlight]
+                import { SystemMessage } from "@langchain/core/messages";
+                import { ChatOpenAI } from "@langchain/openai";
+
+                // ... 您的完整状态定义
+
+                async function chat_node(state: AgentState, config: RunnableConfig) {
+                  state.approval = await interrupt({ type: "approval", content: "请批准" }); // [!code highlight]
+
+                  if (!state.agentName) {
+                    state.agentName = await interrupt({ type: "ask", content: "在我们开始之前，您想叫我什么名字？" }); // [!code highlight]
+                  }
+
+                  // 告诉代理它的名字
+                  const systemMessage = new SystemMessage({
+                    content: `你是一个有帮助的助手...`,
+                  });
+
+                  const response = await new ChatOpenAI({ model: "gpt-5.2" }).invoke(
+                    [systemMessage, ...state.messages],
+                    config
+                  );
+
+                  return {
+                    ...state,
+                    messages: response,
+                  };
+                }
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+    <Step>
+        ### 添加多个前端处理程序
+        考虑到区分器，我们将添加一个处理任何 "ask" 和任何 "approve" 类型的处理程序。
+        在我们的页面中使用两个 `useInterrupt` 钩子，我们可以利用 `enabled` 属性在正确的时间启用每个钩子：
+
+        ```tsx title="app/page.tsx"
+        import { useInterrupt } from "@copilotkit/react-core/v2"; // [!code highlight]
+        // ...
+
+        const ApproveComponent = ({ content, onAnswer }: { content: string; onAnswer: (approved: boolean) => void }) => (
+            // 样式为简洁起见已省略
+            <div>
+                <h1>您批准吗？</h1>
+                <button onClick={() => onAnswer(true)}>批准</button>
+                <button onClick={() => onAnswer(false)}>拒绝</button>
+            </div>
+        )
+
+        const AskComponent = ({ question, onAnswer }: { question: string; onAnswer: (answer: string) => void }) => (
+        // 样式为简洁起见已省略
+            <div>
+                <p>{question}</p>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    onAnswer((e.target as HTMLFormElement).response.value);
+                }}>
+                    <input type="text" name="response" placeholder="输入您的回复" />
+                    <button type="submit">提交</button>
+                </form>
+            </div>
+        )
+
+        const YourMainContent = () => {
+            // ...
+            // [!code highlight:13]
+            useInterrupt({
+                enabled: ({ eventValue }) => eventValue.type === 'ask',
+                render: ({ event, resolve }) => (
+                    <AskComponent question={event.value.content} onAnswer={answer => resolve(answer)} />
+                )
+            });
+
+            useInterrupt({
+                enabled: ({ eventValue }) => eventValue.type === 'approval',
+                render: ({ event, resolve }) => (
+                    <ApproveComponent content={event.value.content} onAnswer={answer => resolve(answer)} />
+                )
+            });
+
+            // ...
+        }
+    ```
+    </Step>
+</Steps>
+
+### 中断的预处理和以编程方式处理中断值
+
+当选择自定义聊天 UI 时，某些情况可能需要对中断事件的传入值进行预处理，甚至完全在不显示 UI 的情况下解决它。
+这可以使用 `handler` 属性来实现，该属性不需要返回 React 组件。
+
+处理程序的返回值将作为 `result` 参数传递给 `render` 方法。
+```tsx title="app/page.tsx"
+// 我们假设中断事件的形状如下
+type Department = 'finance' | 'engineering' | 'admin'
+interface AuthorizationInterruptEvent {
+    type: 'auth',
+    accessDepartment: Department,
+}
+
+import { useInterrupt } from "@copilotkit/react-core/v2";
+
+const YourMainContent = () => {
+    const [userEmail, setUserEmail] = useState({ email: 'example@user.com' })
+    function getUserByEmail(email: string): { id: string; department: Department } {
+        // ... 用户获取的实现
+    }
+
+    // ...
+    // 样式为简洁起见已省略
+    // [!code highlight:28]
+    useInterrupt({
+        handler: async ({ result, event, resolve }) => {
+            const { department } = await getUserByEmail(userEmail)
+            if (event.value.accessDepartment === department || department === 'admin') {
+                // 在解决事件后，我们将不会继续执行 render 方法
+                resolve({ code: 'AUTH_BY_DEPARTMENT' })
+                return;
+            }
+
+            return { department, userId }
+        },
+        render: ({ result, event, resolve }) => (
+            <div>
+                <h1>{event.value.type} 请求</h1>
+                <p>{result.department} 部门的成员无法访问此信息</p>
+                <p>您可以向管理员请求访问权限以继续。</p>
+                <button
+                    onClick={() => resolve({ code: 'REQUEST_AUTH', data: { department: result.department, userId: result.userId } })}
+                >
+                    请求访问
+                </button>
+                <button
+                    onClick={() => resolve({ code: 'CANCEL' })}
+                >
+                    取消
+                </button>
+            </div>
+        )
+    });
+    // ...
+
+    return <div>{/* ... */}</div>
+}
+```

@@ -1,0 +1,28 @@
+---
+title: 匿名遥测
+---
+
+我们使用匿名遥测（仅元数据）来了解如何改进 CopilotKit。
+
+* 开源遥测是**完全匿名的**
+* 我们**不收集任何关于最终用户**（与你的 copilot 交互的用户）的数据
+* 我们**不收集任何流经你系统的应用程序数据**，仅收集 CopilotKit 元数据
+* 我们不会向第三方出售或共享任何数据
+* 我们在开源遥测中不使用 cookie 或跟踪器
+* 为了最小化发送数据的频率，我们对遥测应用批处理和采样
+
+## 如何退出匿名遥测
+
+你可以通过多种方式退出开源遥测。
+
+在 CopilotRuntime 中，只需设置 `COPILOTKIT_TELEMETRY_DISABLED=true`。我们也尊重[请勿跟踪 (DNT)](https://consoledonottrack.com/)。
+
+或者，你可以在配置 Copilot Runtime 端点时直接将 `telemetryDisabled` 标志设置为 `true`。
+
+## 如何调整遥测采样率
+
+默认采样率为 `0.05`（5%）。你可以通过将 `COPILOTKIT_TELEMETRY_SAMPLE_RATE` 设置为 0 到 1 之间的任何值来调整它。
+
+## 联系我们
+
+如果你有任何问题或疑虑，请联系 [hello@copilotkit.ai](mailto:hello@copilotkit.ai)。

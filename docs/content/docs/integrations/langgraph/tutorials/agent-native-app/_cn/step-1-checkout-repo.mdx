@@ -1,0 +1,41 @@
+---
+title: "第 1 步：检出代码库"
+---
+
+<Steps>
+<Step>
+## 获取起始代码
+我们将使用 [open-research-ana 仓库](https://github.com/CopilotKit/open-research-ana) 作为我们的起点。克隆 `tutorial-start` 分支：
+
+```shell
+git clone -b tutorial-start https://github.com/CopilotKit/open-research-ana.git
+cd open-research-ana
+```
+
+该仓库包含：
+- `frontend/`：我们将集成智能体的 NextJS 应用程序
+- `agent/`：我们将使用 CopilotKit 增强的基于 Python 的 LangGraph 智能体
+
+</Step>
+<Step>
+## 安装前端依赖项
+导航到前端目录并安装依赖项：
+
+```shell
+cd frontend
+pnpm install
+```
+</Step>
+<Step>
+## 启动应用程序
+启动开发服务器：
+
+```shell
+pnpm run dev
+```
+
+访问 [http://localhost:3000](http://localhost:3000) 查看初始应用程序。你会看到一个空的聊天界面和文档——这是我们的起点。
+</Step>
+</Steps>
+
+接下来，我们将探索我们的 LangGraph 智能体是如何工作的。

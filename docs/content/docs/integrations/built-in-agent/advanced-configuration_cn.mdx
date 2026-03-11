@@ -1,0 +1,145 @@
+---
+title: "高级配置"
+icon: "lucide/Cog"
+description: "使用高级选项微调你的内置代理行为。"
+---
+
+`BuiltInAgent` 接受一整套配置选项来控制模型行为、工具调用等。
+
+## 多步工具调用
+
+默认情况下，代理执行单一生成步骤。设置 `maxSteps` 以允许代理调用工具然后继续推理：
+
+```typescript title="src/copilotkit.ts"
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  maxSteps: 5, // [!code highlight]
+  tools: [searchDocs, createTicket],
+});
+```
+
+使用 `maxSteps: 5`，代理可以调用工具、处理结果、调用另一个工具，依此类推 —— 最多 5 次迭代。这对于代理需要链式调用多个工具的工作流至关重要。
+
+## 工具选择
+
+控制代理如何选择工具：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  toolChoice: "auto",       // 让模型决定（默认）
+  // toolChoice: "required", // 强制模型调用工具
+  // toolChoice: "none",     // 禁用工具调用
+  // toolChoice: { type: "tool", toolName: "searchDocs" }, // 强制特定工具
+});
+```
+
+## 系统提示词
+
+自定义代理的系统提示词：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  prompt: "You are a customer support agent for Acme Corp. Be concise and helpful. Always check the knowledge base before answering.", // [!code highlight]
+});
+```
+
+## 生成参数
+
+微调模型的输出：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  temperature: 0.7,        // 创造性（0 = 确定性，1+ = 创造性）
+  topP: 0.9,               // 核采样
+  topK: 40,                // Top-K 采样（取决于提供商）
+  maxOutputTokens: 4096,   // 响应中的最大令牌数
+  presencePenalty: 0.1,    // 惩罚重复主题
+  frequencyPenalty: 0.1,   // 惩罚重复令牌
+  stopSequences: ["END"],  // 在这些序列处停止生成
+  seed: 42,                // 确定性输出（取决于提供商）
+  maxRetries: 3,           // 瞬态故障时重试
+});
+```
+
+<Callout type="info">
+并非所有参数都被每个提供商支持。例如，`topK` 被 Google 支持但 OpenAI 不支持。不支持的参数会被忽略。
+</Callout>
+
+## 提供商特定选项
+
+使用 `providerOptions` 传递特定于模型提供商的选项：
+
+```typescript
+// OpenAI 推理模型（o3、o4-mini）的推理力度
+const agent = new BuiltInAgent({
+  model: "openai:o3",
+  providerOptions: { // [!code highlight:3]
+    openai: { reasoningEffort: "high" },
+  },
+});
+```
+
+```typescript
+// Anthropic 的扩展思考
+const agent = new BuiltInAgent({
+  model: "anthropic:claude-sonnet-4.5",
+  providerOptions: { // [!code highlight:3]
+    anthropic: { thinking: { type: "enabled", budgetTokens: 10000 } },
+  },
+});
+```
+
+## 可覆盖属性
+
+允许前端在运行时覆盖特定配置。当你希望用户切换模型或调整行为而无需重新部署时，这很有用：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  temperature: 0.5,
+  overridableProperties: ["model", "temperature", "prompt"], // [!code highlight]
+});
+```
+
+可覆盖属性的完整列表：
+`model`, `toolChoice`, `maxOutputTokens`, `temperature`, `topP`, `topK`, `presencePenalty`, `frequencyPenalty`, `stopSequences`, `seed`, `maxRetries`, `prompt`, `providerOptions`
+
+## 消息转发
+
+控制是否将对话中的系统和开发者消息转发给 LLM：
+
+```typescript
+const agent = new BuiltInAgent({
+  model: "openai:gpt-5.2",
+  forwardSystemMessages: true,    // 转发系统角色消息
+  forwardDeveloperMessages: true, // 转发开发者角色消息（作为系统消息）
+});
+```
+
+## 完整配置参考
+
+| 属性 | 类型 | 默认值 | 描述 |
+|----------|------|---------|-------------|
+| `model` | `string \| LanguageModel` | — | 模型说明符或 AI SDK 实例 |
+| `apiKey` | `string` | env var | 提供商的 API 密钥 |
+| `maxSteps` | `number` | `1` | 最大工具调用迭代次数 |
+| `toolChoice` | `"auto" \| "required" \| "none" \| { type: "tool", toolName: string }` | `"auto"` | 工具选择方式 |
+| `maxOutputTokens` | `number` | — | 响应中的最大令牌数 |
+| `temperature` | `number` | — | 采样温度 |
+| `topP` | `number` | — | 核采样 |
+| `topK` | `number` | — | Top-K 采样 |
+| `presencePenalty` | `number` | — | 存在惩罚 |
+| `frequencyPenalty` | `number` | — | 频率惩罚 |
+| `stopSequences` | `string[]` | — | 停止序列 |
+| `seed` | `number` | — | 随机种子 |
+| `maxRetries` | `number` | — | 重试次数 |
+| `prompt` | `string` | — | 系统提示词 |
+| `tools` | `ToolDefinition[]` | `[]` | 服务端工具 |
+| `mcpServers` | `MCPClientConfig[]` | `[]` | MCP 服务器连接 |
+| `overridableProperties` | `string[]` | `[]` | 前端可以覆盖的属性 |
+| `providerOptions` | `Record<string, any>` | — | 提供商特定选项 |
+| `forwardSystemMessages` | `boolean` | `false` | 转发系统消息 |
+| `forwardDeveloperMessages` | `boolean` | `false` | 转发开发者消息 |

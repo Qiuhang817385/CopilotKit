@@ -1,0 +1,173 @@
+---
+title: 读取智能体状态
+icon: "lucide/ArrowLeft"
+description: 在您的原生应用程序中读取实时智能体状态。
+---
+import { ImageZoom } from "fumadocs-ui/components/image-zoom";
+import RunAndConnect from "@/snippets/integrations/llamaindex/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-read-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/llama-index/feature/shared_state) 中的读取共享状态。
+</Callout>
+
+## 这是什么？
+
+您可以轻松地在原生应用程序 UX 中使用实时智能体状态，而不仅仅是在聊天 UI 中。
+
+## 什么时候应该使用这个？
+
+当您想要向用户提供有关智能体状态的反馈时，可以使用此功能。随着智能体
+状态更新，您可以在应用程序中原生地反映这些更新。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义智能体状态
+
+    使用 `initial_state` 创建具有有状态结构的 LlamaIndex 智能体。这里有一个跟踪语言的完整示例：
+
+    ```python title="agent.py"
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+
+    # 初始化 LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # 创建 AG-UI 工作流路由器
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        You are a helpful assistant for tracking the language.
+
+        IMPORTANT:
+        - ALWAYS use the lower case for the language
+        - ALWAYS respond in the current language from the state
+        """,
+        initial_state={
+            "language": "english"
+        },
+    )
+
+    # 创建 FastAPI 应用程序
+    app = FastAPI(
+        title="LlamaIndex Agent",
+        description="A LlamaIndex agent integrated with CopilotKit",
+        version="1.0.0"
+    )
+
+    # 包含路由器
+    app.include_router(agentic_chat_router)
+
+    # 健康检查端点
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook
+    随着您的智能体连接并运行，剩下的就是调用 `useAgent` hook，传递智能体的名称，并
+    可选地提供初始状态。
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 定义智能体状态类型，应与您的智能体的实际状态匹配
+    type AgentState = {
+      language: "english" | "spanish";
+    }
+
+    function YourMainContent() {
+      // [!code highlight:4]
+      const { agent } = useAgent({
+        agentId: "my_agent",
+        initialState: { language: "english" }  // 可选地提供初始状态
+      });
+
+      // ...
+
+      return (
+        // 为简洁起见省略样式
+        <div>
+          <h1>您的主要内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言：{agent.state?.language}</p>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+    </Callout>
+
+    <Callout type="info">
+      `useAgent` 中的 `agent.state` 是反应式的，当智能体状态变化时将自动更新。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+    随着智能体状态更新，您的 `state` 变量将自动随之更新！在这种情况下，您会看到
+    语言设置为 "english"，因为那是我们设置的初始状态。
+  </Step>
+</Steps>
+
+## 在聊天中渲染智能体状态
+
+您还可以在聊天 UI 中渲染智能体的状态。这对于以
+更上下文相关的方式通知用户有关智能体状态的信息很有用。为此，您可以使用带有 `render` 函数的 `useAgent` hook。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// 定义智能体状态类型，应与您的智能体的实际状态匹配
+type AgentState = {
+  language: "english" | "spanish";
+};
+
+function YourMainContent() {
+  // ...
+  // [!code highlight:7]
+  useAgent({
+    agentId: "my_agent",
+    render: ({ state }) => {
+      if (!state.language) return null;
+      return <div>语言：{state.language}</div>;
+    },
+  });
+  // ...
+}
+```
+
+<Callout type="warn" title="重要">
+  `name` 参数必须与您在 CopilotRuntime 配置中定义的智能体名称完全匹配（例如，快速入门中的 `my_agent`）。
+</Callout>
+
+<Callout type="info">
+  `useAgent` 中的 `agent.state` 是反应式的，当智能体状态变化时将自动
+  更新。
+</Callout>

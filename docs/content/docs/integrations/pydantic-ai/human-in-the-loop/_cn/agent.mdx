@@ -1,0 +1,132 @@
+---
+title: Pydantic AI Agents
+description: 学习如何使用 Pydantic AI Agents 实现 Human-in-the-Loop (HITL)。
+icon: lucide/Share2
+---
+
+import RunAndConnectAgentSnippet from "@/snippets/coagents/run-and-connect-agent.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/node-hitl.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 这是什么？
+
+[基于流的代理](https://docs.pydantic-ai.com/concepts/flows) 是有状态的代理，可以中断和恢复以允许用户输入。
+
+CopilotKit 允许您添加自定义 UI 来获取用户输入，然后在完成后将其传递回代理。
+
+## 为什么要使用这个？
+
+Human-in-the-loop 是一种实现可用于生产的复杂工作流的强大方式。通过让人类参与其中，
+您可以确保代理始终做出正确的决策，并最终朝着正确的方向发展。
+
+基于流的代理是实现 HITL 的好方法，适用于更复杂的工作流，您希望确保代理了解 HITL 交互期间发生的一切。
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的代理
+
+        您需要先运行您的代理并将其连接到 CopilotKit，然后再继续。如果您尚未这样做，
+        可以按照 [入门](/pydantic-ai/quickstart/pydantic-ai) 指南中的说明进行操作。
+
+        如果您还没有代理，可以使用 [coagent starter](https://github.com/CopilotKit/CopilotKit/tree/main/examples/coagents-starter-pydantic-ai) 作为起点，
+        因为本指南将其作为起点。
+    </Step>
+
+    <Step>
+        ### 在您的 Frontend 中添加 `useFrontendTool`
+        首先，我们将创建一个组件来渲染代理的文章草稿并等待用户批准。
+
+        ```tsx title="ui/app/page.tsx"
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2"
+        import { Markdown } from "@copilotkit/react-core/v2"
+
+        function YourMainContent() {
+          // ...
+
+          useFrontendTool({
+            name: "write_essay",
+            available: "frontend",
+            description: "Writes an essay and takes the draft as an argument.",
+            parameters: z.object({
+              draft: z.string().describe("The draft of the essay"),
+            }),
+            // [!code highlight:25]
+            renderAndWaitForResponse: ({ args, respond, status }) => {
+              return (
+                <div>
+                  <Markdown content={args.draft || 'Preparing your draft...'} />
+
+                  <div className={`flex gap-4 pt-4 ${status !== "executing" ? "hidden" : ""}`}>
+                    <button
+                      onClick={() => respond?.("CANCEL")}
+                      disabled={status !== "executing"
+                      className="border p-2 rounded-xl w-full"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={() => respond?.("SEND")}
+                      disabled={status !== "executing"
+                      className="bg-blue-500 text-white p-2 rounded-xl w-full"
+                    >
+                      Approve Draft
+                    </button>
+                  </div>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+
+    <Step>
+    ### 设置 Pydantic AI Agent
+现在我们将设置 Pydantic AI 代理。没有完整示例很难理解这个流程，所以下面是
+    带有解释的完整代理实现。
+
+    需要注意的一些主要事项：
+    - 代理的状态继承自 `CopilotKitState` 以引入 CopilotKit 操作。
+    - CopilotKit 的操作作为工具绑定到模型。
+    - 如果在模型的响应中找到 `writeEssay` 操作，代理将把控制权传递回前端
+      以获取用户反馈。
+
+    <Tabs groupId="language" items={["Python"]}>
+      <Tab value="Python">
+        ```python title="agent/sample_agent/agent.py"
+        from pydantic_ai import Agent
+
+        agent = Agent('openai:gpt-5.2-mini')
+
+        @agent.tool_plain
+        async def write_essay(topic: str) -> str:
+            """Write an essay on the given topic."""
+            # This would typically generate an essay
+            # The agent will wait for user feedback before proceeding
+            return f"Essay draft on '{topic}' has been generated. Please review."
+
+        app = agent.to_ag_ui()
+        ```
+      </Tab>
+    </Tabs>
+    </Step>
+    <Step>
+        ### 试一试！
+        尝试让您的代理写一篇关于 AI 好处的文章。您会看到它会生成一篇文章，
+        流式传输进度，最终要求您进行审核。
+    </Step>
+
+</Steps>

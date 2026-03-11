@@ -1,0 +1,74 @@
+import UseClientCalloutSnippet from "@/snippets/use-client-callout.mdx";
+
+<Callout type="warn">
+  useCopilotChatSuggestions 是实验性的。接口不是最终版本，可能会
+  在没有通知的情况下更改。
+</Callout>
+
+[`useCopilotChatSuggestions`](/reference/v1/hooks/useCopilotChatSuggestions) 是一个 React 钩子，可根据实时应用程序状态在聊天窗口中生成建议。
+
+<Frame>
+  <img
+    src="https://cdn.copilotkit.ai/docs/copilotkit/images/use-copilot-chat-suggestions/use-copilot-chat-suggestions.gif"
+    width="500"
+  />
+</Frame>
+
+
+<Steps>
+
+<Step>
+### 简单用法
+
+```tsx
+import { useCopilotChatSuggestions } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+export function MyComponent() {
+  // [!code highlight:8]
+  useCopilotChatSuggestions(
+    {
+      instructions: "建议最相关的下一步操作。",
+      minSuggestions: 1,
+      maxSuggestions: 2,
+    },
+    [relevantState],
+  );
+}
+```
+</Step>
+
+<Step>
+### 依赖管理
+
+```tsx
+import { useCopilotChatSuggestions } from "@copilotkit/react-core/v2";
+
+export function MyComponent() {
+  useCopilotChatSuggestions(
+    {
+      instructions: "建议最相关的下一步操作。",
+      minSuggestions: 1,
+      maxSuggestions: 2,
+    },
+    [relevantState], // [!code highlight]
+  );
+}
+```
+
+在上面的示例中，建议是根据给定的指令生成的。
+该钩子监控 `relevantState`，并在其更改时相应地更新建议。
+
+</Step>
+
+
+<Step>
+  <UseClientCalloutSnippet components={props.components} />
+</Step>
+
+
+</Steps>
+
+## 后续步骤
+
+- 查看[如何自定义建议外观](/guides/custom-look-and-feel/bring-your-own-components#suggestions)。
+- 查看 [useCopilotChatSuggestions 参考](/reference/v1/hooks/useCopilotChatSuggestions) 以获取更多详细信息。

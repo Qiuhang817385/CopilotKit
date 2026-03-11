@@ -1,0 +1,242 @@
+---
+title: 可读项
+icon: "lucide/BookA"
+description: 与您的 Agent 共享应用程序特定的上下文。
+hideTOC: true
+---
+
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import {
+    TailoredContent,
+    TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+
+CopilotKit 最常见的用例之一是使用 `useAgentContext` 注册应用程序状态和上下文。
+这样，您可以实时通知 CopilotKit 应用程序中发生的情况。
+一些示例可能是：当前用户、当前页面等。
+
+然后可以将此上下文与您的 AG2 后端共享。
+
+## 实现
+<Callout>
+    查看[前端数据文档](https://docs.copilotkit.ai/direct-to-llm/guides/connect-your-data/frontend)以了解这是什么以及如何使用它。
+</Callout>
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+<TailoredContent
+    className="step"
+    id="impl"
+>
+    <TailoredContentOption
+        id="graph"
+        title="自定义 Agent"
+        description="我正在使用自定义 AG2 Agent 配置。"
+    >
+        <Steps>
+            <Step>
+                ### 将数据添加到 Copilot
+
+                [`useAgentContext` Hook](/reference/v1/hooks/useAgentContext) 用于将数据作为上下文添加到 Copilot。
+
+                ```tsx title="YourComponent.tsx" showLineNumbers {1, 7-10}
+                "use client" // 仅在使用 Next.js App Router 时才需要。 // [!code highlight]
+                import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import { useState } from 'react';
+
+                export function YourComponent() {
+                  // 创建包含一些示例数据的同事状态
+                  const [colleagues, setColleagues] = useState([
+                    { id: 1, name: "John Doe", role: "Developer" },
+                    { id: 2, name: "Jane Smith", role: "Designer" },
+                    { id: 3, name: "Bob Wilson", role: "Product Manager" }
+                  ]);
+
+                  // 定义 Copilot 可读状态
+                  // [!code highlight:4]
+                  useAgentContext({
+                    description: "当前用户的同事",
+                    value: colleagues,
+                  });
+                  return (
+                    // 您的自定义 UI 组件
+                    <>...</>
+                  );
+                }
+                ```
+            </Step>
+
+            <Step>
+                ### 设置您的 Agent 状态
+                在 AG2 中，可读项以 AG-UI 上下文数据的形式到达。使用 `ContextVariables` 访问这些数据。
+
+                <Tabs groupId="language_ag2_readables_state" items={['Python']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from autogen import ContextVariables
+
+                        def get_readable(context: ContextVariables, description: str):
+                            copilot = context.get("copilotkit", {})
+                            context_items = copilot.get("context", [])
+                            return next(
+                                (item.get("value") for item in context_items if item.get("description") == description),
+                                None,
+                            )
+                        ```
+                    </Tab>
+                </Tabs>
+
+            </Step>
+
+            <Step>
+                ### 在您的 AG2 后端中使用数据
+                您的 AG2 工具和提示可以直接从 `ContextVariables` 使用可读上下文。
+
+                <Tabs groupId="language_ag2_readables_backend" items={['Python']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from fastapi import FastAPI, Header
+                        from fastapi.responses import StreamingResponse
+                        from autogen import ContextVariables, ConversableAgent, LLMConfig
+                        from autogen.ag_ui import AGUIStream, RunAgentInput
+
+                        def get_readable(context: ContextVariables, description: str):
+                            copilot = context.get("copilotkit", {})
+                            context_items = copilot.get("context", [])
+                            return next(
+                                (item.get("value") for item in context_items if item.get("description") == description),
+                                [],
+                            )
+
+                        agent = ConversableAgent(
+                            name="assistant",
+                            system_message=(
+                                "你是一个可以帮助发送邮件给同事的有用助手。"
+                                "在建议收件人之前调用 `get_colleagues`。"
+                            ),
+                            llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+                        )
+
+                        @agent.register_for_llm(description="从 CopilotKit 可读项返回当前用户的同事。")
+                        def get_colleagues(context: ContextVariables) -> list[dict]:
+                            return get_readable(context, "当前用户的同事") or []
+
+                        agent.register_for_execution(name="get_colleagues")(get_colleagues)
+
+                        stream = AGUIStream(agent)
+                        app = FastAPI()
+
+                        @app.post("/chat")
+                        async def run_agent(
+                            message: RunAgentInput,
+                            accept: str | None = Header(None),
+                        ):
+                            return StreamingResponse(
+                                stream.dispatch(message, accept=accept),
+                                media_type=accept or "text/event-stream",
+                            )
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+
+            <Step>
+                ### 试一试
+                向您的 Agent 询问有关上下文的问题。它应该能够回答。
+            </Step>
+        </Steps>
+    </TailoredContentOption>
+    <TailoredContentOption
+        id="prebuilt"
+        title="最小化设置"
+        description="我想要最简单的 AG2 设置，同时仍能读取 CopilotKit 可读项。"
+    >
+        <Steps>
+            <Step>
+                ### 将数据添加到 Copilot
+
+                [`useAgentContext` Hook](/reference/v1/hooks/useAgentContext) 用于将数据作为上下文添加到 Copilot。
+
+                ```tsx title="YourComponent.tsx" showLineNumbers {1, 7-10}
+                "use client" // 仅在使用 Next.js App Router 时才需要。 // [!code highlight]
+                import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+                import { useState } from 'react';
+
+                export function YourComponent() {
+                  // 创建包含一些示例数据的同事状态
+                  const [colleagues, setColleagues] = useState([
+                    { id: 1, name: "John Doe", role: "Developer" },
+                    { id: 2, name: "Jane Smith", role: "Designer" },
+                    { id: 3, name: "Bob Wilson", role: "Product Manager" }
+                  ]);
+
+                  // 定义 Copilot 可读状态
+                  // [!code highlight:4]
+                  useAgentContext({
+                    description: "当前用户的同事",
+                    value: colleagues,
+                  });
+                  return (
+                    // 您的自定义 UI 组件
+                    <>...</>
+                  );
+                }
+                ```
+            </Step>
+
+            <Step>
+                ### 在您的 AG2 后端中使用数据
+                对于最小化的后端，直接在注册的 AG2 工具中解析上下文并通过 AG-UI 暴露它。
+
+                <Tabs groupId="language_ag2_readables_minimal" items={['Python']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from fastapi import FastAPI, Header
+                        from fastapi.responses import StreamingResponse
+                        from autogen import ContextVariables, ConversableAgent, LLMConfig
+                        from autogen.ag_ui import AGUIStream, RunAgentInput
+
+                        agent = ConversableAgent(
+                            name="assistant",
+                            system_message="你是一个有用的助手。",
+                            llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+                        )
+
+                        @agent.register_for_llm(description="从 CopilotKit 可读上下文读取同事。")
+                        def list_colleagues(context: ContextVariables) -> list[dict]:
+                            copilot = context.get("copilotkit", {})
+                            context_items = copilot.get("context", [])
+                            entry = next(
+                                (item for item in context_items if item.get("description") == "当前用户的同事"),
+                                None,
+                            )
+                            return entry.get("value", []) if entry else []
+
+                        agent.register_for_execution(name="list_colleagues")(list_colleagues)
+
+                        stream = AGUIStream(agent)
+                        app = FastAPI()
+
+                        @app.post("/chat")
+                        async def run_agent(
+                            message: RunAgentInput,
+                            accept: str | None = Header(None),
+                        ):
+                            return StreamingResponse(
+                                stream.dispatch(message, accept=accept),
+                                media_type=accept or "text/event-stream",
+                            )
+                        ```
+                    </Tab>
+                </Tabs>
+            </Step>
+
+            <Step>
+                ### 试一试
+                向您的 Agent 询问有关上下文的问题。它应该能够回答。
+            </Step>
+        </Steps>
+    </TailoredContentOption>
+</TailoredContent>

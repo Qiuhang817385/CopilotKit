@@ -1,0 +1,48 @@
+---
+title: "LangChainAdapter"
+description: "适用于 LangChain 的 Copilot Runtime 适配器。"
+---
+
+{
+ /*
+  * 注意！不要修改此文件！
+  * 此页面是自动生成的。如果您想对此页面进行任何更改，必须在以下位置进行更改：
+  * packages/v1/runtime/src/service-adapters/langchain/langchain-adapter.ts
+  */
+}
+适用于 LangChain 的 Copilot Runtime 适配器。
+ 
+## 示例
+ 
+```ts
+import { CopilotRuntime, LangChainAdapter } from "@copilotkit/runtime";
+import { ChatOpenAI } from "@langchain/openai";
+ 
+const copilotKit = new CopilotRuntime();
+ 
+const model = new ChatOpenAI({
+  model: "gpt-5.2",
+  apiKey: "<your-api-key>",
+});
+ 
+return new LangChainAdapter({
+  chainFn: async ({ messages, tools }) => {
+    return model.bindTools(tools).stream(messages);
+    // 或可选地启用严格模式
+    // return model.bindTools(tools, { strict: true }).stream(messages);
+  }
+});
+```
+ 
+异步处理函数 (`chainFn`) 可以返回以下任何一项：
+ 
+- 简单的 `string` 响应
+- LangChain 流 (`IterableReadableStream`)
+- LangChain `BaseMessageChunk` 对象
+- LangChain `AIMessage` 对象
+
+## 构造函数参数
+
+<PropertyReference name="chainFn" type="(parameters: ChainFnParameters) => Promise<LangChainReturnType>" required > 
+使用 LangChain API 生成响应的函数。
+</PropertyReference>

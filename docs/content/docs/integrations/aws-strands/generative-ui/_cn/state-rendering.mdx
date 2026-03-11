@@ -1,0 +1,210 @@
+---
+title: 状态渲染
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染代理的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import RunAndConnect from "@/snippets/integrations/aws-strands/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/aws-strands/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+AWS Strands 代理在处理任务时会维护状态。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为 **代理式生成式 UI**。
+
+## 何时使用？
+
+当用户与代理一起解决问题时，在 UI 中渲染代理的状态非常有用。一个很好的例子是用户和代理一起解决问题的场景。代理可以将其草稿存储在状态中，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的代理
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 设置带状态的 AWS Strands 代理
+
+    配置您的 Strands 代理以维护状态。以下是一个跟踪搜索的示例：
+
+    ```python title="agent/main.py"
+    import json
+    from ag_ui_strands import StrandsAgent, StrandsAgentConfig, ToolBehavior, create_strands_app
+    from strands import Agent, tool
+    from strands.models.openai import OpenAIModel
+
+    # 创建更新状态的工具
+    @tool
+    def add_search(query: str):
+        """将搜索添加到代理的搜索列表中。
+
+        Args:
+            query: 要添加的搜索查询
+
+        Returns:
+            成功状态和查询
+        """
+        return json.dumps({"success": True, "query": query})
+
+    # 从工具参数中提取状态
+    async def searches_state_from_args(context):
+        try:
+            tool_input = context.tool_input
+            if isinstance(tool_input, str):
+                tool_input = json.loads(tool_input)
+            query = tool_input.get("query", "")
+            return {"searches": [{"query": query, "done": True}]}
+        except Exception:
+            return None
+
+    config = StrandsAgentConfig(
+        tool_behaviors={
+            "add_search": ToolBehavior(
+                state_from_args=searches_state_from_args,
+            ),
+        },
+    )
+
+    model = OpenAIModel(
+        client_args={"api_key": os.getenv("OPENAI_API_KEY", "")},
+        model_id="gpt-4o",
+    )
+
+    strands_agent = Agent(
+        model=model,
+        system_prompt="您是存储搜索的乐于助人的助手。使用 add_search 工具添加搜索。",
+        tools=[add_search],
+    )
+
+    agui_agent = StrandsAgent(
+        agent=strands_agent,
+        name="searchAgent",
+        description="存储搜索的乐于助人的助手",
+        config=config,
+    )
+
+    app = create_strands_app(agui_agent)
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染代理状态
+
+    现在我们可以利用 `useAgent` 和 `render` 函数在聊天中渲染代理的状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义代理的状态，应与 Strands 代理的状态模式匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见省略样式
+      useAgent({
+        agentId: "searchAgent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Strands 配置中定义的代理名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+
+    您也可以在聊天外渲染代理的状态。当您想在聊天之外的任何地方渲染代理状态时，这很有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义代理的状态，应与 Strands 代理的状态模式匹配。
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "searchAgent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Strands 配置中定义的代理名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试试看！
+
+    您现在已经创建了一个将在聊天中渲染代理状态的组件。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

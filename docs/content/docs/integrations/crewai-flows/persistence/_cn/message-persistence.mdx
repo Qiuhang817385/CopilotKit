@@ -1,0 +1,17 @@
+---
+title: "消息持久化"
+icon: "lucide/Database"
+---
+
+<Callout>
+  要了解如何加载先前的消息和代理状态，请查看
+  [加载消息历史](/crewai-flows/persistence/loading-message-history)
+  和 [加载代理状态](/crewai-flows/persistence/loading-agent-state)
+  页面。
+</Callout>
+
+要将 CrewAI Flow 消息持久化到数据库，您可以使用 `@persist` 装饰器。例如，您可以使用默认的 `SQLiteFlowPersistence` 或提供您自己的自定义持久化类。
+
+有关如何实现 `InMemoryFlowPersistence` 等自定义持久化类并将其与 `@persist` 装饰器一起使用的具体示例，请参阅[示例代理实现](https://github.com/CopilotKit/CopilotKit/blob/main/examples/coagents-starter-crewai-flows/agent-py/sample_agent/agent.py)。
+
+在 [CrewAI Flows 文档](https://docs.crewai.com/concepts/flows#class-level-persistence)中阅读有关持久化的更多信息。

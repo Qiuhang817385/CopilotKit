@@ -1,0 +1,157 @@
+---
+title: 人机协同
+icon: "lucide/Wrench"
+description: 创建前端工具并在您的 AG2 Agent 中使用它们进行人机协同交互。
+---
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+<Callout>
+  本视频展示了将[实现](#实现)部分应用于 `npx copilotkit@latest init` 的结果。
+</Callout>
+
+## 这是什么？
+
+前端工具使您能够定义 AG2 Agent 可以调用的客户端函数，执行完全发生在用户的浏览器中。当您的 Agent 调用前端工具时，
+逻辑在客户端运行，让您直接访问前端环境。
+
+这可以用于让[您的 Agent 控制 UI](/ag2/frontend-tools)、[生成式 UI](/ag2/frontend-tools)，或用于人机协同交互。
+
+在本指南中，我们介绍将前端工具用于人机协同。
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>
+
+## 什么时候应该使用它？
+
+当您需要 Agent 与客户端原语交互时使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookie
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+      ### 运行并连接您的 Agent
+
+      在 `/chat` 端点上启动您的 AG2 后端并使用 CopilotKit 连接您的前端。
+    </Step>
+
+    <Step>
+        ### 创建前端人机协同工具
+
+        前端工具可以以多种方式加以利用。其中一种方式是让人机协同流程，其中工具的响应
+        由用户的决定来把关。
+
+        在本示例中，我们将模拟命令执行的"审批"流程。首先，使用 `useHumanInTheLoop` Hook 创建一个
+        提示用户进行审批的工具。
+
+        ```tsx title="page.tsx"
+        import { useHumanInTheLoop } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          useHumanInTheLoop({
+            name: "offerOptions",
+            description: "给用户提供两个选项之间的选择，并让他们选择一个。",
+            parameters: [
+              {
+                name: "option_1",
+                type: "string",
+                description: "第一个选项",
+                required: true,
+              },
+              {
+                name: "option_2",
+                type: "string",
+                description: "第二个选项",
+                required: true,
+              },
+            ],
+            render: ({ args, respond }) => {
+              if (!respond) return <></>;
+              return (
+                <div>
+                  {/* [!code highlight:2] */}
+                  <button onClick={() => respond(`${args.option_1} 被选中`)}>{args.option_1}</button>
+                  <button onClick={() => respond(`${args.option_2} 被选中`)}>{args.option_2}</button>
+                </div>
+              );
+            },
+          });
+
+          // ...
+        }
+        ```
+    </Step>
+    <Step>
+        ###  设置您的 AG2 后端
+
+        前端工具发出 AG-UI 工具事件。AG2 可以消费这些事件，然后将用户决定持久化到共享状态：
+
+        ```python title="agent.py"
+        from typing import Annotated
+
+        from ag_ui.core import EventType, StateSnapshotEvent
+        from fastapi import FastAPI, Header
+        from fastapi.responses import StreamingResponse
+        from autogen import ContextVariables, ConversableAgent, LLMConfig
+        from autogen.ag_ui import AGUIStream, RunAgentInput
+
+        agent = ConversableAgent(
+            name="assistant",
+            system_message=(
+                "当您需要用户选择时，调用前端工具 `offerOptions`。"
+                "它返回后，调用 `store_user_choice` 并传入选中的值。"
+            ),
+            llm_config=LLMConfig({"model": "gpt-5.2-mini"}),
+        )
+
+        @agent.register_for_llm(description="在共享状态中存储最新的用户选择。")
+        def store_user_choice(
+            context: ContextVariables,
+            choice: Annotated[str, "用户选择的选项"],
+        ) -> StateSnapshotEvent:
+            snapshot = {"hitl": {"latest_choice": choice}}
+            context["hitl"] = snapshot["hitl"]
+            return StateSnapshotEvent(type=EventType.STATE_SNAPSHOT, snapshot=snapshot)
+
+        agent.register_for_execution(name="store_user_choice")(store_user_choice)
+
+        stream = AGUIStream(agent)
+        app = FastAPI()
+
+        @app.post("/chat")
+        async def run_agent(
+            message: RunAgentInput,
+            accept: str | None = Header(None),
+        ):
+            return StreamingResponse(
+                stream.dispatch(message, accept=accept),
+                media_type=accept or "text/event-stream",
+            )
+        ```
+
+        前端工具由 CopilotKit 通过 AG-UI 协议自动填充，并可供您的 AG2 后端使用。
+    </Step>
+    <Step>
+        ### 试一试
+
+        您现在赋予了 Agent 向用户显示两个选项并让他们选择一个的能力。然后 Agent 将知道用户的选择，并可以在后续步骤中使用它。
+
+        ```
+        你能给我看两个好的餐厅名称选项吗？
+        ```
+    </Step>
+</Steps>

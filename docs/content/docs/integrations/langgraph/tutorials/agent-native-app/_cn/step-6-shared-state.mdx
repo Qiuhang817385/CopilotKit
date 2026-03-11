@@ -1,0 +1,137 @@
+---
+title: "第 6 步：共享状态"
+---
+import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+
+在 LangGraph 中，你的智能体是有状态的。这意味着当你的图遍历节点时，整体应用程序状态将被更新和持久化。
+
+CopilotKit 允许你通过两个主要钩子轻松读取和更新此状态：
+- [`useCoAgent`](/reference/v1/hooks/useCoAgent) - 提供一种在应用程序的任何地方读取和写入智能体状态的方式。
+- [`useCoAgentStateRender`](/reference/v1/hooks/useCoAgentStateRender) - 提供一种在聊天中渲染智能体状态的方式。
+
+考虑到这一点，我们当前的目标是在应用程序状态和 LangGraph 智能体状态之间创建双向连接。这将使我们能够在右侧面板中渲染智能体完成的研究。
+
+为此，我们将使用 `useCoAgent` 钩子。
+
+<Callout>
+`useCoAgentStateRender` 将在下一步中用于在聊天中渲染智能体的进度。
+</Callout>
+
+<Steps>
+<Step>
+## 了解我们的智能体状态
+智能体的状态可以在 `agent/state.py` 中找到。
+
+```python title="agent/state.py"
+# ...
+from typing import Dict, Union, List
+from langgraph.graph import MessagesState
+
+class ResearchState(MessagesState):
+    title: str
+    proposal: Dict[str, Union[str, bool, Dict[str, Union[str, bool]]]]  # 在获得用户批准之前存储提议的结构
+    outline: dict
+    sections: List[dict]  # 包含 'title'、'content' 和 'idx' 的字典列表
+    footnotes: str
+    sources: Dict[str, Dict[str, Union[str, float]]]
+    tool: str
+    logs: List[dict]  # 包含 'message'、'status' 的要发送到前端的日志字典列表
+```
+
+这里有几件事需要注意，但让我们关注 `proposal` 字段和 `sections` 字段。
+
+- `proposal` 字段是一个字典，用于存储用户批准之前提议的研究结构。
+- `sections` 字段是一个字典列表，每个字典包含一个 `title`、`content` 和 `idx`。这是将显示在右侧面板中的实际研究内容。
+
+我们已经在上一步中完成了对 `proposal` 字段的批准连接，所以现在我们需要完成对 `sections` 字段的渲染连接。
+
+</Step>
+<Step>
+
+## `useCoAgent` 钩子
+我们当前的目标是在这两个状态之间创建双向连接。幸运的是，[`useCoAgent`](/reference/v1/hooks/useCoAgent) 钩子让这变得很容易。
+
+在 `useResearch` 钩子中，我们只需用 `useCoAgent` 钩子替换我们的 React 状态对象。
+
+```tsx title="frontend/src/components/research-context.tsx" {3,8-11}
+// ...
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code ++]
+// ...
+
+interface ResearchContextType {
+    state: ResearchState;
+    setResearchState: (newState: ResearchState | ((prevState: ResearchState) => ResearchState)) => void
+    sourcesModalOpen: boolean
+    setSourcesModalOpen: (open: boolean) => void
+    runAgent: () => void
+}
+
+const ResearchContext = createContext<ResearchContextType | undefined>(undefined)
+
+export function ResearchProvider({ children }: { children: ReactNode }) {
+    const [sourcesModalOpen, setSourcesModalOpen] = useState<boolean>(false)
+    // [!code ++:5]
+    const { state, setState, run } = useAgent<ResearchState>({
+        name: 'agent',
+        initialState: {},
+    });
+    const [state, setState] = useState<ResearchState>({} as ResearchState) // [!code --]
+
+    // ...
+
+    return (
+        <ResearchContext.Provider
+            value={{
+              state,
+              setResearchState: setState as ResearchContextType['setResearchState'],
+              setSourcesModalOpen,
+              sourcesModalOpen,
+              runAgent: run  // [!code ++]
+              runAgent: () => {} // [!code --]
+            }}>
+            {children}
+        </ResearchContext.Provider>
+    )
+}
+
+export function useResearch() {
+    const context = useContext(ResearchContext)
+    if (context === undefined) {
+        throw new Error('useResearch 必须在 ResearchProvider 中使用')
+    }
+    return context
+}
+```
+
+<Callout>
+`useCoAgent` 钩子是泛型的。这意味着我们可以指定一个类型来表示 LangGraph 智能体的状态。如果你要指定一个类型，你应该非常小心，确保该类型与你的 LangGraph 智能体的状态形状相同。
+
+不推荐，但你可以放弃类型参数，而是获取一个 `any` 类型。
+</Callout>
+
+在此示例中，我们使用 `useCoAgent` 钩子将应用程序的状态连接到 LangGraph 智能体的状态。
+- 对于泛型类型，我们传递了已在 `@/lib/types.ts` 中为应用程序定义的 `AgentState` 类型。
+- 对于 `name` 参数，我们传递在 `agent/langgraph.json` 中定义的图的名称。
+- 对于 `initialState` 参数，我们传递已在 `@/lib/trips.ts` 中定义的 LangGraph 智能体的初始状态。
+</Step>
+</Steps>
+
+
+## 回顾
+现在我们可以看到右侧面板中的研究成果了！回顾一下，我们做了以下工作：
+- 了解了智能体的状态。
+- 在我们的应用程序中添加了 `useCoAgent` 钩子来渲染 `sections` 字段。
+
+现在，尝试再次运行智能体并执行相同的步骤。最后，你会在右侧面板中看到完成的研究。
+
+```
+请研究一下狗！
+```
+
+<Frame className="mt-0">
+  <ImageZoom className="mt-0" src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/tutorials/research-ana/fe-step-6-finish.png" alt="CopilotCloud API 密钥" height={1000} width={1000} />
+</Frame>
+
+现在，我们可以从头到尾完整地运行我们的智能体*并*在右侧窗口中看到最终的研究成果。
+
+然而，你可能会注意到研究需要很长时间才能完成，没有任何进度指示。在下一步中，我们将利用 CoAgent 概念**生成式 UI** 在聊天中传达智能体的进度。

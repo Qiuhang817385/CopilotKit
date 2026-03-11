@@ -1,0 +1,86 @@
+---
+title: "步骤 2：设置 CopilotKit"
+---
+
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotCloudConfigureCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content";
+import { FaCloud, FaServer } from "react-icons/fa";
+
+现在我们的待办事项列表应用已经运行起来了，我们准备集成 CopilotKit。在本教程中，我们将安装以下依赖：
+
+- `@copilotkit/react-core`：CopilotKit 的核心库，包含 CopilotKit 提供者和有用的 Hook。
+- `@copilotkit/react-textarea`：CopilotKit 的文本域组件，使您能够在应用中获得即时的上下文感知自动补全。
+
+## 安装依赖
+
+要安装 CopilotKit 依赖，请运行以下命令：
+
+```npm
+npm install @copilotkit/react-core @copilotkit/react-textarea
+```
+
+## 设置 CopilotKit
+
+<TailoredContent id="hosting">
+<TailoredContentOption
+  id="copilot-cloud"
+  title="Copilot Cloud（推荐）"
+  description="使用我们托管的后端端点快速开始。"
+  icon={<FaCloud />}
+>
+为了使用 CopilotKit，我们需要配置 CopilotKit 提供者。
+
+<CopilotCloudConfigureCopilotKitProvider components={props.components} />
+</TailoredContentOption>
+<TailoredContentOption
+  id="self-hosted"
+  title="自托管"
+  description="学习如何使用自己的后端托管 CopilotKit 的运行时。"
+  icon={<FaServer />}
+>
+<Steps>
+<Step>
+### 设置 Copilot Runtime 端点
+<SelfHostingCopilotRuntimeCreateEndpoint components={props.components} />
+</Step>
+<Step>
+### 配置 CopilotKit 提供者
+
+```tsx title="app/page.tsx" showLineNumbers {5,10,14}
+"use client";
+
+import { EmailThread } from "@/components/EmailThread";
+import { EmailsProvider } from "@/lib/hooks/use-emails";
+import { CopilotKit } from "@copilotkit/react-core"; // [!code highlight]
+import "@copilotkit/react-textarea/styles.css"; // [!code highlight]
+
+export default function Home() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      {" "}
+      // [!code highlight]
+      <EmailsProvider>
+        <EmailThread />
+      </EmailsProvider>
+    {/* [!code highlight:1] */}
+    </CopilotKit>
+  );
+}
+```
+
+</Step>
+</Steps>
+</TailoredContentOption>
+</TailoredContent>
+
+让我们分解一下：
+
+- 首先，我们从 `@copilotkit/react-core` 导入 `CopilotKit` 提供者。
+- 然后，我们用 `<CopilotKit>` 提供者包裹页面。
+- 我们从 `@copilotkit/react-textarea` 导入内置样式。
+
+在下一步中，我们将实现 AI 驱动的文本域作为现有输入组件的替代品。

@@ -1,0 +1,131 @@
+---
+title: "useRenderToolCall"
+description: "useRenderToolCall 钩子支持在前端渲染后端工具调用。"
+---
+
+<Callout type="warning">
+  `useRenderToolCall` 仍然受支持，但我们建议迁移到 v2 API 的 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+</Callout>
+
+`useRenderToolCall` 纯粹是一个渲染钩子 — 它显示工具调用的自定义 UI，而不执行
+任何逻辑。这通常用于在聊天界面中可视化后端工具执行，向
+用户展示 AI 在幕后正在做什么。
+
+此钩子没有处理函数。您只提供一个渲染函数，该函数接收有关
+工具调用的信息（参数、状态、结果）并按需显示。您可以针对特定
+工具名称或使用星号 (`"*"`) 捕获并渲染所有工具调用。
+
+## 用法
+
+### 渲染特定的后端工具
+
+```tsx
+import { useRenderToolCall } from "@copilotkit/react-core";
+
+useRenderToolCall({
+  name: "analyzeData",
+  description: "Display results of data analysis",
+  parameters: [
+    {
+      name: "datasetName",
+      type: "string",
+      description: "Name of the dataset being analyzed",
+      required: true,
+    },
+    {
+      name: "metrics",
+      type: "string[]",
+      description: "Metrics being calculated",
+      required: true,
+    },
+  ],
+  render: ({ args, status, result }) => {
+    if (status === "inProgress") {
+      return (
+        <div className="p-4 border rounded animate-pulse">
+          <h3>Analyzing {args.datasetName}...</h3>
+          <p>Calculating: {args.metrics?.join(", ")}</p>
+        </div>
+      );
+    }
+
+    if (status === "complete" && result) {
+      return (
+        <div className="p-4 border rounded bg-green-50">
+          <h3>Analysis Complete: {args.datasetName}</h3>
+          <pre className="mt-2 p-2 bg-gray-100 rounded">
+            {JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      );
+    }
+
+    return null;
+  },
+});
+```
+
+## 从 useCopilotAction 迁移
+
+如果您要从只有 `render` 函数的 `useCopilotAction` 迁移：
+
+```tsx
+// 之前使用 useCopilotAction
+useCopilotAction({
+  name: "showResult",
+  render: ({ args }) => <ResultCard {...args} />,
+});
+
+// 之后使用 useRenderToolCall
+useRenderToolCall({
+  name: "showResult",
+  render: ({ args }) => <ResultCard {...args} />,
+});
+```
+
+迁移很简单 - 只需更改钩子名称。渲染 props 保持不变。
+
+## 参数
+
+<PropertyReference name="name" type="string" required >
+要渲染的工具名称。使用 `"*"` 捕获所有工具调用。
+</PropertyReference>
+
+<PropertyReference name="description" type="string"  >
+此渲染器作用的描述。主要用于文档目的。
+</PropertyReference>
+
+<PropertyReference name="parameters" type="T"  >
+可选的参数定义数组。如果提供，可为渲染函数中的 args 添加类型安全。每个参数对象应具有：
+- `name` (string): 参数名称
+- `type` (string): 参数类型（例如 "string", "number", "boolean", "string[]", "object"）
+- `description` (string): 参数的用途描述
+- `required` (boolean): 参数是否必需
+- `properties` (array, optional): 对于对象类型，使用相同的模式定义嵌套属性
+
+简单示例：`[{ name: "datasetName", type: "string", description: "Name of the dataset", required: true }]`
+
+嵌套示例：
+```typescript
+[
+  {
+    name: "analysisConfig",
+    type: "object",
+    description: "Configuration for the analysis",
+    required: true,
+    properties: [
+      { name: "method", type: "string", description: "Analysis method to use", required: true },
+      { name: "threshold", type: "number", description: "Threshold value", required: false }
+    ]
+  }
+]
+```
+</PropertyReference>
+
+<PropertyReference name="render" type="FrontendAction<T>['render']"  >
+渲染工具调用 UI 的 React 组件。该组件接收带有 `status`、`args`、`result`、`name` 和 `description` 的 props。
+</PropertyReference>
+
+<PropertyReference name="available" type="'disabled' | 'enabled'"  >
+渲染器是否可用。设置为 "disabled" 以阻止渲染。
+</PropertyReference>

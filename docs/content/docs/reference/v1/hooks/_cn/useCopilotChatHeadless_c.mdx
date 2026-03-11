@@ -1,0 +1,174 @@
+---
+title: "useCopilotChatHeadless_c"
+---
+
+{
+ /*
+  * 注意！请勿修改此文件！
+  * 此页面是自动生成的。如果你想对此页面进行任何更改，必须在以下位置进行更改：
+  * packages/v1/react-core/src/hooks/use-copilot-chat-headless_c.ts
+  */
+}
+
+<Callout type="warning">
+  `useCopilotChatHeadless_c` 仍然受支持，但我们建议迁移到 v2 API 的 [`useAgent`](/reference/v2/hooks/useAgent)。
+</Callout>
+
+`useCopilotChatHeadless_c` 用于构建完全自定义 UI（无头 UI）实现。
+ 
+<Callout title="这是一个高级功能">
+在 [Copilot Cloud](https://cloud.copilotkit.ai) 上免费注册以获取你的公共许可证密钥，或阅读更多关于<a href="/premium/overview">高级功能</a>的信息。
+ 
+使用量慷慨，免费开始使用，并且适用于自托管或 Copilot Cloud 环境。
+</Callout>
+ 
+## 主要功能
+ 
+- 完全无头：为你的代理应用程序构建你自己的完全自定义 UI。
+- 高级建议：直接访问建议数组，完全控制
+- 中断处理：支持高级中断功能
+- MCP 服务器支持：模型上下文协议服务器配置
+- 聊天控制：完整的聊天管理功能集
+- 加载状态：全面的加载状态管理
+ 
+ 
+## 用法
+ 
+### 基本设置
+ 
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+import { useCopilotChatHeadless_c } from "@copilotkit/react-core";
+ 
+export function App() {
+  return (
+    <CopilotKit publicApiKey="your-free-public-license-key">
+      <YourComponent />
+    </CopilotKit>
+  );
+}
+ 
+export function YourComponent() {
+  const { messages, sendMessage, isLoading } = useCopilotChatHeadless_c();
+ 
+  const handleSendMessage = async () => {
+    await sendMessage({
+      id: "123",
+      role: "user",
+      content: "Hello World",
+    });
+  };
+ 
+  return (
+    <div>
+      {messages.map(msg => <div key={msg.id}>{msg.content}</div>)}
+      <button onClick={handleSendMessage} disabled={isLoading}>
+        发送消息
+      </button>
+    </div>
+  );
+}
+```
+ 
+### 使用建议
+ 
+```tsx
+import { useCopilotChatHeadless_c, useCopilotChatSuggestions } from "@copilotkit/react-core";
+ 
+export function SuggestionExample() {
+  const {
+    suggestions,
+    setSuggestions,
+    generateSuggestions,
+    isLoadingSuggestions
+  } = useCopilotChatHeadless_c();
+ 
+  // 配置 AI 建议生成
+  useCopilotChatSuggestions({
+    instructions: "根据当前上下文建议有用的操作",
+    maxSuggestions: 3
+  });
+ 
+  return (
+    <div>
+      {suggestions.map(suggestion => (
+        <button key={suggestion.title}>{suggestion.title}</button>
+      ))}
+      <button onClick={generateSuggestions} disabled={isLoadingSuggestions}>
+        生成建议
+      </button>
+    </div>
+  );
+}
+```
+ 
+## 返回值
+该 hook 返回以下属性：
+ 
+<PropertyReference name="messages" type="Message[]">
+当前聊天中的消息，采用 AG-UI 格式
+</PropertyReference>
+ 
+<PropertyReference name="sendMessage" type="(message: Message, options?) => Promise<void>">
+向聊天发送新消息并触发 AI 响应
+</PropertyReference>
+ 
+<PropertyReference name="setMessages" type="(messages: Message[] | DeprecatedGqlMessage[]) => void">
+用新数组替换聊天中的所有消息
+</PropertyReference>
+ 
+<PropertyReference name="deleteMessage" type="(messageId: string) => void">
+从聊天中按 ID 删除特定消息
+</PropertyReference>
+ 
+<PropertyReference name="reloadMessages" type="(messageId: string) => Promise<void>">
+按 ID 重新生成特定消息的响应
+</PropertyReference>
+ 
+<PropertyReference name="stopGeneration" type="() => void">
+停止当前消息生成过程
+</PropertyReference>
+ 
+<PropertyReference name="reset" type="() => void">
+清除所有消息并完全重置聊天状态
+</PropertyReference>
+ 
+<PropertyReference name="isLoading" type="boolean">
+聊天当前是否正在生成响应
+</PropertyReference>
+ 
+<PropertyReference name="runChatCompletion" type="() => Promise<Message[]>">
+手动触发聊天完成以用于高级用法
+</PropertyReference>
+ 
+<PropertyReference name="mcpServers" type="MCPServerConfig[]">
+模型上下文协议服务器配置数组
+</PropertyReference>
+ 
+<PropertyReference name="setMcpServers" type="(servers: MCPServerConfig[]) => void">
+更新 MCP 服务器配置以增强上下文
+</PropertyReference>
+ 
+<PropertyReference name="suggestions" type="SuggestionItem[]">
+用于读取或手动控制的当前建议数组
+</PropertyReference>
+ 
+<PropertyReference name="setSuggestions" type="(suggestions: SuggestionItem[]) => void">
+为自定义工作流手动设置建议
+</PropertyReference>
+ 
+<PropertyReference name="generateSuggestions" type="() => Promise<void>">
+使用配置的设置触发 AI 驱动的建议生成
+</PropertyReference>
+ 
+<PropertyReference name="resetSuggestions" type="() => void">
+清除所有当前建议并重置生成状态
+</PropertyReference>
+ 
+<PropertyReference name="isLoadingSuggestions" type="boolean">
+建议当前是否正在生成
+</PropertyReference>
+ 
+<PropertyReference name="interrupt" type="string | React.ReactElement | null">
+用于人在回路工作流的中断内容
+</PropertyReference>

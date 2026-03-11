@@ -1,0 +1,132 @@
+---
+title: 迁移到 AG-UI
+description: 通过 AG-UI 协议流式传输智能体的迁移指南
+icon: "lucide/RefreshCw"
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import {
+    TailoredContent,
+    TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+
+AG-UI 是 CopilotKit 中使用的新智能体到 UI 协议。
+它已经与 LangGraph 智能体集成。
+
+本指南展示如何进行过渡。
+
+<TailoredContent
+        className="step"
+        id="deployment"
+        header={
+            <div>
+                <p className="text-xl font-semibold">选择您的智能体服务方式</p>
+            </div>
+        }
+    >
+    <TailoredContentOption
+        id="lgp"
+        title="LangGraph 平台"
+        description="我正在使用 LangGraph 的平台来提供我的智能体（云端或自托管）。"
+    >
+        ### 将您当前的 `CopilotRuntime` 实例化从
+        ```typescript
+        import { langGraphPlatformEndpoint, CopilotRuntime } from "@copilotkit/runtime";
+
+        let runtime = new CopilotRuntime({
+            remoteEndpoints: [
+                langGraphPlatformEndpoint({
+                    deploymentUrl: "https://your-deployment-url",
+                    langsmithApiKey: '<langsmith API key>', // 可选
+                    agents: [], // 您之前的智能体定义
+                })
+            ],
+        })
+        ```
+        更改为
+        ```typescript
+        import { LangGraphAgent, CopilotRuntime } from "@copilotkit/runtime";
+
+        let runtime = new CopilotRuntime({
+            agents: {
+                'sample_agent': new LangGraphAgent({
+                    deploymentUrl: "https://your-deployment-url",
+                    langsmithApiKey: '<langsmith API key>', // 可选
+                    graphId: 'sample_agent', // 与 `langgraph.json` 图形配置中定义的相同。
+                }),
+            }
+        })
+        ```
+        就是这样！您已经准备就绪！
+    </TailoredContentOption>
+    <TailoredContentOption
+        id="fastapi"
+        title="自托管 (FastAPI)"
+        description="我正在自托管我的智能体，并通过 FastAPI 提供服务。"
+    >
+
+假设您的 Python 智能体设置如下：
+```python
+from fastapi import FastAPI
+from copilotkit.integrations.fastapi import add_fastapi_endpoint
+from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
+from .agent import graph
+
+app = FastAPI()
+sdk = CopilotKitRemoteEndpoint(
+    agents=[
+        LangGraphAgent(
+            name="sample_agent",
+            description="my agent",
+            graph=graph,
+        ),
+    ],
+)
+
+add_fastapi_endpoint(app, sdk, "/copilotkit")
+```
+
+要迁移，请导入并使用新的端点初始化器和智能体类。
+其他所有内容（主要是您的图）保持不变。
+
+<Steps>
+    <Step>
+        ### 首先，将您的 FastAPI 端点迁移为使用新的智能体类
+        ```python
+        from fastapi import FastAPI
+        from copilotkit import LangGraphAGUIAgent
+        from ag_ui_langgraph import add_langgraph_fastapi_endpoint
+        from .agent import graph
+
+        app = FastAPI()
+        add_langgraph_fastapi_endpoint(
+            app=app,
+            agent=LangGraphAGUIAgent(
+                name="sample_agent",
+                description="my agent",
+                graph=graph,
+            ),
+            path="/agent/sample_agent" # 智能体将在此路径上提供服务。使用 "/" 挂载在根目录。
+        )
+        ```
+    </Step>
+    <Step>
+        ### 然后，在您的 `CopilotRuntime` 实例化中，使用新的 `LangGraphHttpAgent`
+        ```typescript
+        let runtime = new CopilotRuntime({
+            agents: {
+                'sample_agent': new LangGraphHttpAgent({
+                    url: "http://localhost:8000/agent/sample_agent",
+                }),
+            }
+        })
+        ```
+    </Step>
+</Steps>
+        <Accordions>
+            <Accordion title="旧的用于配置智能体的 LangGraph 配置参数怎么办？">
+                `langgraph_config` 选项在新的智能体上不存在。
+                通过 `useCoAgent` 钩子或智能体类上的新 `config` 参数配置智能体。
+            </Accordion>
+        </Accordions>
+    </TailoredContentOption>
+</TailoredContent>

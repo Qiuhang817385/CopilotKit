@@ -1,0 +1,375 @@
+---
+title: "错误调试与可观测性"
+description: "学习如何在 CopilotKit 中调试错误，并为监控服务设置错误可观测性。"
+icon: "lucide/TriangleAlert"
+---
+
+CopilotKit 提供全面的错误处理能力，帮助您调试问题并监控应用程序的行为。无论您是在本地开发还是在生产环境中运行，CopilotKit 都提供工具来有效捕获、理解和解决错误。
+
+## 快速开始
+
+<Steps>
+
+<Step>
+### 使用 Dev Console 进行本地开发
+
+对于本地开发，启用 dev console 以直接在您的 UI 中查看错误：
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      runtimeUrl="<your-runtime-url>"
+      showDevConsole={true} // [!code highlight]
+    >
+      {/* 您的应用 */}
+    </CopilotKit>
+  );
+}
+```
+
+<Callout type="tip">
+  Dev console 直接在您的 UI 中显示错误横幅，使您在开发期间轻松发现问题。此功能**不需要 API 密钥**。
+</Callout>
+
+</Step>
+
+<Step>
+### 生产环境错误可观测性
+
+对于生产应用程序，使用错误可观测性 Hook 将错误发送到监控服务（需要 `publicApiKey`）：
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      runtimeUrl="<your-runtime-url>"
+      publicApiKey="ck_pub_your_key" // [!code highlight]
+      onError={(errorEvent) => {
+        // [!code highlight]
+        // 发送到您的监控服务
+        console.error("CopilotKit 错误:", errorEvent);
+
+        // 示例：发送到分析
+        analytics.track("copilotkit_error", {
+          type: errorEvent.type,
+          source: errorEvent.context.source,
+          timestamp: errorEvent.timestamp,
+        });
+      }} // [!code highlight]
+      showDevConsole={false} // 在生产环境中隐藏 dev console
+    >
+      {/* 您的应用 */}
+    </CopilotKit>
+  );
+}
+```
+
+<Callout type="info">
+  **需要 publicApiKey？** 前往
+  [https://cloud.copilotkit.ai](https://cloud.copilotkit.ai) 免费获取一个！
+</Callout>
+
+</Step>
+
+</Steps>
+
+## 错误处理选项
+
+### Dev Console (`showDevConsole`)
+
+Dev console 在开发期间提供即时的视觉反馈：
+
+```tsx
+<CopilotKit runtimeUrl="<your-runtime-url>" showDevConsole={true}>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+**功能：**
+
+- ✅ **无需 API 密钥** - 适用于任何设置
+- ✅ **视觉错误横幅** - 错误以横幅形式出现在您的 UI 中
+- ✅ **实时反馈** - 错误发生时立即查看
+- ✅ **专注于开发** - 详细的错误信息用于调试
+
+**最适合：**
+
+- 本地开发
+- 测试和调试
+- 了解错误流程
+
+<Callout type="warn">
+  在生产环境中设置 `showDevConsole={false}` 以避免向最终用户显示错误详情。
+</Callout>
+
+### 错误可观测性 (`onError`)
+
+错误可观测性 Hook 提供对详细错误信息的编程访问，用于监控和分析：
+
+```tsx
+import { CopilotErrorEvent } from "@copilotkit/shared";
+
+<CopilotKit
+  publicApiKey="ck_pub_your_key"
+  onError={(errorEvent: CopilotErrorEvent) => {
+    // 将错误数据发送到监控服务
+    switch (errorEvent.type) {
+      case "error":
+        logToService("严重错误", errorEvent);
+        break;
+      case "request":
+        logToService("请求已开始", errorEvent);
+        break;
+      case "response":
+        logToService("已收到响应", errorEvent);
+        break;
+      case "agent_state":
+        logToService("Agent 状态变化", errorEvent);
+        break;
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>;
+```
+
+**功能：**
+
+- ✅ **丰富的错误上下文** - 关于出错内容的详细信息
+- ✅ **请求/响应跟踪** - 监控完整的对话流程
+- ✅ **Agent 状态监控** - 跟踪 Agent 交互和状态变化
+- ✅ **生产就绪** - 结构化数据非常适合监控服务
+
+**要求：**
+
+- 需要来自 [Copilot Cloud](https://cloud.copilotkit.ai) 的 `publicApiKey`
+- CopilotKit 企业可观测性产品的一部分
+
+<Callout type="info">
+  **注意：** 基本错误处理无需 Cloud 即可工作。`onError` Hook 专门用于**错误可观测性** - 将错误数据发送到 Sentry、DataDog 等监控服务。
+</Callout>
+
+## 错误事件结构
+
+`onError` 处理程序接收带有丰富上下文的详细错误事件：
+
+```typescript
+interface CopilotErrorEvent {
+  type:
+    | "error"
+    | "request"
+    | "response"
+    | "agent_state"
+    | "action"
+    | "message"
+    | "performance";
+  timestamp: number;
+  context: {
+    source: "ui" | "runtime" | "agent";
+    request?: {
+      operation: string;
+      method?: string;
+      url?: string;
+      startTime: number;
+    };
+    response?: {
+      endTime: number;
+      latency: number;
+    };
+    agent?: {
+      name: string;
+      nodeName?: string;
+    };
+    messages?: {
+      input: any[];
+      messageCount: number;
+    };
+    technical?: {
+      environment: string;
+      stackTrace?: string;
+    };
+  };
+  error?: any; // 仅对错误事件存在
+}
+```
+
+## 常见错误可观测性模式
+
+### 基本错误日志记录
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key"
+  onError={(errorEvent) => {
+    console.error("[CopilotKit 错误]", {
+      type: errorEvent.type,
+      timestamp: new Date(errorEvent.timestamp).toISOString(),
+      context: errorEvent.context,
+      error: errorEvent.error,
+    });
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+### 与监控服务集成
+
+```tsx
+// Sentry 示例
+import * as Sentry from "@sentry/react";
+
+<CopilotKit
+  publicApiKey="ck_pub_your_key"
+  onError={(errorEvent) => {
+    if (errorEvent.type === "error") {
+      Sentry.captureException(errorEvent.error, {
+        tags: {
+          source: errorEvent.context.source,
+          operation: errorEvent.context.request?.operation,
+        },
+        extra: {
+          context: errorEvent.context,
+          timestamp: errorEvent.timestamp,
+        },
+      });
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>;
+```
+
+### 自定义错误分析
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key"
+  onError={(errorEvent) => {
+    // 跟踪不同类型的错误
+    analytics.track("copilotkit_event", {
+      event_type: errorEvent.type,
+      source: errorEvent.context.source,
+      agent_name: errorEvent.context.agent?.name,
+      latency: errorEvent.context.response?.latency,
+      error_message: errorEvent.error?.message,
+      timestamp: errorEvent.timestamp,
+    });
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+## 开发与生产环境设置
+
+### 开发环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="http://localhost:3000/api/copilotkit"
+  showDevConsole={true} // 显示视觉错误
+  onError={(errorEvent) => {
+    // 开发环境的简单控制台日志
+    console.log("CopilotKit 事件:", errorEvent);
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+### 生产环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="https://your-app.com/api/copilotkit"
+  publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY}
+  showDevConsole={false} // 对用户隐藏
+  onError={(errorEvent) => {
+    // 生产环境错误可观测性
+    if (errorEvent.type === "error") {
+      // 记录严重错误
+      logger.error("CopilotKit 错误", {
+        error: errorEvent.error,
+        context: errorEvent.context,
+        timestamp: errorEvent.timestamp,
+      });
+
+      // 发送到监控服务
+      monitoring.captureError(errorEvent.error, {
+        extra: errorEvent.context,
+      });
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+## 开始使用 Copilot Cloud
+
+要使用错误可观测性 Hook，您需要一个 Copilot Cloud 账户：
+
+1. **免费注册** 在 [https://cloud.copilotkit.ai](https://cloud.copilotkit.ai)
+2. **从仪表板获取您的公共 API 密钥**
+3. **将其添加到您的环境变量中**：
+   ```bash
+   NEXT_PUBLIC_COPILOTKIT_API_KEY=ck_pub_your_key_here
+   ```
+4. **在您的 CopilotKit 提供程序中使用它**：
+   ```tsx
+   <CopilotKit publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY}>
+     {/* 您的应用 */}
+   </CopilotKit>
+   ```
+
+<Callout type="info">
+  Copilot Cloud 免费开始使用，并为您的 AI Copilot 提供生产就绪的基础设施，包括全面的错误可观测性和监控功能。
+</Callout>
+
+## 最佳实践
+
+### ✅ 应该做
+
+- **在开发期间使用 `showDevConsole={true}`** 以获得即时反馈
+- **在生产环境中设置 `showDevConsole={false}`** 以向用户隐藏错误
+- **使用 `onError` Hook 实现适当的错误可观测性** 用于监控
+- **监控错误模式** 以主动识别和修复问题
+- **使用结构化日志记录** 使错误分析更容易
+
+### ❌ 不应该做
+
+- **不要在生产环境中向最终用户暴露详细错误**
+- **不要忽略错误事件** - 它们提供有价值的调试信息
+- **不要在错误可观测性 Hook 中记录敏感数据**
+- **不要用错误处理逻辑阻塞 UI**
+
+## 故障排除
+
+### 错误可观测性不工作
+
+如果您的 `onError` Hook 没有被调用：
+
+1. **检查您的 publicApiKey** - 错误可观测性需要有效的 API 密钥
+2. **验证密钥格式** - 应以 `ck_pub_` 开头
+3. **确保密钥已设置** - 检查您的环境变量
+4. **使用 dev console 测试** - 使用 `showDevConsole={true}` 查看是否发生错误
+
+### Dev Console 不显示
+
+如果 dev console 没有显示错误：
+
+1. **检查 showDevConsole 设置** - 确保它设置为 `true`
+2. **查找控制台错误** - 检查浏览器开发工具中的 JavaScript 错误
+3. **验证错误发生** - 确保错误确实正在发生
+
+## 下一步
+
+- 了解 [Copilot Cloud 功能](https://cloud.copilotkit.ai)
+- 探索 [CopilotKit 参考文档](/reference/v1/components/CopilotKit)
+- 查看 [故障排除指南](/troubleshooting/common-issues) 了解常见问题

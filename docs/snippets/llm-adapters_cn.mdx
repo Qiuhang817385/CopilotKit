@@ -1,0 +1,71 @@
+import { Callout } from "fumadocs-ui/components/callout";
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import { FaCloud, FaServer } from "react-icons/fa";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+
+LLM 适配器负责使用 LLM 执行请求，并以 Copilot 运行时能够理解的方式标准化请求/响应格式。
+
+目前，我们原生支持以下 LLM 适配器：
+
+- [OpenAI 适配器（同时支持 Azure）](/reference/v1/classes/llm-adapters/OpenAIAdapter)
+- [OpenAI 助手适配器](/reference/v1/classes/llm-adapters/OpenAIAssistantAdapter)
+- [LangChain 适配器](/reference/v1/classes/llm-adapters/LangChainAdapter)
+- [Groq 适配器](/reference/v1/classes/llm-adapters/GroqAdapter)
+- [Google Generative AI 适配器](/reference/v1/classes/llm-adapters/GoogleGenerativeAIAdapter)
+- [Anthropic 适配器](/reference/v1/classes/llm-adapters/AnthropicAdapter)
+
+<Callout type="info">
+  您可以使用 [LangChain
+  适配器](/reference/v1/classes/llm-adapters/LangChainAdapter) 来使用我们尚未原生支持的任何 LLM 提供商！
+</Callout>
+
+<Callout type="info">
+  从头开始编写您自己的 LLM 适配器并不困难——请参阅现有适配器获取灵感。当然，我们也欢迎您的贡献！⭐️
+</Callout>
+
+<TailoredContent id="hosting">
+  <TailoredContentOption
+    id="copilot-cloud"
+    title="Copilot Cloud（推荐）"
+    description="使用我们托管的后端端点快速开始。"
+    icon={<FaCloud />}
+  >
+  在 [您的 Copilot Cloud 仪表板](https://cloud.copilotkit.ai/) 上配置所使用的 LLM 适配器！
+
+  </TailoredContentOption>
+
+  <TailoredContentOption
+    id="self-hosted"
+    title="自托管"
+    description="学习如何使用您自己的后端托管 CopilotKit 的运行时。"
+    icon={<FaServer />}
+  >
+
+  <Steps>
+    <Step>
+    ## 找到您的 CopilotRuntime 实例
+    <FindYourCopilotRuntime components={props.components} />
+
+    </Step>
+
+    <Step>
+    ## 修改所使用的 LLM 适配器
+
+    使用下面的示例代码来定制您的 CopilotRuntime 实例化，以适配您所需的 LLM 适配器。
+
+    <SelfHostingCopilotRuntimeCreateEndpoint components={props.components} />
+    </Step>
+
+    <Step>
+    ## 进行进一步的自定义
+    请参阅上面链接的参考文档以获取更多自定义参数。
+    </Step>
+
+  </Steps>
+
+  </TailoredContentOption>
+</TailoredContent>

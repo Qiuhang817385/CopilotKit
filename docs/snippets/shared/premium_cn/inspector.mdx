@@ -1,0 +1,36 @@
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/videos/inspector.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 显示内容
+
+CopilotKit Inspector 是一个内置调试工具，覆盖在您的应用上，让您实时全面了解前端与智能体之间发生的一切。
+
+| 功能 | 描述 |
+| --- | --- |
+| **AG-UI 事件** | 实时查看前端与智能体之间的原始 AG-UI 事件流。 |
+| **可用智能体** | 查看哪些智能体已连接并可供您的应用使用。 |
+| **智能体状态** | 在更新时检查智能体的当前状态。 |
+| **前端工具** | 查看您在前端定义的工具及其参数模式。 |
+| **上下文** | 查看您提供给智能体的上下文，包括可读内容和文档上下文。 |
+
+## 禁用 Inspector
+
+Inspector 默认启用。要禁用它，请将 `enableInspector` 设置为 `false`：
+
+```tsx
+<CopilotKit
+  publicLicenseKey={process.env.NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY}
+  enableInspector={false}
+>
+  {children}
+</CopilotKit>
+```
+
+无论如何，**当您创建生产构建时，Inspector 会自动禁用。**

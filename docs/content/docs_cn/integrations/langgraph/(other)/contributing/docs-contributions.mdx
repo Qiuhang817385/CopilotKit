@@ -1,0 +1,60 @@
+---
+title: 文档贡献
+---
+
+我们理解，由于我们发展迅速，有时我们的文档网站可能会有些过时。因此，我们非常重视对文档的贡献。
+
+## 准备工作
+
+- [Node.js](https://nodejs.org/en/) 20.x 或更高版本
+- [pnpm](https://pnpm.io/) v9.x 全局安装 (`npm i -g pnpm@^9`)
+
+## 如何贡献
+
+<Steps>
+  <Step>
+  ### Fork 仓库
+
+  首先，前往 [CopilotKit GitHub 仓库](https://github.com/CopilotKit/CopilotKit) 创建一个 fork。
+
+  然后，将 fork 的仓库克隆到你的本地机器：
+
+  ```shell
+  git clone https://github.com/<你的用户名>/CopilotKit
+  cd CopilotKit/docs
+  ```
+  </Step>
+  <Step>
+  ### 本地运行文档网站
+
+  要在本地运行文档网站，请安装依赖项，然后以开发模式启动文档：
+
+  ```shell
+  pnpm install
+  pnpm run dev
+  ```
+
+  文档网站应该在 [http://localhost:3000](http://localhost:3000) 可用。
+  </Step>
+  <Step>
+  ### 进行你的更改
+
+  现在，你可以对文档网站进行更改。
+
+  - 所有与文档相关的文件都位于 docs 仓库中
+  - 你可能需要熟悉 [Nextra](https://nextra.site/) 以了解文档网站的结构。
+
+  <Callout type="info">
+    请确保检查你的更改是否存在语法、拼写和格式错误。此外，确保链接和图片正常工作。
+  </Callout>
+  </Step>
+  <Step>
+  ### 审查更改并提交拉取请求
+
+  当你对更改满意后，可以提交并推送它们。然后，前往[拉取请求页面](https://github.com/CopilotKit/CopilotKit/pulls)创建一个拉取请求。感谢你的贡献！
+  </Step>
+</Steps>
+
+## 需要帮助？
+
+如果你需要任何帮助，请随时在 [Discord](https://discord.gg/6dffbvGU3D) 上联系我们。我们有专门的 [#contributing](https://discord.com/channels/1122926057641742418/1183863183149117561) 频道。

@@ -1,0 +1,152 @@
+---
+title: 写入 Agent 状态
+icon: "lucide/ArrowRight"
+description: 从您的应用程序写入 Agent 的状态。
+---
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="shared-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了在 [CopilotKit Feature Viewer](https://feature-viewer.copilotkit.ai/langgraph/feature/shared_state) 中写入共享状态。
+</Callout>
+
+## 这是什么？
+
+本指南向您展示如何从应用程序写入 Agent 的状态。
+
+## 何时使用？
+
+当您的 Agent 调用工具时，您可以使用此功能向用户提供关于 Agent 正在执行的操作的反馈。CopilotKit 允许您完全自定义这些工具在聊天中的渲染方式。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义 Agent 状态
+    LangGraph 是有状态的。当您在不同节点之间转换时，该状态会被更新并传递给下一个节点。在本示例中，假设我们的 Agent 状态如下所示。
+
+    <Tabs groupId="language_langgraph_agent" items={["Python", "TypeScript"]} persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            language: Literal["english", "spanish"] = "english"
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+        ```ts title="agent-js/src/agent.ts"
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+        export const AgentStateAnnotation = Annotation.Root({
+            language: Annotation<"english" | "spanish">,
+            ...CopilotKitStateAnnotation.spec,
+        });
+        export type AgentState = typeof AgentStateAnnotation.State;
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 使用 `useAgent` Hook 读取和写入状态
+    `useAgent` 让您可以访问 Agent，包括其状态。您可以通过调用 `agent.setState` 来更新状态。
+
+    ```tsx title="ui/app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    // 伪 React 组件中的示例用法
+    function YourMainContent() {
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      });
+
+      const language = (agent.state.language as string) ?? "english";
+
+      // ...
+
+      const toggleLanguage = () => {
+        agent.setState({ language: language === "english" ? "spanish" : "english" }); // [!code highlight]
+      };
+
+      // ...
+
+      return (
+        // 为简洁起见，样式已省略
+        <div>
+          <h1>您的主内容</h1>
+          {/* [!code highlight:1] */}
+          <p>语言: {language}</p>
+          <button onClick={toggleLanguage}>切换语言</button>
+        </div>
+      );
+    }
+    ```
+  </Step>
+  <Step>
+    ### 试一试！
+    您现在可以使用 `setState` 函数更新 Agent 状态，并使用 `state` 读取它。尝试切换语言按钮并与您的 Agent 对话。您会看到语言随 Agent 状态的变化而变化。
+
+    <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/write-agent-state.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+    <Callout>
+      此视频显示了应用 [实现](#implementation) 部分后的 `npx copilotkit@latest init` 结果！
+    </Callout>
+  </Step>
+</Steps>
+
+## 高级用法
+
+### 使用更新的状态重新运行 Agent
+
+新的 Agent 状态将在下次运行 Agent 时使用。
+如果您想手动重新运行它，请在更新状态后使用 `agent.runAgent`。
+
+```tsx title="ui/app/page.tsx"
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+// ...
+
+function YourMainContent() {
+  const { agent } = useAgent({
+    agentId: "sample_agent",
+  });
+
+  const language = (agent.state.language as string) ?? "english";
+
+  // 设置为由应用程序中的某个事件调用
+  const toggleLanguage = () => {
+    const newLanguage = language === "english" ? "spanish" : "english";
+    agent.setState({ language: newLanguage });
+
+    // [!code highlight:2]
+    // 使用更新的状态重新运行 Agent
+    agent.runAgent();
+  };
+
+  return (
+    // ...
+  );
+}
+```
+
+### 中间流式传输和渲染 Agent 状态
+默认情况下，LangGraph Agent 状态仅在 LangGraph 节点转换之间更新 —— 这意味着状态更新将是不连续且延迟的。
+
+您可能希望在状态更新时**连续**渲染 Agent 状态。
+
+请参阅 **[预测性状态更新](/langgraph/shared-state/predictive-state-updates)。**

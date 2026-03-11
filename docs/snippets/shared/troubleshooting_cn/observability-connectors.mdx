@@ -1,0 +1,244 @@
+CopilotKit Premium 通过 `onError` 钩子通过您选择的可观测性解决方案提供生产级错误可观测性。此功能需要 `publicLicenseKey` 或 `publicApiKey`，并提供丰富的结构化错误事件，您可以将其转发到您的监控和分析系统。
+有关所有可观测性功能的完整描述，请参阅[可观测性](../premium/observability)。
+
+## 快速设置
+
+```tsx
+import { CopilotKit } from "@copilotkit/react-core";
+
+export default function App() {
+  return (
+    <CopilotKit
+      runtimeUrl="<your-runtime-url>"
+      publicApiKey="ck_pub_your_key" // [!code highlight] - 使用 publicApiKey 连接 Copilot Cloud
+      // 或
+      publicLicenseKey="ck_pub_your_key" // [!code highlight] - 使用 publicLicenseKey 进行自托管
+      onError={(errorEvent) => {
+        // [!code highlight]
+        // 发送到您的监控/分析服务
+        console.error("CopilotKit 错误:", errorEvent);
+        analytics.track("copilotkit_error", {
+          type: errorEvent.type,
+          source: errorEvent.context.source,
+          timestamp: errorEvent.timestamp,
+        });
+      }} // [!code highlight]
+      showDevConsole={false}
+    >
+      {/* 您的应用 */}
+    </CopilotKit>
+  );
+}
+```
+
+<Callout type="info">
+  **关键配置**：
+  - 使用 Copilot Cloud 时使用 `publicApiKey`
+  - 自托管 CopilotKit 时使用 `publicLicenseKey`
+  - 两种密钥提供相同的可观测性功能
+</Callout>
+
+## 获取您的许可证或 API 密钥
+您可以从 [cloud.copilotkit.ai](https://cloud.copilotkit.ai) 获取任一类型的密钥。如果您尚未注册，请免费注册 Developer 计划。
+
+1. **对于 Copilot Cloud 托管**：登录 CopilotCloud 并获取您的 `publicApiKey`
+2. **对于自托管使用**：登录 CopilotCloud 并获取您的 `publicLicenseKey`。自托管不会使用 Copilot Cloud（除了获取您的密钥）。
+
+## 错误事件结构
+
+`onError` 钩子提供详细的结构化事件：
+
+```tsx
+import { CopilotErrorEvent } from "@copilotkit/shared";
+
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // 或自托管的 publicLicenseKey
+  onError={(errorEvent: CopilotErrorEvent) => {
+    switch (errorEvent.type) {
+      case "error":
+        logToService("关键错误", errorEvent);
+        break;
+      case "request":
+        logToService("请求已开始", errorEvent);
+        break;
+      case "response":
+        logToService("已接收响应", errorEvent);
+        break;
+      case "agent_state":
+        logToService("智能体状态变更", errorEvent);
+        break;
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>;
+```
+
+### 错误事件接口
+
+```ts
+interface CopilotErrorEvent {
+  type:
+    | "error"
+    | "request"
+    | "response"
+    | "agent_state"
+    | "action"
+    | "message"
+    | "performance";
+  timestamp: number;
+  context: {
+    source: "ui" | "runtime" | "agent";
+    request?: {
+      operation: string;
+      method?: string;
+      url?: string;
+      startTime: number;
+    };
+    response?: {
+      endTime: number;
+      latency: number;
+    };
+    agent?: {
+      name: string;
+      nodeName?: string;
+    };
+    messages?: {
+      input: any[];
+      messageCount: number;
+    };
+    technical?: {
+      environment: string;
+      stackTrace?: string;
+    };
+  };
+  error?: any; // 错误事件时存在
+}
+```
+
+## 常见集成模式
+
+### 与监控集成（例如 Sentry）
+
+```tsx
+import * as Sentry from "@sentry/react";
+
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // 或自托管的 publicLicenseKey
+  onError={(errorEvent) => {
+    if (errorEvent.type === "error") {
+      Sentry.captureException(errorEvent.error, {
+        tags: {
+          source: errorEvent.context.source,
+          operation: errorEvent.context.request?.operation,
+        },
+        extra: {
+          context: errorEvent.context,
+          timestamp: errorEvent.timestamp,
+        },
+      });
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>;
+```
+
+### 自定义分析
+
+```tsx
+<CopilotKit
+  publicApiKey="ck_pub_your_key" // 或自托管的 publicLicenseKey
+  onError={(errorEvent) => {
+    analytics.track("copilotkit_event", {
+      event_type: errorEvent.type,
+      source: errorEvent.context.source,
+      agent_name: errorEvent.context.agent?.name,
+      latency: errorEvent.context.response?.latency,
+      error_message: errorEvent.error?.message,
+      timestamp: errorEvent.timestamp,
+    });
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+## 特定环境设置
+
+### 开发环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="http://localhost:3000/api/copilotkit"
+  publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY} // 用于可观测性
+  showDevConsole={true} // 可视化错误以进行快速迭代
+  onError={(errorEvent) => {
+    // 开发环境中轻量级控制台日志
+    console.log("CopilotKit 事件:", errorEvent);
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+### 生产环境
+
+```tsx
+<CopilotKit
+  runtimeUrl="https://your-app.com/api/copilotkit"
+  publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_API_KEY} // [!code highlight]
+  showDevConsole={false} // 对终端用户隐藏详情
+  onError={(errorEvent) => {
+    if (errorEvent.type === "error") {
+      // 关键日志记录
+      logger.error("CopilotKit 错误", {
+        error: errorEvent.error,
+        context: errorEvent.context,
+        timestamp: errorEvent.timestamp,
+      });
+
+      // 转发到监控
+      monitoring.captureError(errorEvent.error, {
+        extra: errorEvent.context,
+      });
+    }
+  }}
+>
+  {/* 您的应用 */}
+</CopilotKit>
+```
+
+## 环境变量
+
+### 对于 Copilot Cloud 用户
+
+```bash
+NEXT_PUBLIC_COPILOTKIT_API_KEY=ck_pub_your_key_here
+```
+
+### 对于自托管用户
+
+```bash
+NEXT_PUBLIC_COPILOTKIT_LICENSE_KEY=ck_pub_your_key_here
+```
+
+## 故障排除
+
+### 生产可观测性问题
+
+- **`onError` 中未收到事件：**
+  - 确保设置了 `publicApiKey` 或 `publicLicenseKey`（以 `ck_pub_` 开头）
+  - 检查您的环境变量是否已加载
+  - 验证错误是否实际发生（在本地使用开发控制台测试）
+
+- **高容量日志记录：**
+  - 保持 `onError` 轻量级；在发送到外部服务之前进行批处理或节流
+  - 考虑按类型过滤事件以减少噪音
+
+### 密钥配置问题
+
+- **密钥类型错误**：确保 Copilot Cloud 使用 `publicApiKey`，自托管使用 `publicLicenseKey`
+- **密钥格式无效**：密钥应以 `ck_pub_` 开头
+- **环境变量未加载**：检查您的环境变量是否正确配置为您的框架
+```

@@ -1,0 +1,61 @@
+---
+title: 介绍
+icon: "custom/ag2"
+description: 通过 AG-UI 使用 CopilotKit 将您的 AG2 Agent 带给您的用户。
+hideHeader: true
+---
+import { customIcons } from "@/lib/icons/custom-icons";
+import { FrameworkOverview } from "@/components/content/landing-pages/framework-overview";
+
+<FrameworkOverview
+  frameworkName="AG2"
+  frameworkIcon={<customIcons.ag2 className="h-10 w-10 text-foreground" />}
+  header="将您的 AG2 Agent 带给您的用户"
+  subheader="使用 CopilotKit 和 AG-UI 为您的 AG2 Agent 提供真正的用户交互性。构建丰富、交互式、Agent 驱动的应用程序。"
+  bannerVideo="https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/overview.mp4"
+  guideLink="/ag2/quickstart"
+  initCommand="npx copilotkit@latest init"
+  featuresLink="/ag2/generative-ui"
+  supportedFeatures={[
+    {
+      title: "生成式 UI",
+      description: "实时使用自定义 UI 组件渲染 Agent 的状态、进度、输出和工具调用。弥合 AI Agent 与用户界面之间的差距。",
+      documentationLink: "/ag2/generative-ui",
+      demoLink: "/ag2/generative-ui",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/haiku.mp4"
+    },
+    {
+      title: "人机协同",
+      description: "让用户在关键检查点引导 Agent。结合 AI 和人类判断的最佳优势，实现更可靠和可控的 Agent 行为。",
+      documentationLink: "/ag2/human-in-the-loop",
+      demoLink: "https://examples-coagents-ai-travel-app.vercel.app/",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/human-in-the-loop-example.mp4"
+    },
+    {
+      title: "共享状态",
+      description: "保持您的 Agent 和应用程序同步。您的 Agent 可以看到应用程序中的一切，您的应用程序可以实时响应您的 Agent。",
+      documentationLink: "/ag2/shared-state",
+      demoLink: "/ag2/shared-state",
+      videoUrl: "https://cdn.copilotkit.ai/docs/copilotkit/videos/coagents/shared-state.mp4"
+    }
+  ]}
+  architectureImage="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/ag2/architecture.png"
+  liveDemos={[
+    {
+      type: "saas",
+      title: "SaaS Copilot",
+      description: "通过 AI Agent 增强的传统 SaaS 应用程序。这些 Copilot 无缝集成到现有工作流程中，为特定业务流程提供智能协助。非常适合客户服务、销售自动化、项目管理和领域特定任务，用户需要引导式、分步的 AI 协助。",
+      iframeUrl: "https://examples-coagents-ai-travel-app.vercel.app?copilotOpen=true"
+    },
+    {
+      type: "canvas",
+      title: "画布 Copilot",
+      description: "一个无限画布界面，用户在其中与 AI Agent 在空间化的视觉环境中协作。这些 Copilot 在研究、头脑风暴、内容创建和复杂问题解决方面表现出色，信息需要以非线性、创造性的方式进行组织、连接和探索。",
+      iframeUrl: "https://examples-coagents-research-canvas-ui.vercel.app/"
+    }
+  ]}
+/>
+
+<Callout type="info">
+  CopilotKit 通过 <code>/chat</code> 消费 AG2 流式传输的 AG-UI 协议事件。请参阅 <a href="https://docs.ag2.ai/latest/docs/user-guide/ag-ui/" target="_blank">AG2 AG-UI 集成文档</a>。
+</Callout>

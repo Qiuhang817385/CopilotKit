@@ -1,0 +1,48 @@
+---
+title: 子图
+description: 在您的应用程序中使用多个代理作为子图。
+icon: "lucide/Network"
+---
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="subgraphs-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/subgraphs?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/subgraphs?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  本示例展示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/langgraph/feature/subgraphs) 中的子图。
+</Callout>
+
+## 什么是子图？
+
+子图只是用作另一个图中节点的图。
+可以将其视为 LangGraph 的封装：每个子图都是一个自包含的单元，可以组合起来构建更大、更复杂的系统。
+
+## 什么时候应该使用这个功能？
+
+当您需要将图结构化为更小、可重用的部分时，子图非常有用。
+它们让您构建多代理系统，在多个图中重用节点集，并让不同的团队独立开发图的不同部分。
+
+## CopilotKit 如何支持这个功能？
+
+CopilotKit 支持直接从子图进行流式传输，因此嵌套图可以像单个图一样实时发出事件。
+
+使用此功能不需要在代理端进行额外步骤。
+您需要做的就是在 `useAgent` 钩子中启用子图流式传输：
+```tsx
+import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+const { agent } = useAgent({
+  agentId: "sample_agent",
+});
+
+// 像往常一样访问代理状态 - 子图流式传输自动处理
+const state = agent.state;
+```
+
+子图节点将像往常一样流式传输，您也可以直接从子图使用 `interrupt()`。

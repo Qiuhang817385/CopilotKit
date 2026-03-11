@@ -1,0 +1,98 @@
+---
+title: "智能体协议"
+icon: "lucide/Zap"
+description: "CopilotKit 通过您选择的智能体协议连接到您的智能体"
+---
+import Image from "next/image"
+
+CopilotKit 完全兼容三种主要的智能体协议：AG-UI、MCP 和 A2A。
+了解这些协议以及如何使用 CopilotKit 将您的应用程序连接到支持它们的智能体。
+
+<Image 
+  src="/images/venn-agentic-light.svg" 
+  alt="智能体协议 - 维恩图" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden mb-8 w-full mx-auto"
+/>
+<Image 
+  src="/images/venn-agentic-dark.svg" 
+  alt="智能体协议 - 维恩图" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block mb-8 w-full mx-auto"
+/>
+
+
+
+<table style={{width: "100%", borderCollapse: "collapse"}}>
+  <thead>
+    <tr>
+      <th style={{width: "25%", textAlign: "left", padding: "12px", borderBottom: "2px solid #e5e7eb"}}>连接</th>
+      <th style={{width: "25%", textAlign: "left", padding: "12px", borderBottom: "2px solid #e5e7eb"}}>协议</th>
+      <th style={{width: "50%", textAlign: "left", padding: "12px", borderBottom: "2px solid #e5e7eb"}}>用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><strong>智能体 ↔ 用户交互</strong></td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><a href="./ag-ui-protocol"><strong>AG-UI</strong></a><br/>（智能体-用户交互协议）</td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb"}}>开放的、基于事件的标准，将智能体连接到面向用户的应用程序——实现实时、多模态、交互式体验。</td>
+    </tr>
+    <tr>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><strong>智能体 ↔ 工具和数据</strong></td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><a href="./connect-mcp-servers"><strong>MCP</strong></a><br/>（模型上下文协议）</td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb"}}>开放标准，允许智能体安全地连接到外部系统——工具、工作流和数据源。</td>
+    </tr>
+    <tr>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><strong>智能体 ↔ 智能体</strong></td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb", verticalAlign: "top"}}><a href="./a2a-protocol"><strong>A2A</strong></a><br/>（智能体对智能体）</td>
+      <td style={{padding: "12px", borderBottom: "1px solid #e5e7eb"}}>定义智能体如何在分布式智能体系统中协调和共享工作。</td>
+    </tr>
+    <tr>
+      <td style={{padding: "12px", verticalAlign: "top"}}><strong>智能体 ↔ 生成式 UI</strong></td>
+      <td style={{padding: "12px", verticalAlign: "top"}}><strong>[A2UI](./generative-ui/specs/a2ui)</strong>（Google）<br/><strong>[MCP Apps](./generative-ui/specs/mcp-apps)</strong>（MCP 生态系统）<br/><strong>[Open-JSON-UI](./generative-ui/specs/open-json-ui)</strong>（OpenAI）</td>
+      <td style={{padding: "12px"}}>声明式、LLM 友好的<a href="./generative-ui/specs">生成式 UI 规范</a>，定义渲染<em>什么</em>以及如何视觉上构建智能体响应。CopilotKit 完全支持所有这些规范。</td>
+    </tr>
+  </tbody>
+</table>
+
+## **混合搭配协议**
+
+CopilotKit 允许开发人员**直接或以组合方式**连接到这些协议中的任何一个。
+CopilotKit 可以通过任何交互协议连接到您的智能体后端。
+
+<Image 
+  src="/images/any-agentic-backend-light.png" 
+  alt="任何智能体后端" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden mb-8 w-full mx-auto"
+/>
+<Image 
+  src="/images/any-agentic-backend-dark.png" 
+  alt="任何智能体后端" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block mb-8 w-full mx-auto"
+/>
+
+或者，由于 AG-UI 还包含与 **MCP** 和 **A2A** 的**握手**，CopilotKit 可以通过 AG-UI 连接到支持 MCP 或 A2A 的智能体。
+
+这意味着如果您的主智能体使用 **MCP** 或 **A2A** 连接子智能体，它们的 UI 属性可以通过 AG-UI 一直传播到面向用户的应用程序——同时保留**完整的安全性、策略和可观察性控制。**
+
+<Image 
+  src="/images/mcp-and-a2a-through-agui-light.png" 
+  alt="通过 AG-UI 的 MCP 和 A2A" 
+  width={4096} 
+  height={2304}
+  className="block dark:hidden mt-8 w-full mx-auto"
+/>
+<Image 
+  src="/images/mcp-and-a2a-through-agui-dark.png" 
+  alt="通过 AG-UI 的 MCP 和 A2A" 
+  width={4096} 
+  height={2304}
+  className="hidden dark:block mt-8 w-full mx-auto"
+/>
+

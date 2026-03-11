@@ -1,0 +1,85 @@
+---
+title: 前端工具
+icon: "lucide/Wrench"
+description: 创建前端工具并在您的 ADK 智能体中使用它们。
+---
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import RunAndConnect from "@/snippets/integrations/adk/run-and-connect.mdx"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="frontend-actions-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/agentic_chat?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/adk-middleware/feature/agentic_chat?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+前端工具让您可以定义客户端函数，供您的 ADK 智能体调用，执行完全在用户的浏览器中进行。当智能体调用前端工具时，逻辑在客户端运行，让您可以直接访问前端环境。
+
+这可以用于让[您的智能体控制 UI](/adk/frontend-tools)、[生成式 UI](/adk/frontend-tools) 或人机交互。
+
+在本指南中，我们介绍如何使用前端工具来驱动和与 UI 交互。
+
+## 什么时候使用它？
+当您需要智能体与客户端原语交互时使用前端工具，例如：
+- 读取或修改 React 组件状态
+- 访问浏览器 API，如 localStorage、sessionStorage 或 cookies
+- 触发 UI 更新或动画
+- 与第三方前端库交互
+- 执行需要用户即时浏览器上下文的操作
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 运行并连接您的智能体
+       <RunAndConnect components={props.components} />
+    </Step>
+
+    <Step>
+        ### 创建前端工具
+
+        首先，您需要使用 [useFrontendTool](/reference/v1/hooks/useFrontendTool) hook 创建一个前端工具。这里有一个简单的示例，向用户问好。
+
+        ```tsx title="page.tsx"
+        import { z } from "zod";
+        import { useFrontendTool } from "@copilotkit/react-core/v2" // [!code highlight]
+
+        export function Page() {
+          // ...
+
+          // [!code highlight:12]
+          useFrontendTool({
+            name: "sayHello",
+            description: "向用户问好",
+            parameters: z.object({
+              name: z.string().describe("要问候的用户名称"),
+            }),
+            handler: async ({ name }) => {
+              alert(`你好, ${name}!`);
+              return `已向 ${name} 问好!`;
+            },
+          });
+
+          // ...
+        }
+        ```
+
+        就这样！您的智能体将自动访问您使用 `useFrontendTool` 在 React 组件中定义的所有前端工具。
+
+        <Callout type="info">
+          使用 `useFrontendTool` 注册的前端工具会通过 AG-UI 协议自动转发给您的智能体。智能体可以调用它们，执行在前端进行。
+        </Callout>
+    </Step>
+    <Step>
+        ### 试一试！
+        您现在已经赋予智能体直接调用您定义的任何前端工具的能力。这些工具将可供智能体在需要时使用。
+
+        <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/frontend-actions-demo.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+    </Step>
+
+</Steps>

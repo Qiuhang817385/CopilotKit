@@ -1,0 +1,17 @@
+---
+title: 共享状态
+description: 在 UI 和 Mastra Agent 状态之间创建双向连接。
+icon: "lucide/Repeat"
+---
+
+<Frame>
+    <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/coagents-state-diagram.png" alt="Agentic Copilot 状态图" />
+</Frame>
+
+该系统的基础建立在 Mastra 通过 AG-UI 实现的有状态架构之上。Mastra Agent 可以在整个执行过程中保持其内部状态，您可以通过 `useCoAgentState` Hook 访问它。
+
+## 何时使用？
+
+当您想要促进 Agent 和用户之间的协作时，状态流是完美的选择。Mastra Agent 持久化的任何状态都将自动由 UI 共享。同样，用户在 UI 中更新的任何状态都将自动反映出来。
+
+这允许 Agent 和用户保持一致的体验。

@@ -1,0 +1,129 @@
+---
+title: 快速入门
+description: 在 10 分钟内将您的 A2A 代理转变为代理原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+} from "lucide-react";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您需要以下内容：
+
+- Google Gemini API 密钥
+- Node.js 20+
+- Python 3.9+
+- 您喜欢的包管理器
+
+## 开始使用
+
+<Steps>
+    <Step>
+        ### 克隆 A2A 入门模板
+
+        ```bash
+        git clone https://github.com/copilotkit/with-a2a-a2ui.git
+        ```
+    </Step>
+    <Step>
+        ### 安装依赖
+
+        ```
+        pnpm install
+        ```
+    </Step>
+    <Step>
+        ### 配置您的环境
+
+        在您的代理目录中创建一个 `.env` 文件并添加您的 Google API 密钥：
+
+        ```plaintext title="agent/.env"
+        GOOGLE_API_KEY=your_google_api_key
+        ```
+
+        <Callout type="info" title="其他模型呢？">
+          入门模板默认配置为使用 Google 的 Gemini，但您可以修改它以使用 ADK 支持的任何语言模型。
+        </Callout>
+    </Step>
+    <Step>
+        ### 启动开发服务器
+
+        <Tabs groupId="package-manager" items={['npm', 'pnpm', 'yarn', 'bun']}>
+            <Tab value="npm">
+                ```bash
+                npm run dev
+                ```
+            </Tab>
+            <Tab value="pnpm">
+                ```bash
+                pnpm dev
+                ```
+            </Tab>
+            <Tab value="yarn">
+                ```bash
+                yarn dev
+                ```
+            </Tab>
+            <Tab value="bun">
+                ```bash
+                bun dev
+                ```
+            </Tab>
+        </Tabs>
+
+        这将同时启动 UI 和代理服务器。
+    </Step>
+    <Step>
+        ### 🎉 开始聊天！
+
+        您的 AI 代理现在可以使用了！导航到 `localhost:3000` 并开始提示它：
+
+        ```
+        给我展示纽约市的中餐馆
+        ```
+
+        <Accordions className="mb-4">
+            <Accordion title="故障排除">
+                - 如果您遇到连接问题，请尝试使用 `0.0.0.0` 或 `127.0.0.1` 代替 `localhost`
+                - 确保您的代理在端口 8000 上运行
+                - 检查您的 Google API 密钥是否已正确设置
+            </Accordion>
+        </Accordions>
+
+    </Step>
+</Steps>
+
+## 接下来是什么？
+
+现在您已经完成了基本代理设置，探索这些高级功能：
+
+<Cards>
+  <Card
+    title="添加一些生成式 UI"
+    description="使用 A2UI 渲染声明式 UI 组件。"
+    href="/a2a/generative-ui/declarative-a2ui"
+    icon={<PaintbrushIcon />}
+  />
+</Cards>

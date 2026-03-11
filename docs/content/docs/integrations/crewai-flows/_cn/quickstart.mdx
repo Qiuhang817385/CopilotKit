@@ -1,0 +1,274 @@
+---
+title: 快速入门
+description: 在 10 分钟内将您的 CrewAI Flows 转变为代理原生应用程序。
+icon: "lucide/Play"
+hideTOC: true
+---
+
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import { CoAgentsDiagram } from "@/components/react/coagents/coagents-diagram.tsx";
+import { FaPython, FaJs, FaCloud } from "react-icons/fa";
+import SelfHostingCopilotRuntimeCreateEndpoint from "@/snippets/self-hosting-copilot-runtime-create-endpoint.mdx";
+import CopilotKitCloudCopilotKitProvider from "@/snippets/copilot-cloud-configure-copilotkit-provider.mdx";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import FindYourCopilotRuntime from "@/snippets/find-your-copilot-runtime.mdx";
+import CloudCopilotKitProvider from "@/snippets/coagents/cloud-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeConfigureCopilotKitProvider from "@/snippets/coagents/self-host-configure-copilotkit-provider.mdx";
+import SelfHostingCopilotRuntimeStarter from "@/snippets/self-hosting-copilot-runtime-starter.mdx";
+import SelfHostingRemoteEndpoints from "@/snippets/self-hosting-remote-endpoints.mdx";
+import { SquareTerminal, SquareChartGantt } from "lucide-react";
+import {
+  UserIcon,
+  PaintbrushIcon,
+  WrenchIcon,
+  RepeatIcon,
+  ServerIcon,
+} from "lucide-react";
+import { SiCrewai } from "@icons-pack/react-simple-icons";
+import CopilotUI from "@/snippets/copilot-ui.mdx";
+
+<video
+  src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4"
+  className="rounded-lg shadow-xl"
+  loop
+  playsInline
+  controls
+  autoPlay
+  muted
+/>
+
+## 先决条件
+
+在开始之前，您必须已经在 [CrewAI Enterprise](https://docs.crewai.com/enterprise/introduction) 上部署了 [CrewAI Flow](https://docs.crewai.com/guides/flows/first-flow)。如果您正在寻找示例流程，请查看这个[示例代理聊天实现](https://github.com/suhasdeshpande/agentic_chat)。
+
+## 开始使用
+
+<Steps>
+<TailoredContent
+    className="step"
+    id="path"
+    header={
+        <div>
+            <p className="text-xl font-semibold">您想如何开始？</p>
+            <p className="text-base">
+                使用全新的 <span className="text-indigo-500 dark:text-indigo-400">CopilotKit CLI（测试版）</span> 快速启动，或跟随我们一起编写代码来开始。
+            </p>
+        </div>
+    }
+>
+    <TailoredContentOption
+        id="cli"
+        title="使用 CopilotKit CLI（仅限 NextJS）"
+        description="我有一个 Next.js 应用程序，想快速开始。"
+        icon={<SquareTerminal />}
+    >
+        <Step>
+            ### 运行 CLI
+            只需在您的 Next.js 应用程序中运行以下命令即可开始！
+
+            <Accordions>
+                <Accordion title="没有 Next.js 应用程序？">
+                    没问题！只需使用 `create-next-app` 快速创建一个。
+                    ```bash
+                    npx create-next-app@latest
+                    ```
+                </Accordion>
+            </Accordions>
+
+            ```bash
+            npx copilotkit@latest init -m CrewAI --crew-type Flows
+            ```
+        </Step>
+        <Step>
+            ### 🎉 与您的代理对话！
+
+            恭喜！您已成功将 CrewAI Flow 代理聊天机器人集成到您的应用程序中。根据您选择的模板，您可能会看到一些不同的 UI 元素。首先，尝试向您的代理提出几个问题。
+
+            ```
+            你能给我讲个笑话吗？
+            ```
+
+            ```
+            你能帮我理解 AI 吗？
+            ```
+
+            ```
+            你觉得 React 怎么样？
+            ```
+        </Step>
+    </TailoredContentOption>
+    <TailoredContentOption
+        id="code-along"
+        title="跟随编写代码"
+        description="我想深入了解底层发生了什么，或者我没有 Next.js 应用程序。"
+        icon={<SquareChartGantt />}
+    >
+        <Step>
+            ### 连接到 Copilot Cloud
+            1. 前往 [Copilot Cloud](https://cloud.copilotkit.ai)，登录并点击开始使用
+            2. 点击"添加远程端点"并填写您的 CrewAI Flow 的详细信息。注意：如果您的代理名称包含多个单词，请使用下划线（`_`）作为分隔符。
+            3. 点击"保存端点"
+            4. 复制 Copilot Cloud 公共 API 密钥
+
+            <img src="https://cdn.copilotkit.ai/docs/copilotkit/images/copilot-cloud/crewai-flow-cpk-setup.gif" alt="CrewAI Flow Copilot Setup" className="rounded-lg shadow-xl mt-4" />
+        </Step>
+
+        <Step>
+            ### 安装 CopilotKit
+            首先，将 CopilotKit 的最新软件包安装到您的前端。
+            ```npm
+            npm install @copilotkit/react-ui @copilotkit/react-core
+            ```
+        </Step>
+
+        <Step>
+            ### 设置 CopilotKit 提供者
+            [`<CopilotKit>`](/reference/v1/components/CopilotKit) 组件必须包裹应用程序中感知 Copilot 的部分。对于大多数用例，
+            将 CopilotKit 提供者包裹在整个应用程序周围是合适的，例如在您的 layout.tsx 中。
+
+            <CloudCopilotKitProvider components={props.components} />
+        </Step>
+        <Step>
+            ### 选择 Copilot UI
+            您快到了！现在是时候设置您的 Copilot UI 了。
+            <CopilotUI components={props.components} />
+        </Step>
+        <Step>
+            ### 创建 CrewAI Flow 组件
+            将以下代码片段放在您的**主页面**（例如 Next.js 中的 `page.tsx`）或您想使用 CopilotKit 的任何地方。
+
+            ```tsx title="page.tsx"
+            "use client";
+            import "@copilotkit/react-ui/v2/styles.css";
+            import { CopilotKit } from "@copilotkit/react-core";
+            import { z } from "zod";
+            import { useFrontendTool } from "@copilotkit/react-core/v2";
+            import { CopilotChat } from "@copilotkit/react-core/v2";
+            import React, { useState } from "react";
+
+            const publicApiKey = process.env.NEXT_PUBLIC_COPILOT_API_KEY || "";
+            /**
+             * AgentName 指的是您在设置期间通过 CLI 保存的 Crew Flow 代理。
+             * 它用于标识您要用于聊天的代理。
+             */
+            const agentName =
+              process.env.NEXT_PUBLIC_COPILOTKIT_AGENT_NAME || "DefaultAgent";
+
+            // 主聊天组件：处理聊天界面和背景自定义
+            const Chat = () => {
+              const [background, setBackground] = useState(
+                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+              );
+
+              // 操作：允许 AI 动态更改背景颜色
+              useFrontendTool({
+                name: "change_background",
+                description:
+                  "更改聊天的背景颜色。可以是 CSS background 属性接受的任何值。常规颜色、线性或径向渐变等。",
+                parameters: z.object({
+                  background: z.string().describe("背景。优先使用渐变。"),
+                }),
+                handler: async ({ background }) => {
+                  setBackground(background);
+                  return `背景已更改为 ${background}`;
+                },
+                followUp: false,
+              });
+
+              return (
+                <div
+                  className="h-screen w-full flex items-center justify-center"
+                  style={{ background }}
+                >
+                  <div className="w-full max-w-3xl h-[80vh] px-4">
+                    <div className="h-full bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden">
+                      <CopilotChat
+                        className="h-full"
+                        labels={{
+                          welcomeMessageText: "嗨，我是一个代理。想聊天吗？",
+                          placeholder: "输入消息...",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // App 组件：提供 CopilotKit 上下文的主包装器
+            const CrewAIFlow: React.FC = () => (
+              <CopilotKit publicApiKey={publicApiKey} agent={agentName}>
+                <Chat />
+              </CopilotKit>
+            );
+
+            export default CrewAIFlow;
+            ```
+        </Step>
+        <Step>
+            ### 🎉 与您的代理对话！
+
+            恭喜！您已成功将 CrewAI Flow 聊天机器人集成到您的应用程序中。首先，尝试向您的代理提出几个问题。
+
+            ```
+            你能给我讲个笑话吗？
+            ```
+
+            ```
+            你能帮我理解 AI 吗？
+            ```
+
+            ```
+            你觉得 React 怎么样？
+            ```
+
+            <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/chat-example.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+
+            <Accordions className="mb-4">
+                <Accordion title="遇到问题？">
+                    - 尝试将主机更改为 `0.0.0.0` 或 `127.0.0.1` 而不是 `localhost`。
+                </Accordion>
+            </Accordions>
+        </Step>
+    </TailoredContentOption>
+    </TailoredContent>
+
+</Steps>
+
+---
+
+## 下一步是什么？
+
+您现在已经在 CopilotKit 中运行了 CrewAI Flow！现在您可以开始探索 CopilotKit
+可以帮助您构建强大的代理原生应用程序的各种方式。
+
+<Cards>
+  <Card
+    title="实现人机协同"
+    description="允许您的用户和代理在任务上协同工作。"
+    href="/crewai-flows/human-in-the-loop"
+    icon={<UserIcon />}
+  />
+  <Card
+    title="利用共享状态"
+    description="了解如何将代理的状态与 UI 的状态同步，反之亦然。"
+    href="/crewai-flows/shared-state"
+    icon={<RepeatIcon />}
+  />
+  <Card
+    title="添加生成式 UI"
+    description="在 UI 中渲染代理的进度和输出。"
+    href="/crewai-flows/generative-ui/tool-rendering"
+    icon={<PaintbrushIcon />}
+  />
+  <Card
+    title="设置前端操作"
+    description="让您的代理能够调用前端工具，直接更新您的应用程序。"
+    href="/crewai-flows/frontend-tools"
+    icon={<WrenchIcon />}
+  />
+</Cards>

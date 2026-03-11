@@ -1,0 +1,316 @@
+---
+title: "状态流式传输"
+icon: "lucide/Podcast"
+description: 将正在进行的 Agent 状态更新流式传输到前端。
+---
+import {
+  TailoredContent,
+  TailoredContentOption,
+} from "@/components/react/tailored-content.tsx";
+import { CoAgentsEnterpriseCTA } from "@/components/react/coagents/coagents-enterprise-cta.tsx";
+import InstallSDKSnippet from "@/snippets/install-sdk.mdx"
+import { FaWrench } from "react-icons/fa";
+import { FaArrowUp } from "react-icons/fa";
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="predictive-state-updates-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/predictive_state_updates?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/predictive_state_updates?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+<Callout type="info">
+  此示例演示了 [CopilotKit 功能查看器](https://feature-viewer.copilotkit.ai/langgraph/feature/predictive_state_updates) 中的预测状态更新。
+</Callout>
+
+## 这是什么？
+
+LangGraph Agent 的状态是不连续更新的；仅在图中的节点转换之间。
+但即使图中的一个_节点_通常也需要许多秒才能运行，并且包含用户感兴趣的子步骤。
+
+**Agent 原生应用程序**向最终用户反映 Agent 正在做什么，**尽可能连续地**。
+
+CopilotKit 通过其 **_预测状态更新_** 概念实现这一点。
+
+
+## 何时使用？
+您可以在想要向用户提供有关 Agent 正在做什么的反馈时使用此功能，特别是：
+
+- **保持用户参与**，避免长时间的加载指示器
+- **建立信任**，通过展示 Agent 正在处理什么
+- 启用 **Agent 引导** - 允许用户在需要时纠正 Agent 的方向
+
+## 重要说明
+
+当 LangGraph 中的节点完成执行时，**其返回的状态成为唯一真实来源**。虽然中间状态更新对于实时反馈很棒，但您想要持久化的任何更改必须显式包含在节点的最终返回状态中。否则，当节点完成时，它们将被覆盖。
+
+
+## 实现
+
+<Steps>
+    <Step>
+        ### 安装 CopilotKit SDK
+        <InstallSDKSnippet components={props.components}/>
+    </Step>
+    <Step>
+        ### 定义状态
+        我们将在状态中定义一个 `observed_steps` 字段，当 Agent 写入报告的不同部分时，它将更新。
+
+        <Tabs groupId="language_langgraph_agent" items=["Python", "TypeScript"] persist>
+            <Tab value="Python">
+                ```python title="agent.py"
+                from copilotkit import CopilotKitState
+                from typing import Literal
+
+                class AgentState(CopilotKitState):
+                    observed_steps: list[str]  # 已完成步骤的数组
+                ```
+            </Tab>
+            <Tab value="TypeScript">
+                ```ts title="agent-js/src/agent.ts"
+                import { Annotation } from "@langchain/langgraph";
+                import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+                export const AgentStateAnnotation = Annotation.Root({
+                    observed_steps: Annotation<string[]>,  // 已完成步骤的数组
+                    ...CopilotKitStateAnnotation.spec,
+                });
+                export type AgentState = typeof AgentStateAnnotation.State;
+                ```
+            </Tab>
+        </Tabs>
+    </Step>
+    <Step>
+        ### 发送中间状态
+        <TailoredContent
+            id="state-emission"
+            header={
+                <div>
+                    <p className="text-xl font-semibold">您希望如何发送状态更新？</p>
+                    <p className="text-base">
+                        您可以手动发送状态更新，或配置特定的工具调用以发送更新。
+                    </p>
+                </div>
+            }
+        >
+            <TailoredContentOption
+                id="manual-emission"
+                title="手动预测状态更新"
+                description="手动发送状态更新，以最大程度控制何时发生更新。"
+                icon={<FaArrowUp />}
+            >
+                对于长时间运行的任务，您可以逐步发送状态更新作为最终状态的预测。在此示例中，我们通过在每个更新之间添加一秒延迟来模拟长时间运行的任务。
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python title="agent.py"
+                        from copilotkit.langgraph import copilotkit_emit_state # [!code highlight]
+                        # ...
+                        async def chat_node(state: AgentState, config: RunnableConfig) -> Command[Literal["cpk_action_node", "tool_node", "__end__"]]:
+                            # ...
+
+                            # 模拟逐个执行步骤
+                            steps = [
+                                "正在分析输入数据...",
+                                "正在识别关键模式...",
+                                "正在生成建议...",
+                                "正在格式化最终输出..."
+                            ]
+
+                            for step in steps:
+                                self.state["observed_steps"] = self.state.get("observed_steps", []) + [step]
+                                await copilotkit_emit_state(config, state) # [!code highlight]
+                                await asyncio.sleep(1)
+
+                            # ...
+                        ```
+                    </Tab>
+                    <Tab value="TypeScript">
+                        ```ts title="agent-js/src/agent.ts"
+                        import { copilotkitEmitState } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+                        // ...
+                        async function chat_node(state: AgentState, config: RunnableConfig) {
+                            // ...
+
+                            // 模拟逐个执行步骤
+                            const steps = [
+                                "正在分析输入数据...",
+                                "正在识别关键模式...",
+                                "正在生成建议...",
+                                "正在格式化最终输出..."
+                            ];
+
+                            for (const step of steps) {
+                                state.observed_steps = [...(state.observed_steps ?? []), step];
+                                copilotkitEmitState(config, state);
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                        ```
+                    </Tab>
+                </Tabs>
+            </TailoredContentOption>
+
+            <TailoredContentOption
+                id="tool-emission"
+                title="基于工具的预测状态更新"
+                description="配置特定的工具调用以自动发送中间状态更新。"
+                icon={<FaWrench />}
+            >
+                对于长时间运行的任务，您可以配置 CopilotKit 以在特定工具调用时自动预测状态更新。在此示例中，我们将配置 CopilotKit 以在 LLM 调用步骤进度工具时预测状态更新。
+                <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+                    <Tab value="Python">
+                        ```python
+                        from copilotkit.langgraph import copilotkit_customize_config
+                        from copilotkit import CopilotKitState
+                        from langgraph.types import Command
+                        from langgraph.graph import END
+                        from langchain.tools import tool
+                        from langchain_openai import ChatOpenAI
+                        from langchain_core.messages import SystemMessage, AIMessage
+                        from langchain_core.runnables import RunnableConfig
+
+                        # 定义一个步骤进度工具供 LLM 报告步骤
+                        @tool
+                        def step_progress_tool(steps: list[str])
+                            """读取和报告步骤"""
+
+                        async def frontend_actions_node(state: AgentState, config: RunnableConfig):
+                            # 配置 CopilotKit 将步骤进度工具调用视为最终状态的预测
+                            config = copilotkit_customize_config(
+                                config,
+                                emit_intermediate_state=[
+                                    {
+                                        "state_key": "observed_steps",
+                                        "tool": "step_progress_tool",
+                                        "tool_argument": "steps"
+                                    },
+                                ]
+                            )
+
+                            system_message = SystemMessage(
+                                content=f"您是一个任务执行者。假装执行给您的任务，使用 step_progress_tool 报告步骤。"
+                            )
+
+                            # 向 LLM 提供操作
+                            model = ChatOpenAI(model="gpt-4").bind_tools(
+                                [
+                                    *state["copilotkit"]["actions"],
+                                    step_progress_tool
+                                    # 您的其他工具放在这里
+                                ],
+                            )
+
+                            # 使用 CopilotKit 的修改后的配置调用模型
+                            response = await model.ainvoke([
+                                system_message,
+                                *state["messages"],
+                            ], config)
+
+                            # 在状态中设置步骤，以便它们被持久化并传达给前端
+                            if isinstance(response, AIMessage) and response.tool_calls and response.tool_calls[0].get("name") == 'step_progress_tool':
+                                return Command(
+                                    goto=END,
+                                    update={
+                                        "messages": response,
+                                        "observed_steps": response.tool_calls[0].get("args", None).get('steps')
+                                    }
+                                )
+
+                            return Command(goto=END, update={"messages": response})
+                        ```
+                    </Tab>
+                    <Tab value="TypeScript">
+                        ```typescript
+                        import { copilotkitCustomizeConfig } from '@copilotkit/sdk-js/langgraph';
+
+                        async function frontendActionsNode(state: AgentState, config: RunnableConfig): Promise<AgentState> {
+                            const modifiedConfig = copilotkitCustomizeConfig(config, {
+                                emitIntermediateState: [
+                                {
+                                    stateKey: "observed_steps",
+                                    tool: "StepProgressTool",
+                                    toolArgument: "steps",
+                                },
+                                ],
+                            });
+
+                            const stepProgress = tool(
+                                async (args) => args,
+                                {
+                                    name: "StepProgressTool",
+                                    description: "通过更新步骤数组记录进度",
+                                    schema: z.object({
+                                        steps: z.array(z.string()),
+                                    }),
+                                }
+                            );
+
+                            const model = new ChatOpenAI({
+                                model: "gpt-5.2",
+                            }).bindTools([stepProgress]);
+
+                            const system_message = new SystemMessage("您是一个任务执行者。假装执行给您的任务，使用 StepProgressTool 报告步骤。")
+                            const response = await model.invoke([system_message, ...state.messages], modifiedConfig);
+
+
+                            if (response.tool_calls?.length) {
+                                return {
+                                    messages: response;
+                                    observed_steps: response.tool_calls[0].args.steps,
+                                }
+
+                            return { messages: response };
+                        }
+                        ```
+                    </Tab>
+                </Tabs>
+            </TailoredContentOption>
+        </TailoredContent>
+    </Step>
+    <Step>
+        ### 观察预测
+        这些预测将在 Agent 运行时发送，允许您在最终状态确定之前跟踪其进度。
+
+        ```tsx title="ui/app/page.tsx"
+        import { useAgent } from '@copilotkit/react-core/v2'; // [!code highlight]
+
+        const YourMainContent = () => {
+            // [!code highlight:3]
+            const { agent } = useAgent({
+                agentId: "sample_agent",
+            });
+
+            const observedSteps = (agent.state.observed_steps as string[]) ?? [];
+
+            return (
+                <div>
+                    <h1>Agent 进度</h1>
+                    {observedSteps.length > 0 && (
+                        <div>
+                            <h3>步骤：</h3>
+                            <ul>
+                                {observedSteps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )
+        }
+        ```
+    </Step>
+    <Step>
+        ### 试试看！
+        现在您会注意到，随着 Agent 的进展，状态预测会被发送，让您在最终状态确定之前了解其工作。
+        您可以将此模式应用于 Agent 中的任何长时间运行的任务。
+
+        <video src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/intermediate-state-render.mp4" className="rounded-lg shadow-xl" loop playsInline controls autoPlay muted />
+        <Callout>
+          此视频显示了应用了[实现](#实现)部分的 `npx copilotkit@latest init` 的结果！
+        </Callout>
+    </Step>
+</Steps>

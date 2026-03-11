@@ -1,0 +1,387 @@
+---
+title: 生成式 UI 概述
+icon: "lucide/Sparkles"
+description: 不同类型的生成式 UI，以及 AG-UI 和 CopilotKit 如何与它们协同工作。
+---
+
+import Image from "next/image"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Callout } from "fumadocs-ui/components/callout"
+import { TwoColumnSection } from "@/components/react/generative-ui/two-column-section"
+import { AttributeCards } from "@/components/react/generative-ui/attribute-cards"
+import { PatternCard } from "@/components/react/generative-ui/pattern-card"
+import { EcosystemTable } from "@/components/react/generative-ui/ecosystem-table"
+import { IntegrationsGrid } from "@/components/react/integrations";
+
+---
+
+## 什么是生成式 UI？
+
+<TwoColumnSection
+  imagePosition="right"
+  imageSrc="/images/generative-ui/generative-ui-light.png"
+  imageSrcDark="/images/generative-ui/generative-ui-dark.png"
+  imageAlt="生成式 UI 概述图"
+  imageWidth={600}
+  imageHeight={400}
+>
+
+生成式 UI 指的是**部分或完全由 AI 智能体生成**的用户界面，而不是仅由人类设计师和开发人员编写。UI 不是预先手工制作的，智能体在决定屏幕上显示什么、信息如何结构化，甚至在某些情况下布局如何组合方面发挥作用。
+
+核心思想很简单：随着智能体变得更加强大，智能体应用程序的 UI 本身变得更加动态——能够适应、重组和响应用户意图和应用程序上下文。这可以通过非常不同的方式完成，每种方式都有自己的权衡。
+
+本页面涵盖：
+
+- **[应用程序表面](#生成式-ui-的应用程序表面)** - 生成式 UI 在智能体应用程序中出现的位置。
+- **[属性](#生成式-ui-的属性)** - 不同的生成式 UI 类型和用途如何变化及其原因。
+- **[类型](#生成式-ui-的类型)** - 主要的生成式 UI 类型、它们的用途和权衡。
+- **[生态系统映射](#生态系统映射)** - 不同类型的生成式 UI 如何在生态系统中使用。
+- **[AG-UI 和 CopilotKit](#ag-ui-和-copilotkit-是生成式-ui-无关的)** - AG-UI 和 CopilotKit 如何与不同类型的生成式 UI 协同工作。
+
+</TwoColumnSection>
+
+---
+
+<div>
+
+## 准备好开始了吗？选择您的集成！
+
+生成式 UI 可以通过任何智能体后端实现，每个集成都提供不同的方法来创建动态的、AI 驱动的界面。
+
+**选择您的集成以查看特定的实施指南和示例，或向下滚动以了解有关生成式 UI 的更多信息。**
+
+<IntegrationsGrid targetPage="generative-ui" />
+
+</div>
+
+---
+
+## 生成式 UI 的应用程序表面
+
+生成式 UI 可以根据用户如何与智能体交互以及应用程序如何调解该交互而在应用程序的不同部分出现。这些表面决定了用户体验、开发人员职责以及生成式 UI 出现的位置。
+
+### 1. 聊天（线程交互）
+
+<TwoColumnSection
+  imagePosition="right"
+  imageSrc="/images/generative-ui/chat-surface.png"
+  imageAlt="聊天表面 - 线程交互"
+  imageWidth={300}
+  imageHeight={200}
+>
+
+类似 Slack 的对话界面，应用程序协调每次交互。生成式 UI 以内联方式显示为卡片、块或工具响应。
+
+**主要特征：**
+- 基于轮次、消息驱动的流程。
+- 应用程序协调所有智能体通信。
+- 非常适合支持、问答、调试和引导式工作流。
+
+**示例：** Slack 机器人、Discord 机器人、Intercom AI 智能体、Zendesk AI、GitHub Copilot Chat、Notion AI Chat。
+
+</TwoColumnSection>
+
+### 2. 聊天+（协作者工作区）
+
+<TwoColumnSection
+  imagePosition="left"
+  imageSrc="/images/generative-ui/chat-plus-surface.png"
+  imageAlt="聊天+ 表面 - 协作者工作区"
+  imageWidth={600}
+  imageHeight={400}
+>
+
+并排或多窗格布局：一个窗格中有聊天，另一个窗格中有动态画布。画布成为一个共享工作空间，智能体生成的 UI 在其中出现和演变。
+
+**主要特征：**
+- 聊天保持存在但次要。
+- 画布显示结构化输出和预览。
+- 生成式 UI 可以出现在画布或聊天空间中。
+- 非常适合创建、规划、编辑和多步骤任务。
+
+**示例：** Figma AI、Notion AI 工作区、Google Workspace Duet 侧面板、Replit Ghostwriter 配对编辑器。
+
+</TwoColumnSection>
+
+### 3. 无聊天（生成式 UI 集成到应用程序 UI 中）
+
+<TwoColumnSection
+  imagePosition="right"
+  imageSrc="/images/generative-ui/chatless-surface.png"
+  imageAlt="无聊天表面 - 集成的应用程序 UI"
+  imageWidth={300}
+  imageHeight={200}
+>
+
+智能体不直接与用户对话。相反，它通过 API 与应用程序通信，应用程序将智能体的生成式 UI 渲染为其原生界面的一部分。
+
+**主要特征：**
+- 根本没有聊天表面。
+- 应用程序决定生成式 UI 何时何地出现。
+- 感觉像内置的产品功能，而不是对话。
+- 非常适合仪表板、建议和自主任务助手。
+
+**示例：** Microsoft 365 Copilot（内联编辑）、Linear Insights、Superhuman AI 分类、HubSpot AI Assist、Datadog Notebooks AI 面板。
+
+</TwoColumnSection>
+
+---
+
+## 生成式 UI 的属性
+
+生成式 UI 的类型，甚至单个用途在两个属性方面差异很大：自由度和控制。
+
+<AttributeCards
+  cards={[
+    {
+      title: "属性：表达自由度",
+      content: "生成式 UI 类型在它们可以表示的内容上高度差异化——它们的视觉"自由度"。在光谱的固定端，静态生成式 UI 只返回预定义的组件。在这个轴的另一端，开放式 UI 可以包含任意 HTML，理论上使任何类型的交互成为可能。声明式 UI 位于中间，具有更宽但仍然受限的视觉词汇，程序员和智能体都可以从中选择。",
+      imageSrc: "/images/generative-ui/freedom.svg",
+      imageAlt: "生成式 UI 自由度光谱"
+    },
+    {
+      title: "属性：谁拥有控制权",
+      content: "一个更微妙且更难管理的生成式 UI 属性在于谁决定表示：智能体（LLM）还是程序员（应用程序开发人员）。以开放式生成式 UI 为例，智能体有能力呈现任意 HTML。但 HTML 从何而来？它可以是预定义在代码中并由智能体返回的，也可以完全由 LLM 生成。在许多情况下，应用程序开发人员希望定义智能体可以提供什么以感觉原生到应用程序，即使程序员可能想要使用 HTML 的丰富性。即使使用静态生成式 UI，也有控制权选择要做。您可以硬编码智能体在发生特定事情时呈现特定的生成式 UI，或者让 LLM 选择从头开始显示它。",
+      imageSrc: "/images/generative-ui/control.svg",
+      imageAlt: "生成式 UI 控制权光谱"
+    }
+  ]}
+/>
+
+---
+
+## 生成式 UI 的类型
+
+<div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 w-full mb-8">
+  <div className="w-full md:w-1/2">
+    <div className="w-full rounded-lg border border-border bg-card p-6 md:p-8">
+      <table className="w-full">
+        <tbody>
+          <tr className="border-b border-border">
+            <td className="py-3 pr-4 text-sm md:text-base font-semibold align-top">
+              静态
+            </td>
+            <td className="py-3 text-sm md:text-base text-muted-foreground">
+              UI 从一组固定的手工构建组件中选择。
+            </td>
+          </tr>
+          <tr className="border-b border-border">
+            <td className="py-3 pr-4 text-sm md:text-base font-semibold align-top whitespace-nowrap">
+              开放式
+            </td>
+            <td className="py-3 text-sm md:text-base text-muted-foreground">
+              在智能体和前端之间传递任意 UI（HTML、iframe、自由格式内容）。
+            </td>
+          </tr>
+          <tr>
+            <td className="py-3 pr-4 text-sm md:text-base font-semibold align-top">
+              声明式
+            </td>
+            <td className="py-3 text-sm md:text-base text-muted-foreground">
+              在智能体和前端之间使用结构化的 UI 规范（卡片、列表、表单、小部件）。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div className="w-full md:w-1/2 flex flex-col gap-4 text-sm md:text-base">
+    <p>
+      生成式 UI 方法分为三大类，每类在开发人员体验、UI 自由度、适应性和长期可维护性方面都有明显的权衡。
+    </p>
+    <p>
+      如上所述，这些类型通过其 UI 表达的自由度/词汇量来区分，但任何类型都可以由应用程序程序员控制，或留给智能体定义。
+    </p>
+  </div>
+</div>
+
+---
+
+### 静态生成式 UI
+
+<PatternCard
+  id="static"
+  index={1}
+  title="静态"
+  subtitle="智能体从一组固定的手工构建组件中选择"
+  description="静态生成式 UI 允许工程师手工制作特定的视觉组件，智能体只需决定使用这些组件中的哪些。智能体不会生成任意的 UI；相反，它将生成的数据映射到现有的 UI 组件。"
+  fullDescription="在这种模式下，前端定义体验的每个细节——布局、样式、交互模式和约束。后端或智能体贡献信息和意图，但渲染最终来自一组预定义的组件。"
+  whyUse={[
+    "保证高视觉精度和一致性。",
+    "非常适合高流量、任务关键型表面，在这些地方可预测性很重要。"
+  ]}
+  tradeoffs={[
+    "用例越多，您必须构建和维护的组件就越多。",
+    "前端代码库与智能体能力的数量成比例增长。"
+  ]}
+  exampleTitle="示例：使用 CopilotChat 与 AG-UI"
+  examples={[
+    {
+      src: "/images/generative-ui/static-example-code.png",
+      alt: "静态生成式 UI 示例 - 使用 AG-UI 连接前端的智能体代码",
+      caption: "智能体定义工具，AG-UI 处理连接，前端渲染预定义组件。",
+      width: 1400,
+      height: 600
+    },
+    {
+      src: "/images/generative-ui/static-example-ui.png",
+      alt: "静态生成式 UI 结果 - 天气卡片 UI",
+      width: 800,
+      height: 800
+    }
+  ]}
+/>
+
+### 开放式生成式 UI
+
+<PatternCard
+  id="open-ended"
+  index={2}
+  title="开放式"
+  subtitle="智能体返回任意 UI（HTML、iframe、自由格式内容）"
+  description="开放式生成式 UI 代表了光谱的另一端。在这里，智能体生成完整的 UI 表面——通常以 HTML、iframe 或自由格式标记的形式。智能体不是从预定义组件中选择，而是可以用整个 UI 负载响应，前端只需显示它。"
+  fullDescription="这种方法提供了无与伦比的表达灵活性。智能体可以渲染日历、自定义表格、动画可视化或交互式 HTML 小部件，无论是由 LLM 生成还是由应用程序开发人员预定义。"
+  whyUse={[
+    "任何类型的 UI 都可以成为智能体响应的一部分，无论是由程序员预定义还是由智能体生成。",
+    "前端代码和智能体行为之间的耦合最小。",
+    "支持快速原型设计和复杂工作流，无需前端工程周期。"
+  ]}
+  tradeoffs={[
+    "渲染任意内容时的安全性和性能考虑。",
+    "通常是 Web 优先且难以移植到原生环境。",
+    "样式一致性和品牌对齐变得具有挑战性。"
+  ]}
+  exampleTitle="示例：使用 MCP-UI 和 ChatGPT Apps SDK"
+  examples={[
+    {
+      src: "/images/generative-ui/open-ended-example.png",
+      alt: "开放式生成式 UI 示例 - 带有地图界面的 HTML/iframe",
+      caption: "智能体返回完整的 HTML/iframe，渲染任意 UI，提供最大的灵活性。",
+      width: 1400,
+      height: 600
+    }
+  ]}
+/>
+
+### 声明式生成式 UI
+
+<PatternCard
+  id="declarative"
+  index={3}
+  title="声明式"
+  subtitle="智能体返回结构化的 UI 规范（卡片、列表、表单、小部件）"
+  description="声明式生成式 UI 通过让智能体返回结构化规范而不是任意 UI 代码来平衡结构和灵活性。智能体不是自由格式的 HTML，而是发出明确定义的模式——例如由声明式标准定义的卡片、列表、表单或小部件集合。"
+  fullDescription="这种方法在保持一致性的同时，给予智能体比纯静态组件库更大的表达能力。它创造了一个中间地带，UI 不是为每个用例手工制作的，但也不是完全自由格式的。"
+  whyUse={[
+    "支持广泛的用例，无需为每个用例自定义组件。",
+    "开发人员可以在多个框架（React、移动端、桌面端等）中渲染相同的规范。",
+    "应用程序逻辑和表示之间更清晰的分离。"
+  ]}
+  tradeoffs={[
+    "可能无法实现自定义 UI 模式。",
+    "如果规范的解释不同，视觉差异仍然可能发生。"
+  ]}
+  exampleTitle="示例：使用 Open-JSON-UI"
+  examples={[
+    {
+      src: "/images/generative-ui/declarative-example.png",
+      alt: "声明式生成式 UI 示例 - 带有航空公司卡片的卡片规范",
+      caption: "智能体返回结构化规范（如卡片），前端以一致的方式解释和渲染。",
+      width: 1400,
+      height: 600
+    }
+  ]}
+/>
+
+---
+
+## 生态系统映射
+
+<div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 w-full mb-8">
+  <div className="w-full md:w-1/3 space-y-3 text-sm md:text-base">
+    <p>
+      最近宣布的几个<a href="/learn/generative-ui/specs">生成式 UI 规范</a>为生成式 UI 增加了丰富性（和一些混乱）。这些包括 <a href="https://mcpui.dev/">MCP-Apps</a>、<a href="https://json-schema.org/">Open JSON UI</a> 和新发布的 <a href="/learn/generative-ui/specs/a2ui">A2UI</a>。
+    </p>
+    <p>
+      生成式 UI 风格与工具生态系统和这些标准清晰地映射。
+    </p>
+    <p>
+      这种映射突出表明没有单一方法是优越的——最佳选择取决于应用程序的优先级、表面和用户体验理念。
+    </p>
+  </div>
+
+  <div className="w-full md:w-2/3">
+    <EcosystemTable
+      data={[
+        {
+          approach: "静态",
+          examples: "AG-UI, CopilotChat, useAgent",
+          strengths: "保真度、可靠性、品牌控制",
+          weaknesses: "工程密集、线性增长"
+        },
+        {
+          approach: "开放式",
+          examples: "MCP-Apps, ChatGPT Apps",
+          strengths: "无限创造力",
+          weaknesses: "难以保护、Web 优先"
+        },
+        {
+          approach: "声明式",
+          examples: "Open-JSON-UI, A2UI",
+          strengths: "平衡、可扩展、多渲染器",
+          weaknesses: "完全自定义有限"
+        }
+      ]}
+    />
+  </div>
+</div>
+
+---
+
+## AG-UI 和 CopilotKit 是生成式 UI 无关的
+
+<div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 w-full mb-8">
+  <div className="w-full md:w-1/2 space-y-3 text-sm md:text-base">
+    <p>
+      **AG-UI 旨在支持全谱系的生成式 UI 技术**，同时添加统一它们的重要能力。
+    </p>
+    <p>
+      AG-UI 与所有类型无缝集成：静态、声明式和开放式生成式 UI 方法。无论团队更喜欢手工制作的组件、结构化模式还是智能体编写的表面，AG-UI 都可以支持该工作流。
+    </p>
+    <p>
+      但 AG-UI 添加了**共享原语**——交互模型、上下文同步、事件处理、通用状态框架——这些标准化了智能体和 UI 如何在所有表面类型中通信。
+    </p>
+    <p>
+      CopilotKit 适用于任何生成式 UI，并使用 AG-UI 将智能体连接到前端。
+    </p>
+    <p>
+      这为开发人员创造了**一致的心智模型**，同时使智能体能够利用任何生成式 UI 模式的能力。
+    </p>
+  </div>
+
+  <div className="w-full md:w-1/2 flex flex-col items-center gap-4">
+    <Image
+      src="/images/gen-ui-specs-light.png"
+      alt="AG-UI 支持多种生成式 UI 规范"
+      width={600}
+      height={400}
+      className="rounded-lg w-full h-auto block dark:hidden"
+    />
+    <Image
+      src="/images/gen-ui-specs-dark.png"
+      alt="AG-UI 支持多种生成式 UI 规范"
+      width={600}
+      height={400}
+      className="rounded-lg w-full h-auto hidden dark:block"
+    />
+    <p className="text-sm md:text-base text-muted-foreground text-center italic">
+      AG-UI 充当通用运行时，适用于 A2UI、MCP-UI、Open-JSON-UI 和任何类型的自定义规范。
+    </p>
+  </div>
+</div>
+
+<Callout type="info">
+  了解更多关于使用 <a href="/ag-ui-protocol">AG-UI 协议</a> 实现生成式 UI 的信息，并探索 <a href="/learn/generative-ui/specs">生成式 UI 规范</a>。
+</Callout>

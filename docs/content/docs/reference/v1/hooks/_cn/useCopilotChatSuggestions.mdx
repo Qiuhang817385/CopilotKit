@@ -1,0 +1,68 @@
+---
+title: "useCopilotChatSuggestions"
+description: "useCopilotChatSuggestions 钩子根据实时应用状态在聊天窗口中生成建议。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-ui/src/hooks/use-copilot-chat-suggestions.tsx
+  */
+}
+
+<Callout type="warning">
+  `useCopilotChatSuggestions` 仍然受支持，但我们建议迁移到 v2 API 的 [`useConfigureSuggestions`](/reference/v2/hooks/useConfigureSuggestions) 和 [`useSuggestions`](/reference/v2/hooks/useSuggestions)。
+</Callout>
+ 
+`useCopilotReadable` 是一个 React 钩子，向 Copilot 提供应用程序状态和其他信息。
+可选地，该钩子还可以处理应用程序中的分层状态，将这些父子关系传递给 Copilot。
+ 
+<br/>
+<img src="https://cdn.copilotkit.ai/docs/copilotkit/images/use-copilot-chat-suggestions/use-copilot-chat-suggestions.gif" width="500" />
+ 
+## 用法
+ 
+### 安装依赖
+ 
+此组件是 [@copilotkit/react-ui](https://npmjs.com/package/@copilotkit/react-ui) 包的一部分。
+ 
+```shell npm2yarn "@copilotkit/react-ui"\
+npm install @copilotkit/react-core @copilotkit/react-ui
+```
+ 
+### 简单用法
+ 
+```tsx
+import { useCopilotChatSuggestions } from "@copilotkit/react-ui";
+ 
+export function MyComponent() {
+  const [employees, setEmployees] = useState([]);
+ 
+  useCopilotChatSuggestions({
+    instructions: `The following employees are on duty: ${JSON.stringify(employees)}`,
+  });
+}
+```
+ 
+### 依赖管理
+ 
+```tsx
+import { useCopilotChatSuggestions } from "@copilotkit/react-ui";
+ 
+export function MyComponent() {
+  useCopilotChatSuggestions(
+    {
+      instructions: "Suggest the most relevant next actions.",
+    },
+    [appState],
+  );
+}
+```
+ 
+在上面的示例中，建议是根据给定的指令生成的。
+该钩子监控 `appState`，并在其更改时相应地更新建议。
+ 
+### 行为和生命周期
+ 
+该钩子在组件挂载时向聊天上下文注册配置，并在卸载时将其移除，确保干净高效的生命周期管理。

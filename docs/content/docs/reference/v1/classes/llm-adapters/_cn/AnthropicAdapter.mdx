@@ -1,0 +1,49 @@
+---
+title: "AnthropicAdapter"
+description: "适用于 Anthropic 的 Copilot Runtime 适配器。"
+---
+
+{
+ /*
+  * 注意！不要修改此文件！
+  * 此页面是自动生成的。如果您想对此页面进行任何更改，必须在以下位置进行更改：
+  * packages/v1/runtime/src/service-adapters/anthropic/anthropic-adapter.ts
+  */
+}
+适用于 Anthropic 的 Copilot Runtime 适配器。
+ 
+## 示例
+ 
+```ts
+import { CopilotRuntime, AnthropicAdapter } from "@copilotkit/runtime";
+import Anthropic from "@anthropic-ai/sdk";
+ 
+const copilotKit = new CopilotRuntime();
+ 
+const anthropic = new Anthropic({
+  apiKey: "<your-api-key>",
+});
+ 
+return new AnthropicAdapter({
+  anthropic,
+  promptCaching: {
+    enabled: true,
+    debug: true
+  }
+});
+```
+
+## 构造函数参数
+
+<PropertyReference name="anthropic" type="Anthropic"  > 
+要使用的可选 Anthropic 实例。如果未提供，将创建一个新实例。
+</PropertyReference>
+
+<PropertyReference name="model" type="string"  > 
+要使用的模型。
+</PropertyReference>
+
+<PropertyReference name="promptCaching" type="AnthropicPromptCachingConfig"  > 
+提示缓存的配置。
+  参见：https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+</PropertyReference>

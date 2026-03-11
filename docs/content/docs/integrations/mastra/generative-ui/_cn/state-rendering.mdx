@@ -1,0 +1,207 @@
+---
+title: "状态渲染"
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件渲染 Agent 的状态。
+---
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { IframeSwitcher } from "@/components/content"
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import RunAndConnect from "@/snippets/integrations/mastra/run-and-connect.mdx"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/mastra/feature/shared_state?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+所有 Mastra Agent 都通过工作内存保持状态。这意味着随着 Agent 的执行，工作内存会在会话中保留。CopilotKit 允许您使用自定义 UI 组件在应用程序中渲染此状态，我们称之为 **Agentic Generative UI**。
+
+## 何时使用？
+
+当用户和 Agent 一起解决问题时，在 UI 中渲染 Agent 的状态非常有用。Agent 可以在其工作内存中存储草稿，然后在 UI 中渲染。例如，当用户和 Agent 一起解决问题时，Agent 可以在其工作内存中存储草稿，然后在 UI 中渲染。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接您的 Agent
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 使用工作内存设置您的 Agent
+
+    使用工作内存创建您的 Mastra Agent。以下是一个跟踪搜索的完整示例：
+
+    ```ts title="src/mastra/agents/index.ts"
+    import { openai } from "@ai-sdk/openai";
+    import { Agent } from "@mastra/core/agent";
+    import { LibSQLStore } from "@mastra/libsql";
+    import { z } from "zod";
+    import { Memory } from "@mastra/memory";
+    import { createTool } from "@mastra/core/tools";
+
+    // 定义 Agent 状态 schema
+    const AgentStateSchema = z.object({
+      searches: z.array(
+        z.object({
+          query: z.string(),
+          done: z.boolean(),
+        })
+      ).default([]),
+    });
+
+    export type AgentState = z.infer<typeof AgentStateSchema>;
+
+    // 创建更新工作内存的工具
+    const addSearch = createTool({
+      id: "addSearch",
+      inputSchema: z.object({
+        query: z.string(),
+      }),
+      description: "Add a search to the agent's list of searches",
+      execute: async ({ query }) => {
+        // 工具实现 - 工作内存会自动更新
+        return { success: true, query };
+      },
+    });
+
+    export const searchAgent = new Agent({
+      name: "Search Agent",
+      model: openai("gpt-5.2"),
+      instructions: `
+        You are a helpful assistant for storing searches.
+
+        IMPORTANT:
+        - Use the addSearch tool to add a search to the agent's state
+        - ONLY USE THE addSearch TOOL ONCE FOR A GIVEN QUERY
+      `,
+      tools: {
+        addSearch,
+      },
+      memory: new Memory({
+        storage: new LibSQLStore({ id: "mastra-storage", url: ":memory:" }),
+        options: {
+          workingMemory: {
+            enabled: true,
+            schema: AgentStateSchema,
+          },
+        },
+      }),
+    });
+    ```
+
+  </Step>
+  <Step>
+    ### 在聊天中渲染 Agent 状态
+    现在我们可以利用 `useAgent` 的 `render` 函数在**聊天中**渲染我们的 Agent 状态。
+
+    ```tsx title="app/page.tsx"
+    // ...
+    import { useAgent } from "@copilotkit/react-core/v2";
+    // ...
+
+    // 定义 Agent 的状态，应与您的 Mastra Agent 的工作内存匹配
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:13]
+      // 为简洁起见，省略了样式
+      useAgent({
+        agentId: "searchAgent",
+        render: ({ state }) => (
+          <div>
+            {state.searches?.map((search, index) => (
+              <div key={index}>
+                {search.done ? "✅" : "❌"} {search.query}{search.done ? "" : "..."}
+              </div>
+            ))}
+          </div>
+        ),
+      });
+
+      // ...
+
+      return <div>...</div>;
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Mastra 实例中定义的 Agent 名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 在聊天外渲染状态
+    您还可以在聊天**之外**渲染 Agent 的状态。当您想在聊天之外的任何地方渲染 Agent 的状态时，这非常有用。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+    // ...
+
+    // 定义 Agent 的状态，应与您的 Mastra Agent 的工作内存匹配
+    type AgentState = {
+      searches: {
+        query: string;
+        done: boolean;
+      }[];
+    };
+
+    function YourMainContent() {
+      // ...
+
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "searchAgent",
+      })
+
+      // ...
+
+      return (
+        <div>
+          {/* ... */}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* [!code highlight:5] */}
+            {agent.state?.searches?.map((search, index) => (
+              <div key={index} className="flex flex-row">
+                {search.done ? "✅" : "❌"} {search.query}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 Mastra 实例中定义的 Agent 名称完全匹配（例如，上面的 `searchAgent`）。
+    </Callout>
+
+  </Step>
+  <Step>
+    ### 试一试！
+
+    您现在已经创建了一个将在聊天中渲染 Agent 工作内存的组件。
+
+    <video
+      src="https://cdn.copilotkit.ai/docs/copilotkit/images/coagents/agentic-generative-ui.mp4"
+      className="rounded-lg shadow-xl"
+      loop
+      playsInline
+      controls
+      autoPlay
+      muted
+    />
+  </Step>
+</Steps>

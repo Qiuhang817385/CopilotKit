@@ -1,0 +1,221 @@
+import { ImageAndCode } from "@/components/react/image-and-code"
+import { Callout } from "fumadocs-ui/components/callout"
+
+某些模型（如 OpenAI 的 o1、o3 和 o4-mini）会发出**推理令牌**——内部的
+"思考"痕迹，显示模型在产生最终答案之前的思维链。CopilotKit 通过可折叠的
+**推理消息**卡片自动显示这些令牌。
+
+## 默认行为
+
+当推理事件从代理到达时，CopilotKit 会在内置卡片中渲染它们：
+
+- 在模型推理时显示**"思考中…"**标签和脉动指示器。
+- 自动展开，以便你可以实时跟踪模型的思维过程。
+- 推理完成后折叠并切换到**"思考了 X 秒"**。
+- 将推理内容渲染为**Markdown**。
+- 包含一个 Chevron 切换按钮，以便用户可以随时重新展开并查看推理。
+
+不需要额外的配置——如果你的模型发出推理令牌，
+卡片会自动出现。
+
+## 自定义推理消息
+
+推理消息由三个子组件组成，每个子组件都可以通过**插槽属性**独立替换：
+
+| 子组件 | 插槽属性 | 描述 |
+| --- | --- | --- |
+| `Header` | `header` | 带有大脑图标、标签和 Chevron 的可点击栏 |
+| `Content` | `contentView` | 推理文本区域（Markdown） |
+| `Toggle` | `toggle` | 展开/折叠动画包装器 |
+
+你通过 `CopilotChat`、`CopilotPopup` 或 `CopilotSidebar` 上的 `messageView` 属性传递自定义子组件：
+
+```tsx
+<CopilotChat
+  messageView={{
+    reasoningMessage: {
+      header: CustomHeader,
+      contentView: CustomContent,
+    },
+  }}
+/>
+```
+
+### 自定义 Header
+
+替换 header 以更改图标、标签文本或样式。header 接收以下属性：
+
+| 属性 | 类型 | 描述 |
+| --- | --- | --- |
+| `isOpen` | `boolean` | 内容面板当前是否展开 |
+| `label` | `string` | 流式传输时为 `"思考中…"`，之后为 `"思考了 X 秒"` |
+| `hasContent` | `boolean` | 是否已收到任何推理文本 |
+| `isStreaming` | `boolean` | 是否正在主动流式传输推理 |
+| `onClick` | `() => void` | 切换处理程序（仅当 `hasContent` 为 `true` 时存在） |
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-ui/v2/styles.css";
+
+function CustomHeader({
+  isOpen,
+  label,
+  hasContent,
+  isStreaming,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  isOpen?: boolean;
+  label?: string;
+  hasContent?: boolean;
+  isStreaming?: boolean;
+}) {
+  return (
+    <button
+      className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium"
+      {...props}
+    >
+      {isStreaming ? "🧠" : "💡"}
+      <span>{label}</span>
+      {hasContent && (
+        <span className="ml-auto text-xs">{isOpen ? "隐藏" : "显示"}</span>
+      )}
+    </button>
+  );
+}
+
+// [!code highlight:5]
+<CopilotChat
+  messageView={{
+    reasoningMessage: { header: CustomHeader },
+  }}
+/>
+```
+
+### 自定义 Content
+
+替换内容区域以更改推理文本的显示方式：
+
+| 属性 | 类型 | 描述 |
+| --- | --- | --- |
+| `isStreaming` | `boolean` | 是否仍在接收推理令牌 |
+| `hasContent` | `boolean` | 是否已收到任何推理文本 |
+| `children` | `string` | 原始推理文本 |
+
+```tsx
+function CustomContent({
+  isStreaming,
+  hasContent,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  isStreaming?: boolean;
+  hasContent?: boolean;
+}) {
+  if (!hasContent && !isStreaming) return null;
+
+  return (
+    <div className="px-4 pb-3 text-sm text-gray-500 font-mono" {...props}>
+      {children}
+      {isStreaming && <span className="animate-pulse ml-1">▊</span>}
+    </div>
+  );
+}
+
+// [!code highlight:5]
+<CopilotChat
+  messageView={{
+    reasoningMessage: { contentView: CustomContent },
+  }}
+/>
+```
+
+## 完全自定义推理消息
+
+为了完全控制整个推理卡片，请传递一个**组件**而不是插槽属性。你的组件接收与内置组件相同的顶级属性：
+
+| 属性 | 类型 | 描述 |
+| --- | --- | --- |
+| `message` | `ReasoningMessage` | 推理消息对象（`.content` 保存文本） |
+| `messages` | `Message[]` | 对话中的所有消息 |
+| `isRunning` | `boolean` | 代理当前是否正在运行 |
+
+```tsx
+import {
+  type CopilotChatReasoningMessageProps,
+} from "@copilotkit/react-ui";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-ui/v2/styles.css";
+
+function MyReasoningMessage({
+  message,
+  messages,
+  isRunning,
+}: CopilotChatReasoningMessageProps) {
+  const isLatest = messages?.[messages.length - 1]?.id === message.id;
+  const isStreaming = !!(isRunning && isLatest);
+
+  if (!message.content && !isStreaming) return null;
+
+  return (
+    <details open={isStreaming} className="my-2 rounded border p-3">
+      <summary className="cursor-pointer font-medium text-sm">
+        {isStreaming ? "思考中…" : "查看推理"}
+      </summary>
+      <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">
+        {message.content}
+      </p>
+    </details>
+  );
+}
+
+// [!code highlight:5]
+<CopilotChat
+  messageView={{
+    reasoningMessage: MyReasoningMessage,
+  }}
+/>
+```
+
+## Render-Prop Children
+
+内置的 `CopilotChatReasoningMessage` 还支持 **render-prop**
+模式，适用于你希望重新排列内置子组件而无需重新实现它们的情况：
+
+```tsx
+import {
+  CopilotChatReasoningMessage,
+} from "@copilotkit/react-ui";
+import { CopilotChat } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-ui/v2/styles.css";
+
+function MyReasoningLayout(props: React.ComponentProps<typeof CopilotChatReasoningMessage>) {
+  return (
+    <CopilotChatReasoningMessage {...props}>
+      {({ header, toggle }) => (
+        // [!code highlight:5]
+        <div className="rounded-lg border bg-yellow-50 my-2">
+          {header}
+          {toggle}
+        </div>
+      )}
+    </CopilotChatReasoningMessage>
+  );
+}
+
+<CopilotChat
+  messageView={{
+    reasoningMessage: MyReasoningLayout,
+  }}
+/>
+```
+
+Render-prop 回调接收：
+
+| 属性 | 描述 |
+| --- | --- |
+| `header` | 预渲染的 header 元素 |
+| `contentView` | 预渲染的内容元素 |
+| `toggle` | 预渲染的展开/折叠包装器（包含 `contentView`） |
+| `message` | 推理消息对象 |
+| `messages` | 所有消息 |
+| `isRunning` | 代理是否正在运行 |

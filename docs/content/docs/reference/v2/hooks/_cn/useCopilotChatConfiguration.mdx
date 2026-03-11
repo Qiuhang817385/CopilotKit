@@ -1,0 +1,252 @@
+---
+title: "useCopilotChatConfiguration"
+description: "用于聊天 UI 配置和标签的 React Hook 和 Provider"
+---
+
+## 概述
+
+`useCopilotChatConfiguration` 是一个读取聊天配置上下文的 React Hook。它返回最近的 `CopilotChatConfigurationProvider` 的配置值，如果没有 Provider 则返回 `null`。
+
+本页同时记录 **Hook** 和 **`CopilotChatConfigurationProvider`** 组件，它们共同为聊天 UI 组件提供用于本地化标签、Agent/线程绑定和模态框状态的轻量级上下文。
+
+## CopilotChatConfigurationProvider
+
+一个 Provider 组件，向所有后代聊天组件公开本地化标签、Agent 和线程 ID，以及可选的模态框状态。
+
+### 签名
+
+```tsx
+import { CopilotChatConfigurationProvider } from "@copilotkit/react-core/v2";
+
+<CopilotChatConfigurationProvider
+  labels={...}
+  agentId="my-agent"
+  threadId="thread-123"
+  isModalDefaultOpen={true}
+>
+  {children}
+</CopilotChatConfigurationProvider>
+```
+
+### Props
+
+<PropertyReference name="children" type="ReactNode" required>
+  可以访问聊天配置上下文的子组件。
+</PropertyReference>
+
+<PropertyReference name="labels" type="Partial<CopilotChatLabels>">
+  部分标签覆盖。任何未提供的标签将回退到默认值，然后回退到任何父 Provider 的标签。有关所有可用的键，请参阅下面的 [CopilotChatLabels](#copilotchatlabels) 部分。
+</PropertyReference>
+
+<PropertyReference name="agentId" type="string" default='"default"'>
+  与此聊天上下文关联的 Agent ID。回退到父 Provider 的 `agentId`，然后回退到 `"default"`。
+</PropertyReference>
+
+<PropertyReference name="threadId" type="string">
+  用于对话连续性的线程 ID。如果省略，回退到父 Provider 的 `threadId`，或生成一个新的随机 UUID。
+</PropertyReference>
+
+<PropertyReference name="isModalDefaultOpen" type="boolean">
+  提供时，在此 Provider 内创建模态框打开/关闭状态。初始值用作默认状态。如果省略，模态框状态从父 Provider 继承（如果有）。
+</PropertyReference>
+
+## useCopilotChatConfiguration
+
+### 签名
+
+```tsx
+import { useCopilotChatConfiguration } from "@copilotkit/react-core/v2";
+
+function useCopilotChatConfiguration(): CopilotChatConfigurationValue | null
+```
+
+### 参数
+
+此 Hook 不接受任何参数。
+
+### 返回值
+
+如果在 `CopilotChatConfigurationProvider` 外部使用则返回 `null`。否则返回一个 `CopilotChatConfigurationValue` 对象：
+
+<PropertyReference name="config" type="CopilotChatConfigurationValue">
+  已解析的聊天配置。
+
+  <PropertyReference name="labels" type="CopilotChatLabels">
+    完全解析的标签对象，从默认值、父 Provider 和最近的 Provider 覆盖合并而来。有关所有键，请参阅 [CopilotChatLabels](#copilotchatlabels)。
+  </PropertyReference>
+
+  <PropertyReference name="agentId" type="string">
+    此聊天上下文的已解析 Agent ID。
+  </PropertyReference>
+
+  <PropertyReference name="threadId" type="string">
+    此聊天上下文的已解析线程 ID。
+  </PropertyReference>
+
+  <PropertyReference name="isModalOpen" type="boolean | undefined">
+    当前的模态框打开状态。如果树中没有任何 Provider 通过 `isModalDefaultOpen` 创建模态框状态，则为 `undefined`。
+  </PropertyReference>
+
+  <PropertyReference name="setModalOpen" type="((open: boolean) => void) | undefined">
+    控制模态框打开状态的函数。如果树中没有任何 Provider 创建模态框状态，则为 `undefined`。
+  </PropertyReference>
+</PropertyReference>
+
+## CopilotChatLabels
+
+`CopilotChatLabels` 类型定义了聊天 UI 使用的所有可自定义文本字符串。以下键可用，并带有其默认值：
+
+| 键 | 默认值 |
+|-----|---------------|
+| `chatInputPlaceholder` | `"Type a message..."` |
+| `chatInputToolbarStartTranscribeButtonLabel` | `"Transcribe"` |
+| `chatInputToolbarCancelTranscribeButtonLabel` | `"Cancel"` |
+| `chatInputToolbarFinishTranscribeButtonLabel` | `"Finish"` |
+| `chatInputToolbarAddButtonLabel` | `"Add photos or files"` |
+| `chatInputToolbarToolsButtonLabel` | `"Tools"` |
+| `assistantMessageToolbarCopyCodeLabel` | `"Copy"` |
+| `assistantMessageToolbarCopyCodeCopiedLabel` | `"Copied"` |
+| `assistantMessageToolbarCopyMessageLabel` | `"Copy"` |
+| `assistantMessageToolbarThumbsUpLabel` | `"Good response"` |
+| `assistantMessageToolbarThumbsDownLabel` | `"Bad response"` |
+| `assistantMessageToolbarReadAloudLabel` | `"Read aloud"` |
+| `assistantMessageToolbarRegenerateLabel` | `"Regenerate"` |
+| `userMessageToolbarCopyMessageLabel` | `"Copy"` |
+| `userMessageToolbarEditMessageLabel` | `"Edit"` |
+| `chatDisclaimerText` | `"AI can make mistakes. Please verify important information."` |
+| `chatToggleOpenLabel` | `"Open chat"` |
+| `chatToggleCloseLabel` | `"Close chat"` |
+| `modalHeaderTitle` | `"CopilotKit Chat"` |
+| `welcomeMessageText` | `"How can I help you today?"` |
+
+## 用法
+
+### 基本标签自定义
+
+```tsx
+import {
+  CopilotChatConfigurationProvider,
+  useCopilotChatConfiguration,
+} from "@copilotkit/react-core/v2";
+
+function App() {
+  return (
+    <CopilotChatConfigurationProvider
+      labels={{
+        chatInputPlaceholder: "Ask me anything...",
+        modalHeaderTitle: "AI Assistant",
+        welcomeMessageText: "Hello! What can I do for you?",
+        chatDisclaimerText: "Responses are AI-generated.",
+      }}
+    >
+      <ChatUI />
+    </CopilotChatConfigurationProvider>
+  );
+}
+```
+
+### 在组件中读取配置
+
+```tsx
+import { useCopilotChatConfiguration } from "@copilotkit/react-core/v2";
+
+function ChatHeader() {
+  const config = useCopilotChatConfiguration();
+
+  if (!config) {
+    return <h2>Chat</h2>;
+  }
+
+  return <h2>{config.labels.modalHeaderTitle}</h2>;
+}
+```
+
+### 绑定到特定 Agent 和线程
+
+```tsx
+import { CopilotChatConfigurationProvider } from "@copilotkit/react-core/v2";
+
+function SupportChat() {
+  return (
+    <CopilotChatConfigurationProvider
+      agentId="support-agent"
+      threadId="ticket-456"
+      labels={{
+        chatInputPlaceholder: "Describe your issue...",
+        modalHeaderTitle: "Support Chat",
+      }}
+    >
+      <ChatWindow />
+    </CopilotChatConfigurationProvider>
+  );
+}
+```
+
+### 模态框状态管理
+
+```tsx
+import {
+  CopilotChatConfigurationProvider,
+  useCopilotChatConfiguration,
+} from "@copilotkit/react-core/v2";
+
+function App() {
+  return (
+    <CopilotChatConfigurationProvider isModalDefaultOpen={false}>
+      <ToggleButton />
+      <ChatModal />
+    </CopilotChatConfigurationProvider>
+  );
+}
+
+function ToggleButton() {
+  const config = useCopilotChatConfiguration();
+
+  if (!config?.setModalOpen) return null;
+
+  return (
+    <button onClick={() => config.setModalOpen!(!config.isModalOpen)}>
+      {config.isModalOpen
+        ? config.labels.chatToggleCloseLabel
+        : config.labels.chatToggleOpenLabel}
+    </button>
+  );
+}
+```
+
+### 嵌套 Provider
+
+Provider 可以嵌套。子 Provider 从父 Provider 继承和合并标签，子覆盖优先。
+
+```tsx
+import { CopilotChatConfigurationProvider } from "@copilotkit/react-core/v2";
+
+function App() {
+  return (
+    <CopilotChatConfigurationProvider
+      labels={{ chatDisclaimerText: "Company-wide disclaimer." }}
+    >
+      <CopilotChatConfigurationProvider
+        agentId="sales"
+        labels={{ modalHeaderTitle: "Sales Assistant" }}
+      >
+        {/* 此上下文同时具有公司免责声明和销售标题 */}
+        <SalesChat />
+      </CopilotChatConfigurationProvider>
+    </CopilotChatConfigurationProvider>
+  );
+}
+```
+
+## 行为
+
+- **标签合并**：标签按顺序合并：内置默认值，然后父 Provider 标签，然后当前 Provider 标签。这允许在任何级别进行部分覆盖。
+- **Agent ID 解析**：`agentId` 从最近的 Provider 解析，回退到父 Provider，然后回退到 `"default"`。
+- **线程 ID 生成**：如果在任何级别都未提供 `threadId`，则生成一个随机 UUID 并在 Provider 的生命周期内保持稳定。
+- **模态框状态所有权**：模态框状态 (`isModalOpen` / `setModalOpen`) 仅在 Provider 显式设置 `isModalDefaultOpen` 时创建。没有此 prop 的 Provider 会传递父 Provider 的模态框状态。
+- **Null 返回**：当在任何 `CopilotChatConfigurationProvider` 外部使用时，Hook 返回 `null` 而不是抛出错误。组件应优雅地处理这种情况。
+
+## 相关
+
+- [`useSuggestions`](/reference/v2/hooks/useSuggestions) -- 使用 `CopilotChatConfigurationProvider` 上下文进行 Agent ID 解析
+- [`CopilotChat`](/reference/v2/components/CopilotChat) -- 用此 Provider 包装其子组件的聊天组件

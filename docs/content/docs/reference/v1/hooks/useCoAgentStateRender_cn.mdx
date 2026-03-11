@@ -1,0 +1,75 @@
+---
+title: "useCoAgentStateRender"
+description: "useCoAgentStateRender Hook 允许你在聊天中渲染 Agent 的状态。"
+---
+
+{
+ /*
+  * ATTENTION! DO NOT MODIFY THIS FILE!
+  * This page is auto-generated. If you want to make any changes to this page, changes must be made at:
+  * packages/v1/react-core/src/hooks/use-coagent-state-render.ts
+  */
+}
+
+<Callout type="warning">
+  `useCoAgentStateRender` 仍然受支持，但我们建议迁移到 v2 API 中的 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+</Callout>
+
+useCoAgentStateRender Hook 允许你根据聊天中 Agentic Copilot 的状态渲染 UI 或基于文本的组件。
+这在显示 Agentic Copilot 操作期间的中间状态或进度时特别有用。
+ 
+## 用法
+ 
+### 简单用法
+ 
+```tsx
+import { useCoAgentStateRender } from "@copilotkit/react-core";
+ 
+type YourAgentState = {
+  agent_state_property: string;
+}
+ 
+useCoAgentStateRender<YourAgentState>({
+  name: "basic_agent",
+  nodeName: "optionally_specify_a_specific_node",
+  render: ({ status, state, nodeName }) => {
+    return (
+      <YourComponent
+        agentStateProperty={state.agent_state_property}
+        status={status}
+        nodeName={nodeName}
+      />
+    );
+  },
+});
+```
+ 
+这允许你根据 Agent 中发生的情况渲染 UI 组件或文本。
+ 
+### 示例
+一个很好的例子是我们的 Perplexity 克隆，我们在其中渲染 Agent 的互联网搜索进度。
+你可以在下面体验它，或通过其演示学习如何构建它。
+ 
+<Callout type="info">
+  此示例托管在 Vercel 上，可能需要几秒钟才能加载。
+</Callout>
+ 
+<iframe src="https://examples-coagents-ai-researcher-ui.vercel.app/" className="w-full rounded-lg border h-[700px] my-4" />
+
+## 参数
+
+<PropertyReference name="name" type="string" required > 
+CoAgent 的名称。
+</PropertyReference>
+
+<PropertyReference name="nodeName" type="string"  > 
+CoAgent 的节点名称。
+</PropertyReference>
+
+<PropertyReference name="handler" type="(props: CoAgentStateRenderHandlerArguments<T>) => void | Promise<void>"  > 
+处理 Agent 状态的处理函数。
+</PropertyReference>
+
+<PropertyReference name="render" type="| ((props: CoAgentStateRenderProps<T>) => string | React.ReactElement | undefined | null) | string"  > 
+处理 Agent 状态的渲染函数。
+</PropertyReference>

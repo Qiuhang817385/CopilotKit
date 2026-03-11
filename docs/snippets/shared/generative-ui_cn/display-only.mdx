@@ -1,0 +1,80 @@
+## 这是什么？
+
+`useComponent` 让您可以将 React 组件注册为智能体可以调用的工具。当智能体调用该工具时，CopilotKit 会在聊天中直接使用工具的参数作为 props 渲染您的组件。
+
+这是生成式 UI 最简单的形式 —— 您的智能体决定何时显示组件，CopilotKit 渲染它。不需要处理逻辑，也不需要用户交互。
+
+## 什么时候应该使用？
+
+当您想要以下功能时使用 `useComponent`：
+- 在聊天中内联显示丰富的 UI（卡片、图表、表格）
+- 显示来自智能体回复的结构化数据
+- 渲染预览、状态指示器或视觉反馈
+- 让智能体呈现纯文本之外的信息
+
+对于需要用户交互的组件，请参阅交互式或基于中断的指南。
+
+## 注册组件
+
+使用 `useComponent` 钩子注册 React 组件。智能体将能够通过名称调用它，CopilotKit 将使用工具参数作为 props 渲染它。
+
+```tsx title="app/page.tsx"
+import { useComponent } from "@copilotkit/react-core/v2"; // [!code highlight]
+import { z } from "zod";
+
+const weatherSchema = z.object({
+  city: z.string().describe("城市名称"),
+  temperature: z.number().describe("华氏温度"),
+  condition: z.string().describe("天气状况"),
+});
+
+function WeatherCard({ city, temperature, condition }: z.infer<typeof weatherSchema>) {
+  return (
+    <div className="rounded-lg border p-4">
+      <h3 className="font-semibold">{city}</h3>
+      <p className="text-2xl">{temperature}°F</p>
+      <p className="text-sm text-gray-500">{condition}</p>
+    </div>
+  );
+}
+
+function YourMainContent() {
+  // [!code highlight:9]
+  useComponent({
+    name: "showWeather",
+    description: "显示城市的天气卡片。",
+    parameters: weatherSchema,
+    render: WeatherCard,
+  });
+
+  return <div>{/* ... */}</div>;
+}
+```
+
+## 无需参数
+
+对于不需要类型化参数的简单组件：
+
+```tsx
+useComponent({
+  name: "showGreeting",
+  render: ({ message }: { message: string }) => (
+    <div className="rounded border p-3 bg-blue-50">
+      <p>{message}</p>
+    </div>
+  ),
+});
+```
+
+## 限定到特定智能体
+
+在多智能体设置中，将组件限定到特定智能体：
+
+```tsx
+useComponent({
+  name: "renderProfile",
+  parameters: z.object({ userId: z.string() }),
+  render: ProfileCard,
+  agentId: "support-agent",
+});
+```

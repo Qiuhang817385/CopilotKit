@@ -1,0 +1,211 @@
+---
+title: 输入/输出模式
+description: 决定哪些状态属性被接收和返回到前端
+icon: "lucide/Play"
+---
+
+## 这是什么？
+
+并非所有状态属性都与前端-后端共享相关。
+本指南展示如何确保只有正确的状态部分来回通信。
+
+本指南基于 [LangGraph 的输入/输出模式功能](https://docs.langchain.com/oss/python/langgraph/use-graph-api#define-input-and-output-schemas)
+
+## 何时使用？
+
+根据您的实现，某些属性是用于内部处理的，而另一些是 UI 与用户通信的方式。
+此外，某些状态属性包含大量信息。在 Agent 和 UI 之间来回同步它们可能代价高昂，而可能没有实际的益处。
+
+## 实现
+
+<Steps>
+  <Step>
+      ### 检查我们的旧状态
+      LangGraph 是有状态的。当您在节点之间转换时，该状态会被更新并传递给下一个节点。对于此示例，
+      假设我们的 Agent 应该使用的状态可以这样描述：
+      <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+        <Tab value="Python">
+        ```python title="agent.py"
+        from copilotkit import CopilotKitState
+        from typing import Literal
+
+        class AgentState(CopilotKitState):
+            question: str
+            answer: str
+            resources: List[str]
+        ```
+        </Tab>
+        <Tab value="TypeScript">
+        ```typescript title="agent-js/sample_agent/agent.ts"
+        import { Annotation } from "@langchain/langgraph";
+        import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+        const AgentState = Annotation.Root({
+          ...CopilotKitStateAnnotation.spec,
+          question: Annotation<string>,
+          answer: Annotation<string>,
+          resources: Annotation<string[]>,
+        })
+        ```
+        </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 将状态划分为输入和输出
+    我们的示例列出了几个状态属性，每个属性都有自己的用途：
+      - 问题由用户提出，期望 LLM 回答
+      - 答案是 LLM 返回的内容
+      - 资源列表将被 LLM 用于回答问题，不应传达给用户或由用户设置。
+
+      <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+          <Tab value="Python">
+          ```python title="agent.py"
+          from copilotkit import CopilotKitState
+          from typing import Literal
+
+          # 将状态划分为 3 部分
+
+          # 用于您愿意从前端接受的输入的输入模式
+          class InputState(CopilotKitState):
+            question: str
+
+          # 用于您愿意传递给前端的输出的输出模式
+          class OutputState(CopilotKitState):
+            answer: str
+
+          # 完整的模式，包括输入、输出和内部状态（在我们的例子中是 "resources"）
+          class OverallState(InputState, OutputState):
+            resources: List[str]
+
+          async def answer_node(state: OverallState, config: RunnableConfig):
+            """
+            标准对话节点，用于回答一般问题。
+            """
+
+            model = ChatOpenAI()
+
+            # 在系统提示中添加输入问题，以便传递给 LLM
+            system_message = SystemMessage(
+              content=f"您是一个有用的助手。回答问题：{state.get('question')}"
+            )
+
+            response = await model.ainvoke([
+              system_message,
+              *state["messages"],
+            ], config)
+
+            # ...添加 Agent 实现的其余部分
+
+            # 提取答案，它将被分配给状态
+            answer = response.content
+
+            return {
+               "messages": response,
+                # 在返回的状态中包含答案
+               "answer": answer
+            }
+
+
+          # 最后，在编译图之前，我们定义 3 个状态组件
+          builder = StateGraph(OverallState, input=InputState, output=OutputState)
+
+          # 添加所有不同的节点和边并编译图
+          builder.add_node("answer_node", answer_node)
+          builder.add_edge(START, "answer_node")
+          builder.add_edge("answer_node", END)
+          graph = builder.compile()
+          ```
+          </Tab>
+          <Tab value="TypeScript">
+            <Callout type="warn">
+              在我们为 LangGraph TypeScript 添加 Zod 模式支持的同时，定义"完整状态"时需要一种解决方法来忽略 TypeScript 错误。
+
+              您可以在 TypeScript 实现片段的末尾看到这一点。
+            </Callout>
+            ```typescript title="agent-js/sample_agent/agent.ts"
+              import { Annotation } from "@langchain/langgraph";
+              import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+              // 将状态划分为 3 部分
+
+              // 用于您愿意从前端接受的输入的输入模式
+              const InputAnnotation = Annotation.Root({
+                ...CopilotKitStateAnnotation.spec,
+                question: Annotation<string>,
+              });
+
+              // 用于您愿意传递给前端的输出的输出模式
+              const OutputAnnotation = Annotation.Root({
+                ...CopilotKitStateAnnotation.spec,
+                answer: Annotation<string>,
+              });
+
+              // 完整的模式，包括输入、输出和内部状态（在我们的例子中是 "resources"）
+              export const AgentStateAnnotation = Annotation.Root({
+                ...CopilotKitStateAnnotation.spec,
+                ...OutputAnnotation.spec,
+                ...InputAnnotation.spec,
+                resources: Annotation<string[]>,
+              });
+
+              // 定义支持整个的状态类型
+              export type AgentState = typeof AgentStateAnnotation.State;
+
+              async function answerNode(state: AgentState, config: RunnableConfig) {
+                const model = new ChatOpenAI()
+
+                const systemMessage = new SystemMessage({
+                  content: `您是一个有用的助手。回答问题：${state.question}。`,
+                });
+
+                const response = await modelWithTools.invoke(
+                  [systemMessage, ...state.messages],
+                  config
+                );
+
+                // ...添加 Agent 实现的其余部分
+                // 提取答案，它将被分配给状态
+                const answer = response.content
+
+                return {
+                  messages: response,
+                  // 在返回的状态中包含答案
+                  answer,
+                }
+              }
+
+              // 最后，在编译图之前，我们定义 3 个状态组件
+              const workflow = new StateGraph({
+                input: InputAnnotation,
+                output: OutputAnnotation,
+                // @ts-expect-error -- LangGraph 不期望带有内部属性的"完整模式"。
+                stateSchema: AgentStateAnnotation,
+              })
+                .addNode("answer_node", answerNode) // 添加所有不同的节点和边并编译图
+                .addEdge(START, "answer_node")
+                .addEdge("answer_node", END)
+              export const graph = workflow.compile()
+            ```
+          </Tab>
+      </Tabs>
+  </Step>
+  <Step>
+    ### 试试看！
+    现在我们知道我们的 Agent 发出哪些状态属性，我们可以检查状态并期望发生以下情况：
+    - 虽然我们能够提供问题，但我们不会从 Agent 那里收到它。如果我们在 UI 中使用它，我们需要记住 UI 是它的真实来源
+    - 答案将在从 Agent 返回时更改
+    - UI 无法访问资源。
+
+    ```tsx
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    const { agent } = useAgent({
+      agentId: "sample_agent",
+    });
+
+    const answer = agent.state.answer as string;
+
+    console.log(answer) // 您可以期望看到 "answer" 更改，而其他属性不会从 Agent 返回
+    ```
+  </Step>
+</Steps>

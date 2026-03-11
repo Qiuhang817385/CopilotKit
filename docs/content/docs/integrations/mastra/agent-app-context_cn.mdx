@@ -1,0 +1,82 @@
+---
+title: 可读项
+icon: "lucide/BookA"
+description: 与 Agent 共享应用特定的上下文。
+---
+
+## 这是什么？
+
+CopilotKit 最常见的用例之一是使用 `useCopilotReadble` 注册应用状态和上下文。
+这样，您可以实时通知 Agent 应用中正在发生的事情。
+
+## 何时使用？
+
+当想向用户提供有关工作记忆反馈时可以使用它。当 Agent 的状态更新时，您可以在应用中本地反映这些更新。
+
+一些示例可能包括：当前用户、当前页面等。这可以与您的 Agent 实时共享。
+
+## 实现
+<Steps>
+    <Step>
+        ### 将数据包装在可读项中
+
+        [`useAgentContext` Hook](/reference/v1/hooks/useAgentContext) 用于将数据作为上下文添加到 Copilot。
+
+        ```tsx title="YourComponent.tsx" showLineNumbers {1, 7-10}
+        "use client" // 仅在使用 App Router 的 Next.js 中需要。 // [!code highlight]
+        import { useAgentContext } from "@copilotkit/react-core/v2"; // [!code highlight]
+        import { useState } from 'react';
+
+        export function YourComponent() {
+            // 创建包含一些示例数据的同事状态
+            const [colleagues, setColleagues] = useState([
+                { id: 1, name: "John Doe", role: "Developer" },
+                { id: 2, name: "Jane Smith", role: "Designer" },
+                { id: 3, name: "Bob Wilson", role: "Product Manager" }
+            ]);
+
+            // 定义 Copilot 可读状态
+            // [!code highlight:4]
+            useAgentContext({
+                description: "当前用户的同事",
+                value: colleagues,
+            });
+            return (
+                // 您的自定义 UI 组件
+                <>...</>
+            );
+        }
+        ```
+    </Step>
+
+    <Step>
+        ### 在 Mastra Agent 中使用数据
+
+        Mastra 有 `RuntimeContext` 类，可用于在运行时设置和访问额外上下文。
+        CopilotKit 的上下文自动注入其中，可以立即使用。
+        您可以在[此处](https://mastra.ai/en/docs/agents/runtime-context)阅读更多相关信息。
+
+        ```tsx title="agent.ts"
+        export const colleaguesContactorAgent = new Agent({
+            name: "Colleagues contact Agent",
+            model: openai("gpt-5.2"),
+            // 使用注入的运行时上下文
+            // [!code highlight:9]
+            instructions: ({ runtimeContext }) => {
+              // AG-UI 上下文是一个项目数组，可以通过过滤获取特定上下文
+              const aguiContext = runtimeContext.get('ag-ui')?.context
+              const colleaguesContextItem = aguiContext.find(contextItem => contextItem.description === 'The current user\'s colleagues"')
+              return `
+                您是一个可以帮助发送邮件给同事的有用助手。
+                用户的同事是：${colleaguesContextItem.value}
+              `
+            },
+            // ... 用于配置 Agent 的其他所有内容
+        });
+        ```
+    </Step>
+    <Step>
+        ### 试一试！
+        向 Agent 询问有关上下文的问题。它应该能够回答！
+    </Step>
+</Steps>

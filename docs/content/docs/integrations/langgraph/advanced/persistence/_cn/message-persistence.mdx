@@ -1,0 +1,46 @@
+---
+title: "消息持久化"
+icon: "lucide/Database"
+---
+
+<Callout>
+  要了解如何加载先前的消息和代理状态，请查看 [加载消息历史](/langgraph/advanced/persistence/loading-message-history) 和 [加载代理状态](/langgraph/advanced/persistence/loading-agent-state) 页面。
+</Callout>
+
+要将 LangGraph 消息持久化到数据库，您可以使用 `AsyncPostgresSaver` 或 `AsyncSqliteSaver`。通过在 lifespan 函数中配置图来设置异步内存，如下所示：
+
+```python
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from copilotkit import LangGraphAGUIAgent
+from ag_ui_langgraph import add_langgraph_fastapi_endpoint
+
+graph = None
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with AsyncPostgresSaver.from_conn_string(
+        "postgresql://postgres:postgres@127.0.0.1:5432/postgres"
+    ) as checkpointer:
+        # 注意：第一次使用 checkpointer 时需要调用 .setup()
+        await checkpointer.setup()
+        # 创建异步图
+        graph = workflow.compile(checkpointer=checkpointer)
+        yield
+        # 使用图创建 SDK
+
+app = FastAPI(lifespan=lifespan)
+
+add_langgraph_fastapi_endpoint(
+    app=app,
+    agent=LangGraphAGUIAgent(
+        name="research_agent",
+        description="研究代理。",
+        graph=graph,
+    ),
+    path="/agents/research_agent"
+)
+
+```
+
+要了解更多关于 LangGraph 中的持久化，请查看 [LangGraph 文档](https://docs.langchain.com/oss/python/langgraph/persistence)。

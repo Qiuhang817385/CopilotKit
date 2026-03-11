@@ -1,0 +1,118 @@
+---
+title: "useRenderTool"
+description: "按工具名称或通配符注册类型化的工具调用渲染器"
+---
+
+## 概述
+
+`useRenderTool` 为工具调用注册一个聊天渲染器。
+你可以针对特定的工具名称（使用类型化的 Zod `parameters` 模式）或使用通配符 (`"*"`) 回退渲染器。
+
+这是 v2 工具渲染 Hook 集合的一部分，包括 [`useComponent`](/reference/v2/hooks/useComponent)、[`useDefaultRenderTool`](/reference/v2/hooks/useDefaultRenderTool) 和 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+
+此 Hook 仅处理渲染。它不注册前端处理器。
+
+## 签名
+
+### 通配符重载
+
+```tsx
+import { useRenderTool } from "@copilotkit/react-core/v2";
+
+useRenderTool(
+  {
+    name: "*",
+    render: (props) => React.ReactElement,
+    agentId?: string,
+  },
+  deps?: ReadonlyArray<unknown>,
+);
+```
+
+### 命名重载
+
+```tsx
+import { z } from "zod";
+import { useRenderTool } from "@copilotkit/react-core/v2";
+
+useRenderTool(
+  {
+    name: string,
+    parameters: z.ZodTypeAny,
+    render: (props) => React.ReactElement,
+    agentId?: string,
+  },
+  deps?: ReadonlyArray<unknown>,
+);
+```
+
+## 渲染 Props
+
+`render` 接收以下状态之一：
+
+- `{ status: "inProgress", parameters: Partial<T>, result: undefined }`
+- `{ status: "executing", parameters: T, result: undefined }`
+- `{ status: "complete", parameters: T, result: string }`
+
+`name` 在所有状态下始终存在。
+
+## 行为
+
+- 使用 `defineToolCallRenderer` 构建渲染器条目。
+- 通过 `agentId:name` 键去重（最新注册优先）。
+- 有意不在清理时移除渲染器，以便之前的聊天记录仍然可以渲染。
+- 通过 `config.name` 加上 `deps` 中的值跟踪更新（在 `deps` 中包含变化的捕获）。
+
+## 用法
+
+### 命名工具渲染器
+
+```tsx
+import { z } from "zod";
+import { useRenderTool } from "@copilotkit/react-core/v2";
+
+function App() {
+  useRenderTool(
+    {
+      name: "searchDocs",
+      parameters: z.object({ query: z.string() }),
+      render: ({ name, parameters, status, result }) => {
+        if (status === "inProgress") return <div>Preparing {name}…</div>;
+        if (status === "executing") return <div>Searching for: {parameters.query}</div>;
+        return <div>Done: {result}</div>;
+      },
+    },
+    [],
+  );
+
+  return null;
+}
+```
+
+### 通配符回退渲染器
+
+```tsx
+import { useRenderTool } from "@copilotkit/react-core/v2";
+
+function App() {
+  useRenderTool(
+    {
+      name: "*",
+      render: ({ name, status }) => (
+        <div>
+          {status === "complete" ? "✓" : "⏳"} {name}
+        </div>
+      ),
+    },
+    [],
+  );
+
+  return null;
+}
+```
+
+## 相关
+
+- [`useDefaultRenderTool`](/reference/v2/hooks/useDefaultRenderTool)
+- [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)
+- [`useFrontendTool`](/reference/v2/hooks/useFrontendTool)

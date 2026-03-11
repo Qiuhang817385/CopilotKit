@@ -1,0 +1,219 @@
+---
+title: "CopilotChatView"
+description: "布局组件，结合了可滚动的对话记录和输入区域"
+---
+
+## 概述
+
+`CopilotChatView` 是一个布局组件，结合了可滚动的消息对话记录与聊天输入区域、建议标签、滚动到底部按钮以及可选的欢迎屏幕。它是聊天界面的视觉核心，在内部被 [`CopilotChat`](/reference/v2/components/CopilotChat)、[`CopilotPopup`](/reference/v2/components/CopilotPopup) 和 [`CopilotSidebar`](/reference/v2/components/CopilotSidebar) 使用。
+
+`CopilotChatView` 的每个视觉部分都作为**插槽**暴露，因此你可以替换、样式化或扩展任何部分，而无需重写整个布局。
+
+## 导入
+
+```tsx
+import CopilotChatView from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+```
+
+<Callout type="info">
+  `CopilotChatView` 是一个命名导出：`import { CopilotChatView } from "@copilotkit/react-core/v2"` 通过 `CopilotChat.View` 的重新导出也可以工作。
+</Callout>
+
+## 插槽
+
+`CopilotChatView` 使用 `WithSlots` 模式。每个插槽 prop 接受以下三种值类型之一：
+
+| 值 | 行为 |
+|-------|----------|
+| **组件** | 完全替换默认组件。接收与默认值相同的 props。 |
+| **`className` 字符串** | 通过 `twMerge` 合并到默认组件的类列表中。 |
+| **部分 props 对象** | 作为额外或覆盖的 props 展开到默认组件中。 |
+
+传递一个 `children` 渲染 prop 可以让你访问所有组合的插槽元素以及数据 props，让你可以以完全自定义的布局来排列它们。
+
+### 插槽 Props
+
+<PropertyReference name="messageView" type="SlotValue<typeof CopilotChatMessageView>">
+  渲染对话记录的消息列表组件。默认显示助手消息、用户消息和输入光标。替换它可以添加自定义消息类型或修改消息布局。
+</PropertyReference>
+
+<PropertyReference name="scrollView" type='SlotValue<React.FC<React.HTMLAttributes<HTMLDivElement>>>'>
+  包裹消息列表的可滚动容器。默认处理自动滚动行为和滚动位置跟踪。替换它以实现自定义滚动机制。
+</PropertyReference>
+
+<PropertyReference name="scrollToBottomButton" type='SlotValue<React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>>>'>
+  当用户从对话记录底部向上滚动时出现的按钮。点击它将视图滚动回最新消息。
+</PropertyReference>
+
+<PropertyReference name="input" type="SlotValue<typeof CopilotChatInput>">
+  消息输入组件。默认提供一个带有发送按钮的文本区域、转录控件、文件上传和工具菜单。替换它以构建完全自定义的输入体验。
+</PropertyReference>
+
+<PropertyReference name="inputContainer" type='SlotValue<React.FC<React.HTMLAttributes<HTMLDivElement> & { children: React.ReactNode }>>'>
+  包裹聊天底部输入和免责声明的容器。绝对定位，在内容滚动时固定在底部。
+</PropertyReference>
+
+<PropertyReference name="feather" type='SlotValue<React.FC<React.HTMLAttributes<HTMLDivElement>>>'>
+  出现在输入容器上方的装饰性渐变遮罩，在消息区域和输入之间创建平滑的视觉过渡。
+</PropertyReference>
+
+<PropertyReference name="disclaimer" type='SlotValue<React.FC<React.HTMLAttributes<HTMLDivElement>>>'>
+  显示在输入下方的免责声明文本行（例如 "AI 可能会出错。请核实重要信息。"）。用替换组件覆盖或隐藏它。
+</PropertyReference>
+
+<PropertyReference name="suggestionView" type="SlotValue<typeof CopilotChatSuggestionView>">
+  渲染建议标签的组件。替换它以更改建议的显示或动画方式。
+</PropertyReference>
+
+## 数据 Props
+
+<PropertyReference name="messages" type="Message[]">
+  要显示的对话消息数组。通过 `CopilotChat` 使用时，这由代理自动管理。单独使用 `CopilotChatView` 时，你必须自己提供消息。
+</PropertyReference>
+
+<PropertyReference name="autoScroll" type="boolean" default="true">
+  当新消息到达时，视图是否应自动滚动到底部。如果你希望手动控制滚动，请设置为 `false`。
+</PropertyReference>
+
+<PropertyReference name="inputProps" type="Partial<Omit<CopilotChatInputProps, 'children'>>">
+  转发到内部 `CopilotChatInput` 组件的额外 props。使用它来配置自动聚焦、自定义提交处理程序、转录回调或工具菜单，而无需完全替换输入插槽。
+</PropertyReference>
+
+<PropertyReference name="isRunning" type="boolean">
+  代理当前是否正在处理。当为 `true` 时，输入显示停止按钮，消息视图在最新的助手消息上显示输入光标。
+</PropertyReference>
+
+<PropertyReference name="suggestions" type="Suggestion[]">
+  要显示为可点击标签的建议对象数组。每个建议都有一个 `title`、`message` 和可选的 `isLoading` 标志。
+</PropertyReference>
+
+<PropertyReference name="suggestionLoadingIndexes" type="ReadonlyArray<number>">
+  当前处于加载状态的建议索引（例如用户刚刚点击它们，代理正在处理）。
+</PropertyReference>
+
+<PropertyReference name="onSelectSuggestion" type="(suggestion: Suggestion, index: number) => void">
+  当用户点击建议标签时调用的回调。接收选中的建议对象及其索引。
+</PropertyReference>
+
+<PropertyReference name="welcomeScreen" type='SlotValue<React.FC<WelcomeScreenProps>> | boolean'>
+  控制当 `messages` 数组为空时显示的欢迎屏幕。
+
+  - `true` -- 显示默认欢迎屏幕
+  - `false` -- 禁用欢迎屏幕
+  - **`className` 字符串** -- 样式化默认欢迎屏幕
+  - **组件** -- 完全替换欢迎屏幕
+
+  欢迎屏幕组件接收 `input` 和 `suggestionView` 作为 React 元素，外加一个 `welcomeMessage` 插槽，因此你可以以任何布局组合它们。
+</PropertyReference>
+
+## 静态子组件
+
+`CopilotChatView` 将其默认插槽实现作为静态属性暴露，用于自定义组合：
+
+- `CopilotChatView.ScrollView` -- 带有自动滚动支持的默认滚动容器
+- `CopilotChatView.ScrollToBottomButton` -- 默认滚动到底部按钮
+- `CopilotChatView.Feather` -- 默认渐变遮罩
+- `CopilotChatView.InputContainer` -- 默认输入容器
+- `CopilotChatView.Disclaimer` -- 默认免责声明文本
+- `CopilotChatView.WelcomeMessage` -- 默认欢迎消息
+- `CopilotChatView.WelcomeScreen` -- 默认欢迎屏幕布局
+
+## 用法
+
+### 独立使用
+
+```tsx
+import CopilotChatView from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function CustomChat({ messages, isRunning }) {
+  return (
+    <CopilotChatView
+      messages={messages}
+      isRunning={isRunning}
+      autoScroll={true}
+    />
+  );
+}
+```
+
+### 用自定义组件替换插槽
+
+```tsx
+import CopilotChatView from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function CustomDisclaimer(props) {
+  return (
+    <div {...props}>
+      Powered by CopilotKit。回复可能包含错误。
+    </div>
+  );
+}
+
+function Chat({ messages, isRunning }) {
+  return (
+    <CopilotChatView
+      messages={messages}
+      isRunning={isRunning}
+      disclaimer={CustomDisclaimer}
+    />
+  );
+}
+```
+
+### 用 className 样式化插槽
+
+```tsx
+import CopilotChatView from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function Chat({ messages, isRunning }) {
+  return (
+    <CopilotChatView
+      messages={messages}
+      isRunning={isRunning}
+      scrollView="bg-gray-50"
+      inputContainer="border-t border-gray-200"
+    />
+  );
+}
+```
+
+### 使用 Children 渲染 Prop 的自定义布局
+
+```tsx
+import CopilotChatView from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+function Chat({ messages, isRunning }) {
+  return (
+    <CopilotChatView messages={messages} isRunning={isRunning}>
+      {({ scrollView, input, inputContainer, feather, disclaimer, suggestionView }) => (
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-hidden">
+            {scrollView}
+          </div>
+          {feather}
+          {suggestionView}
+          {inputContainer}
+        </div>
+      )}
+    </CopilotChatView>
+  );
+}
+```
+
+## 行为
+
+- **自动滚动**：当 `autoScroll` 为 `true` 时，视图使用粘到底部策略保持最新消息可见。当用户向上滚动时，会出现滚动到底部按钮。
+- **欢迎屏幕**：当 `messages` 为空且 `welcomeScreen` 不为 `false` 时，会渲染欢迎屏幕代替对话记录。欢迎屏幕接收 `input` 和 `suggestionView` 元素，因此可以将它们放置在欢迎布局中。
+- **输入容器定位**：输入容器绝对定位在聊天底部，滚动区域填充其内容以避免重叠。
+- **调整大小处理**：滚动视图监控输入容器高度变化以保持填充同步，并在调整大小过渡期间隐藏滚动到底部按钮。
+
+## 相关
+
+- [`CopilotChat`](/reference/v2/components/CopilotChat) -- 将代理连接到 `CopilotChatView` 的高级组件
+- [`CopilotPopup`](/reference/v2/components/CopilotPopup) -- 使用 `CopilotPopupView`（扩展 `CopilotChatView`）的弹窗变体
+- [`CopilotSidebar`](/reference/v2/components/CopilotSidebar) -- 使用 `CopilotSidebarView`（扩展 `CopilotChatView`）的侧边栏变体

@@ -1,0 +1,252 @@
+---
+title: 状态输入与输出
+icon: "lucide/ArrowRightLeft"
+description: 决定哪些状态属性在前端接收和返回。
+---
+
+## 这是什么？
+
+并非所有状态属性都与前端-后端共享相关。
+本指南展示如何确保只有正确的状态部分来回通信。
+
+## 什么时候应该使用它？
+
+根据您的实现，某些属性是用于内部处理的，而其他属性是 UI 与用户通信的方式。
+此外，某些状态属性包含大量信息。在 Agent 和 UI 之间同步它们可能代价高昂，而可能没有实际好处。
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 检查您的状态结构
+    使用 AG-UI 工作流路由器的 LlamaIndex Agent 是有状态的。当您执行工具和处理消息时，该状态会被更新并在整个会话中可用。对于这个例子，
+    假设我们的 Agent 应该使用的状态可以这样描述：
+
+    ```python title="agent.py"
+    # Agent 的完整状态结构
+    initial_state = {
+        "question": "",         # 来自用户的输入
+        "answer": "",           # 给用户的输出
+        "resources": []         # 仅供内部使用
+    }
+    ```
+  </Step>
+  <Step>
+    ### 按用途组织状态
+    我们的示例列出了几个状态属性，每个都有其自己的用途：
+      - **question** 是用户提出的，期望 LLM 回答
+      - **answer** 是 LLM 返回的
+      - **resources** 列表将由 LLM 用来回答问题，不应与用户通信或由他们设置
+
+    以下是一个完整的示例，展示如何在这些考虑因素下构建您的 Agent：
+
+    ```python title="agent.py"
+    from typing import Annotated, List
+    from fastapi import FastAPI
+    from llama_index.llms.openai import OpenAI
+    from llama_index.core.workflow import Context
+    from llama_index.protocols.ag_ui.router import get_ag_ui_workflow_router
+    from llama_index.protocols.ag_ui.events import StateSnapshotWorkflowEvent
+
+    async def answerQuestion(
+        ctx: Context,
+        answer: Annotated[str, "The answer to store in state."]
+    ) -> str:
+        """Stores the answer to the user's question in shared state.
+
+        Args:
+            ctx: The workflow context for state management.
+            answer: The answer to store in state.
+
+        Returns:
+            str: A message indicating the answer was stored.
+        """
+        async with ctx.store.edit_state() as global_state:
+            state = global_state.get("state", {})
+            if state is None:
+                state = {}
+            
+            state["answer"] = answer
+            
+            # Emit state update to frontend
+            ctx.write_event_to_stream(
+                StateSnapshotWorkflowEvent(snapshot=state)
+            )
+            
+            global_state["state"] = state
+        
+        return f"Answer stored: {answer}"
+
+    async def addResource(
+        ctx: Context,
+        resource: Annotated[str, "The resource URL or reference to add."]
+    ) -> str:
+        """Adds a resource to the internal resources list in shared state.
+
+        Args:
+            ctx: The workflow context for state management.
+            resource: The resource URL or reference to add.
+
+        Returns:
+            str: A message indicating the resource was added.
+        """
+        async with ctx.store.edit_state() as global_state:
+            state = global_state.get("state", {})
+            if state is None:
+                state = {}
+            
+            resources = state.get("resources", [])
+            resources.append(resource)
+            state["resources"] = resources
+            
+            global_state["state"] = state
+        
+        return f"Resource added: {resource}"
+
+    # Initialize the LLM
+    llm = OpenAI(model="gpt-5.2")
+
+    # Create the AG-UI workflow router
+    agentic_chat_router = get_ag_ui_workflow_router(
+        llm=llm,
+        system_prompt="""
+        You are a helpful assistant. When the user asks a question:
+        1. Think through your answer
+        2. Optionally use addResource to track any sources you reference
+        3. Use answerQuestion to provide your final answer - this stores it in state for the user to see
+        
+        Always use the answerQuestion tool to provide your response so it appears in the UI.
+        """,
+        backend_tools=[answerQuestion, addResource],
+        initial_state={
+            "question": "",       # 输入：从前端接收
+            "answer": "",         # 输出：发送到前端
+            "resources": []       # 内部：跟踪资源
+        },
+    )
+
+    # Create FastAPI app
+    app = FastAPI(
+        title="LlamaIndex Agent",
+        description="A LlamaIndex agent integrated with CopilotKit",
+        version="1.0.0"
+    )
+
+    # Include the router
+    app.include_router(agentic_chat_router)
+
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "agent": "llamaindex"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="localhost", port=8000)
+    ```
+  </Step>
+  <Step>
+    ### 在前端使用状态
+    现在我们知道了我们的 Agent 使用哪些状态属性，我们可以在 UI 中使用它们：
+    - **question**：由 UI 设置以向 Agent 提问
+    - **answer**：从 Agent 的响应中读取
+    - **resources**：UI 无法访问（仅供 Agent 内部使用）
+
+    ```tsx title="ui/app/page.tsx"
+    "use client";
+
+    import { useState } from "react";
+    import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+
+    // Define the agent state type, should match the actual state of your agent
+    type AgentState = {
+      question: string;
+      answer: string;
+    }
+
+    /* Example usage in a pseudo React component */
+    function YourMainContent() { // [!code highlight]
+      const [inputQuestion, setInputQuestion] = useState("What's the capital of France?");
+      const [isLoading, setIsLoading] = useState(false);
+
+      const { agent } = useAgent({
+        agentId: "my_agent",
+      });
+      const { copilotkit } = useCopilotKit();
+
+      const askQuestion = async (newQuestion: string) => {
+        setIsLoading(true);
+
+        // Update the state with the new question
+        agent.setState({ ...agent.state, question: newQuestion, answer: "" });
+
+        try {
+          // Add a message and trigger the agent to run
+          agent.addMessage({
+            id: crypto.randomUUID(),
+            role: "user",
+            content: newQuestion,
+          });
+          await copilotkit.runAgent({ agent });
+        } catch (error) {
+          console.error("Error running agent:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      return (
+        <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
+          <h1>Q&A Assistant</h1>
+          
+          <div style={{ marginBottom: "1rem" }}>
+            <input
+              type="text"
+              value={inputQuestion}
+              onChange={(e) => setInputQuestion(e.target.value)}
+              placeholder="Enter your question..."
+              style={{ 
+                padding: "0.5rem", 
+                width: "300px", 
+                marginRight: "0.5rem",
+                borderRadius: "4px",
+                border: "1px solid #ccc"
+              }}
+            />
+            <button 
+              onClick={() => askQuestion(inputQuestion)}
+              disabled={isLoading || !inputQuestion.trim()}
+              style={{
+                padding: "0.5rem 1rem",
+                borderRadius: "4px",
+                border: "none",
+                backgroundColor: isLoading ? "#ccc" : "#0070f3",
+                color: "white",
+                cursor: isLoading ? "not-allowed" : "pointer"
+              }}
+            >
+              {isLoading ? "Thinking..." : "Ask Question"}
+            </button>
+          </div>
+
+          <div style={{ marginTop: "1.5rem" }}>
+            <p><strong>Question:</strong> {agent.state?.question || "(none yet)"}</p>
+            <p><strong>Answer:</strong> {agent.state?.answer || (isLoading ? "Thinking..." : "Waiting for question...")}</p>
+          </div>
+        </div>
+      );
+    }
+    ```
+
+    <Callout type="warn" title="重要">
+      `name` 参数必须与您在 CopilotRuntime 配置中定义的 Agent 名称完全匹配（例如，来自快速入门的 `my_agent`）。
+    </Callout>
+  </Step>
+  <Step>
+    ### 试一试！
+    现在我们按用途组织了状态：
+    - UI 可以设置 `question` 并读取 `answer`
+    - Agent 内部使用 `resources` 而不将其暴露给前端
+    - 状态更新在前端和后端之间高效流动
+  </Step>
+</Steps>

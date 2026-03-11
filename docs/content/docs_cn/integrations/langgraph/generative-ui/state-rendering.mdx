@@ -1,0 +1,158 @@
+---
+title: 状态渲染
+icon: "lucide/Bot"
+description: 使用自定义 UI 组件实时渲染智能体的状态。
+---
+import { Tabs, Tab } from "fumadocs-ui/components/tabs"
+import RunAndConnect from "@/snippets/integrations/langgraph/run-and-connect.mdx"
+import { IframeSwitcher } from "@/components/content"
+
+<IframeSwitcher
+  id="agent-state-example"
+  exampleUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_generative_ui?sidebar=false&chatDefaultOpen=false"
+  codeUrl="https://feature-viewer.copilotkit.ai/langgraph/feature/agentic_generative_ui?view=code&sidebar=false&codeLayout=tabs"
+  exampleLabel="演示"
+  codeLabel="代码"
+  height="700px"
+/>
+
+## 这是什么？
+
+状态渲染让你可以构建反映智能体状态的 UI。随着智能体在节点间推进并发出状态更新，你的前端会渲染这些变化——显示进度、草稿或中间结果。
+
+## 什么时候使用？
+
+当你想要以下功能时使用状态渲染：
+- 显示实时进度（例如"正在研究... 2/5 完成"）
+- 显示随着智能体工作而更新的草稿
+- 构建反映智能体状态的仪表板
+- 在聊天之外渲染结构化输出
+
+## 实现
+
+<Steps>
+  <Step>
+    ### 运行并连接你的智能体
+    <RunAndConnect components={props.components} />
+  </Step>
+  <Step>
+    ### 定义你的智能体状态
+
+    向你的智能体状态添加你希望在 UI 中渲染的属性。
+
+    <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+        <Tab value="Python">
+          ```python title="agent.py"
+          from copilotkit import CopilotKitState
+
+          class AgentState(CopilotKitState):
+              searches: list[dict]
+          ```
+        </Tab>
+        <Tab value="TypeScript">
+          ```typescript title="agent-js/src/agent.ts"
+          import { Annotation } from "@langchain/langgraph";
+          import { CopilotKitStateAnnotation } from "@copilotkit/sdk-js/langgraph";
+
+          export const AgentStateAnnotation = Annotation.Root({
+            searches: Annotation<{ query: string; done: boolean }[]>,
+            ...CopilotKitStateAnnotation.spec,
+          });
+          export type AgentState = typeof AgentStateAnnotation.State;
+          ```
+        </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 从智能体发出状态更新
+
+    使用 `copilotkit_emit_state` 在节点完成前将中间状态推送到前端。
+
+    <Tabs groupId="language_langgraph_agent" items={['Python', 'TypeScript']} default="Python" persist>
+      <Tab value="Python">
+        ```python title="agent.py"
+        import asyncio
+        from copilotkit.langgraph import copilotkit_emit_state # [!code highlight]
+
+        async def chat_node(state: AgentState, config: RunnableConfig):
+            state["searches"] = [
+                {"query": "初步研究", "done": False},
+                {"query": "检索来源", "done": False},
+                {"query": "形成答案", "done": False},
+            ]
+            await copilotkit_emit_state(config, state) # [!code highlight]
+
+            for search in state["searches"]:
+                await asyncio.sleep(1)
+                search["done"] = True
+                await copilotkit_emit_state(config, state) # [!code highlight]
+
+            response = await ChatOpenAI(model="gpt-5.2").ainvoke(
+                [SystemMessage(content="你是一个有用的助手。"), *state["messages"]],
+                config,
+            )
+            return {**state, "messages": response}
+        ```
+      </Tab>
+      <Tab value="TypeScript">
+        ```typescript title="agent-js/src/agent.ts"
+        import { copilotkitEmitState } from "@copilotkit/sdk-js/langgraph"; // [!code highlight]
+
+        async function chat_node(state: AgentState, config: RunnableConfig) {
+          state.searches = [
+            { query: "初步研究", done: false },
+            { query: "检索来源", done: false },
+            { query: "形成答案", done: false },
+          ];
+          await copilotkitEmitState(config, state); // [!code highlight]
+
+          for (const search of state.searches) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            search.done = true;
+            await copilotkitEmitState(config, state); // [!code highlight]
+          }
+
+          const response = await new ChatOpenAI({ model: "gpt-5.2" }).invoke(
+            [new SystemMessage("你是一个有用的助手。"), ...state.messages],
+            config,
+          );
+          return { ...state, messages: response };
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    ### 在 UI 中渲染状态
+
+    使用 `useAgent` 钩子在你的应用中的任何地方访问智能体状态。你可以在聊天中、仪表板中、侧边栏或自定义布局中渲染它。
+
+    ```tsx title="app/page.tsx"
+    import { useAgent } from "@copilotkit/react-core/v2"; // [!code highlight]
+
+    function YourMainContent() {
+      // [!code highlight:3]
+      const { agent } = useAgent({
+        agentId: "sample_agent",
+      });
+
+      const searches = agent.state.searches as { query: string; done: boolean }[] ?? [];
+
+      return (
+        <div>
+          {searches.map((search, index) => (
+            <div key={index}>
+              {search.done ? "✅" : "⏳"} {search.query}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    ```
+  </Step>
+  <Step>
+    ### 试一试！
+
+    随着智能体逐步推进，你会看到搜索项目实时出现和更新。
+  </Step>
+</Steps>

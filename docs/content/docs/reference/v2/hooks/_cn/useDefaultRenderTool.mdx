@@ -1,0 +1,80 @@
+---
+title: "useDefaultRenderTool"
+description: "为未处理的工具调用注册通配符默认渲染器"
+---
+
+## 概述
+
+`useDefaultRenderTool` 是 `useRenderTool` 的便捷包装器，使用 `name: "*"`。
+
+这是 v2 工具渲染 Hook 集合的一部分，包括 [`useComponent`](/reference/v2/hooks/useComponent)、[`useRenderTool`](/reference/v2/hooks/useRenderTool) 和 [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)。
+
+- 无配置时，它注册 CopilotKit 的内置默认工具调用 UI。
+- 使用 `render` 时，它用你自己的通配符渲染器替换默认 UI。
+
+用于捕获所有没有特定命名渲染器的工具调用的渲染。
+
+## 签名
+
+```tsx
+import { useDefaultRenderTool } from "@copilotkit/react-core/v2";
+
+function useDefaultRenderTool(
+  config?: {
+    render?: (props: {
+      name: string;
+      parameters: any;
+      status: string;
+      result: string | undefined;
+    }) => React.ReactElement;
+  },
+  deps?: ReadonlyArray<unknown>,
+): void;
+```
+
+## 行为
+
+- 内部调用 `useRenderTool({ name: "*", ... })`。
+- 如果省略 `config.render`，使用可展开的默认卡片 UI 显示状态、参数和结果。
+- 如果提供了 `config.render`，则使用你的渲染器代替。
+- 继承 `useRenderTool` 的注册行为和依赖语义。
+
+## 用法
+
+### 内置默认渲染器
+
+```tsx
+import { useDefaultRenderTool } from "@copilotkit/react-core/v2";
+
+function App() {
+  useDefaultRenderTool();
+  return null;
+}
+```
+
+### 自定义通配符渲染器
+
+```tsx
+import { useDefaultRenderTool } from "@copilotkit/react-core/v2";
+
+function App() {
+  useDefaultRenderTool(
+    {
+      render: ({ name, status, result }) => (
+        <div>
+          <strong>{name}</strong>: {status}
+          {status === "complete" && result ? <pre>{result}</pre> : null}
+        </div>
+      ),
+    },
+    [],
+  );
+
+  return null;
+}
+```
+
+## 相关
+
+- [`useRenderTool`](/reference/v2/hooks/useRenderTool)
+- [`useRenderToolCall`](/reference/v2/hooks/useRenderToolCall)
