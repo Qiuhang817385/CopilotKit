@@ -4,28 +4,15 @@
 
 ## 根文档 (root) 未翻译
 
-- `/headless` 或 `(root)/headless`
-- `/index` 或 `(root)/index`
-- `/prebuilt-components` 或 `(root)/prebuilt-components`
+（已全部翻译完成）
 
 ## 集成文档未翻译（仅列出有 _cn 的集成）
 
-### aws-strands
-- `/aws-strands/generative-ui/mcp-apps`
+（已全部翻译完成）
 
 ## 全部未翻译的英文路径（含 reference、learn、无 _cn 的集成）
 
-- `/(other)/contributing/code-contributions/index`
-- `/(other)/contributing/code-contributions/package-linking`
-- `/(other)/contributing/docs-contributions`
-- `/(other)/telemetry/index`
-- `/aws-strands/generative-ui/mcp-apps`
-- `/generative-ui/display`
-- `/generative-ui/mcp-apps`
-- `/generative-ui/tool-rendering`
-- `/headless`
-- `/index`
-- `/prebuilt-components`
+（已全部翻译完成）
 
 ## Snippets 未翻译
 
@@ -36,11 +23,36 @@
 ## 统计
 
 - 英文路径总数: 575
-- 中文路径总数: 584
-- 未翻译英文路径总数: 11
-- 根文档未翻译数量: 3
-- 有未翻译页的集成数: 1
-- 集成未翻译条数: 1
+- 中文路径总数: 595
+- 未翻译英文路径总数: 0
+- 根文档未翻译数量: 0
+- 有未翻译页的集成数: 0
+- 集成未翻译条数: 0
 - **Snippets 英文数: 73**
 - **Snippets 中文数: 73**
 - **Snippets 未翻译数: 0**
+
+---
+
+## 最近完成的翻译（2026-03-12）
+
+以下文档已完成中文翻译：
+
+### 根文档
+- `/headless` → `headless_cn.mdx`
+- `/index` → `(root)_cn/index.mdx`
+- `/prebuilt-components` → `prebuilt-components_cn.mdx`
+
+### 生成式 UI 文档
+- `/generative-ui/display` → `generative-ui/display_cn.mdx`
+- `/generative-ui/mcp-apps` → `generative-ui/mcp-apps_cn.mdx`
+- `/generative-ui/tool-rendering` → `generative-ui/tool-rendering_cn.mdx`
+
+### 贡献与遥测文档
+- `/(other)/contributing/code-contributions/index` → `(other)/contributing/code-contributions/index_cn.mdx`
+- `/(other)/contributing/code-contributions/package-linking` → `(other)/contributing/code-contributions/package-linking_cn.mdx`
+- `/(other)/contributing/docs-contributions` → `(other)/contributing/docs-contributions_cn.mdx`
+- `/(other)/telemetry/index` → `(other)/telemetry/index_cn.mdx`
+
+### 集成文档
+- `/aws-strands/generative-ui/mcp-apps` → `integrations/aws-strands/generative-ui/mcp-apps_cn.mdx`

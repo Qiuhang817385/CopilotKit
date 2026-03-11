@@ -1,0 +1,117 @@
+---
+title: 概述
+description: "智能体应用平台：用于构建 AI 驱动智能体应用的开源框架，以及云或自托管服务。"
+icon: "lucide/Sparkles"
+hideTOC: true
+hideHeader: true
+---
+
+import { MessageSquare, Layers, Code, Bot, Server, BookOpen, Play, Book } from "lucide-react"
+import LandingCodeShowcase from "@/snippets/landing-code-showcase.mdx"
+import { IntegrationGrid } from "@/components/content/integration-grid"
+import { LazyIframe } from "@/components/content/lazy-iframe"
+
+{/* ── 主视觉区 ── */}
+
+## 欢迎使用 CopilotKit！
+
+CopilotKit 是面向**智能体**和**生成式 UI** 的**前端技术栈**。将任何智能体框架或模型连接到你的 React 应用，实现**聊天**、**生成式 UI**、**画布应用**和**人机协同**工作流。
+
+查看下方的指南，找到适合你需求的入门方式，无论你是从零开始，还是已有智能体想要为其添加预置聊天 UI 或完全自定义 UI。
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 not-prose mb-10 mt-10">
+  <a href="/quickstart" className="group flex items-start gap-3 bg-card border border-border/80 rounded-lg p-4 no-underline hover:border-primary/60 hover:bg-accent/50 transition-colors shadow-sm">
+    <Play className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary mb-1">快速开始</div>
+      <div className="text-sm text-muted-foreground leading-relaxed">几分钟内启动并运行。</div>
+    </div>
+  </a>
+  <a href="/reference" className="group flex items-start gap-3 bg-card border border-border/80 rounded-lg p-4 no-underline hover:border-primary/60 hover:bg-accent/50 transition-colors shadow-sm">
+    <Book className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary mb-1">API 参考</div>
+      <div className="text-sm text-muted-foreground leading-relaxed">Hooks、组件和配置。</div>
+    </div>
+  </a>
+  <a href="/prebuilt-components" className="group flex items-start gap-3 bg-card border border-border/80 rounded-lg p-4 no-underline hover:border-primary/60 hover:bg-accent/50 transition-colors shadow-sm">
+    <MessageSquare className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary mb-1">聊天 UI</div>
+      <div className="text-sm text-muted-foreground leading-relaxed">支持流式传输的预置聊天组件。</div>
+    </div>
+  </a>
+  <a href="/generative-ui/your-components/display-only" className="group flex items-start gap-3 bg-card border border-border/80 rounded-lg p-4 no-underline hover:border-primary/60 hover:bg-accent/50 transition-colors shadow-sm">
+    <Layers className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary mb-1">生成式 UI</div>
+      <div className="text-sm text-muted-foreground leading-relaxed">将工具渲染为 React 组件。</div>
+    </div>
+  </a>
+</div>
+
+{/* ── 代码示例 ── */}
+<LandingCodeShowcase components={props.components}/>
+
+---
+
+{/* ── 按功能探索 ── */}
+
+## 按功能探索
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8 mt-6 mb-16 not-prose">
+  <a href="/prebuilt-components" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><MessageSquare className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">聊天 UI &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">支持流式传输、工具调用和 Markdown 的预置聊天组件。</div>
+    </div>
+  </a>
+  <a href="/headless" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><Code className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">无头 UI &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">通过 Hooks 实现完全渲染控制——零设计预设。</div>
+    </div>
+  </a>
+  <a href="/generative-ui/your-components/display-only" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><Layers className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">生成式 UI &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">将智能体工具和状态渲染为交互式 React 组件。</div>
+    </div>
+  </a>
+  <a href="/backend" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><Server className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">后端与运行时 &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">设置 CopilotKit 运行时、AG-UI 中间件和端点。</div>
+    </div>
+  </a>
+  <a href="/programmatic-control" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><Bot className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">程序化控制 &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">构建非聊天或完全自定义的体验。</div>
+    </div>
+  </a>
+  <a href="/reference" className="group flex items-start gap-4 no-underline">
+    <div className="flex-shrink-0 mt-1"><BookOpen className="h-6 w-6 text-primary" /></div>
+    <div>
+      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">API 参考 &rsaquo;</div>
+      <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">Hooks、组件和配置的完整参考。</div>
+    </div>
+  </a>
+</div>
+
+{/* ── 集成 ── */}
+
+## 按 AI 后端探索
+
+<IntegrationGrid />
+
+## 功能对比（按框架）
+
+import { FeatureMatrix } from "@/components/react/feature-matrix"
+
+<FeatureMatrix />
