@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { baseOptions } from "../layout.config";
 import { source } from "@/app/source";
 import ConditionalSidebar from "@/components/layout/conditional-sidebar";
-import Navbar from "@/components/layout/navbar";
+import { ClientNavbar } from "@/components/layout/client-navbar";
 import { ScrollReset } from "@/components/layout/scroll-reset";
 import { patchPageTree } from "@/lib/patch-pagetree";
 
@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <Navbar pageTree={patchedPageTree} />
+      <ClientNavbar pageTree={patchedPageTree} />
       <HomeLayout {...baseOptions} nav={{ enabled: false }}>
         <ConditionalSidebar pageTree={patchedPageTree} />
         <div className="docs-content-wrapper">

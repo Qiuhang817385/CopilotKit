@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import Separator from "./separator";
 import { useOpenedFolders } from "@/lib/hooks/use-opened-folders";
 import { normalizeUrl, normalizeUrlForMatching } from "@/lib/analytics-utils";
+import { toUserUrl } from "@/lib/i18n-utils";
 
 type Node = DocsLayoutProps["tree"]["children"][number] & {
   url: string;
@@ -118,7 +119,7 @@ const Folder = ({ node }: FolderProps) => {
       }
 
       if (folderUrl) {
-        const normalizedUrl = normalizeUrl(folderUrl);
+        const normalizedUrl = toUserUrl(normalizeUrl(folderUrl));
         router.push(normalizedUrl);
       }
     },

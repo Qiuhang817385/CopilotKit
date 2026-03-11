@@ -5,6 +5,8 @@ import Link from "fumadocs-core/link";
 import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { normalizeUrl, normalizeUrlForMatching } from "@/lib/analytics-utils";
+import { toUserUrl } from "@/lib/i18n-utils";
 import AdkIcon from "../icons/adk";
 import Ag2Icon from "../icons/ag2";
 import AgnoIcon from "../icons/agno";
@@ -57,8 +59,6 @@ const INTEGRATION_ICONS: Record<
 
 const ICON_SIZE = 20;
 
-import { normalizeUrl, normalizeUrlForMatching } from "@/lib/analytics-utils";
-
 const IntegrationLink = ({ node }: IntegrationLinkProps) => {
   const pathname = usePathname();
   const linkUrl = node.index?.url ?? "";
@@ -82,7 +82,7 @@ const IntegrationLink = ({ node }: IntegrationLinkProps) => {
       )}
     >
       <Link
-        href={normalizedUrl}
+        href={toUserUrl(normalizedUrl)}
         className="flex gap-2 justify-between items-center w-full h-full text-foreground dark:text-white"
       >
         <div className="flex gap-2 items-center">

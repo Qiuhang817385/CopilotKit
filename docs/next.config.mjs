@@ -83,14 +83,11 @@ function generateFolderRedirects(baseDir) {
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
-  env: {
-    RB2B_ID: process.env.RB2B_ID,
-    POSTHOG_KEY: process.env.POSTHOG_KEY,
-    POSTHOG_HOST: process.env.POSTHOG_HOST,
-    SCARF_PIXEL_ID: process.env.SCARF_PIXEL_ID,
-  },
-
+  // 减少静态生成并发，降低内存使用
+  staticPageGenerationTimeout: 120,
+  // 禁用图片优化以减少内存使用
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -113,6 +110,12 @@ const config = {
         hostname: '**',
       },
     ],
+  },
+  env: {
+    RB2B_ID: process.env.RB2B_ID,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
+    SCARF_PIXEL_ID: process.env.SCARF_PIXEL_ID,
   },
 
   skipTrailingSlashRedirect: true,
@@ -144,10 +147,16 @@ const config = {
           source: '/guides/:path*',
           destination: '/built-in-agent/guides/:path*',
         },
+        // Note: Chinese doc routes (/_cn/*) are handled by middleware.ts
         // Map integration URLs
         ...integrations.map((integration) => ({
           source: `/${integration}/:path*`,
           destination: `/integrations/${integration}/:path*`,
+        })),
+        // Map Chinese integration URLs (e.g. /langgraph_cn/* -> /integrations/langgraph_cn/*)
+        ...integrations.map((integration) => ({
+          source: `/${integration}_cn/:path*`,
+          destination: `/integrations/${integration}_cn/:path*`,
         })),
       ],
     };

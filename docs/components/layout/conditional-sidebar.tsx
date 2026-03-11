@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import VersionSelector, {
   getVersionFromPathname,
 } from "@/components/ui/reference-sidebar/version-selector";
+import { isChinesePath } from "@/lib/i18n-utils";
 
 interface ConditionalSidebarProps {
   pageTree: DocsLayoutProps["tree"];
@@ -17,10 +18,74 @@ interface ConditionalSidebarProps {
 
 type Node = DocsLayoutProps["tree"]["children"][number];
 
+/**
+ * Filter page tree by locale
+ */
+function filterPageTreeByLocale(
+  pageTree: DocsLayoutProps["tree"],
+  isChinese: boolean
+): DocsLayoutProps["tree"] {
+  const filtered = { ...pageTree };
+
+  function isChineseUrl(url: string): boolean {
+    return (
+      url.includes("/_cn") ||
+      url.includes("/(root)_cn") ||
+      /(?:^|\/)\w+_cn(?:\/|$)/.test(url)
+    );
+  }
+
+  function shouldIncludeNode(node: Node): boolean {
+    const nodeAny = node as any;
+    const url = nodeAny.index?.url || nodeAny.url || "";
+
+    if (isChinese) {
+      return isChineseUrl(url);
+    } else {
+      return !isChineseUrl(url);
+    }
+  }
+
+  function filterNode(node: Node): Node | null {
+    const nodeCopy = { ...node } as Node;
+    const nodeAny = nodeCopy as any;
+
+    // Filter children recursively
+    if (nodeAny.children) {
+      nodeAny.children = nodeAny.children
+        .map(filterNode)
+        .filter((child: Node | null): child is Node => child !== null);
+    }
+
+    // Keep the node if it matches locale or has matching children
+    const hasMatchingChildren =
+      nodeAny.children && nodeAny.children.length > 0;
+    const matchesLocale = shouldIncludeNode(nodeCopy);
+
+    if (matchesLocale || hasMatchingChildren) {
+      return nodeCopy;
+    }
+
+    return null;
+  }
+
+  filtered.children = filtered.children
+    .map(filterNode)
+    .filter((child: Node | null): child is Node => child !== null) as any;
+
+  return filtered;
+}
+
 export default function ConditionalSidebar({
   pageTree,
 }: ConditionalSidebarProps) {
   const pathname = usePathname();
+  const isChinese = isChinesePath(pathname);
+
+  // Filter pageTree by current locale
+  const filteredPageTree = useMemo(() => {
+    return filterPageTreeByLocale(pageTree, isChinese);
+  }, [pageTree, isChinese]);
 
   // Normalize the pathname to handle /integrations/... paths
   const normalizedPathname = normalizeUrl(pathname);
@@ -41,7 +106,7 @@ export default function ConditionalSidebar({
   const learnPageTree = useMemo(() => {
     if (!isLearnRoute) return null;
 
-    const learnFolder = pageTree.children.find((node) => {
+    const learnFolder = filteredPageTree.children.find((node) => {
       if (node.type !== "folder") return false;
       const folderNode = node as any;
       const url = folderNode.index?.url || folderNode.url;
@@ -52,20 +117,20 @@ export default function ConditionalSidebar({
 
     if (learnFolder && "children" in learnFolder) {
       return {
-        ...pageTree,
+        ...filteredPageTree,
         children: (learnFolder as any).children || [],
       };
     }
 
     return null;
-  }, [isLearnRoute, pageTree]);
+  }, [isLearnRoute, filteredPageTree]);
 
   // Find the reference folder and drill into the active version
   const referencePageTree = useMemo(() => {
     if (!isReferenceRoute) return null;
 
     // Find the reference folder
-    const referenceFolder = pageTree.children.find((node) => {
+    const referenceFolder = filteredPageTree.children.find((node) => {
       if (node.type !== "folder") return false;
       const folderNode = node as any;
       const url = folderNode.index?.url || folderNode.url;
@@ -91,27 +156,29 @@ export default function ConditionalSidebar({
       if (versionFolder && "children" in versionFolder) {
         // Return a pageTree with only the version folder's children
         return {
-          ...pageTree,
+          ...filteredPageTree,
           children: (versionFolder as any).children || [],
         };
       }
 
       // Fallback: return the reference folder's children directly
       return {
-        ...pageTree,
+        ...filteredPageTree,
         children: referenceChildren,
       };
     }
 
     return null;
-  }, [isReferenceRoute, pageTree, currentVersion]);
+  }, [isReferenceRoute, filteredPageTree, currentVersion]);
 
   if (isIntegrationRoute) {
-    return <IntegrationsSidebar pageTree={pageTree} />;
+    return <IntegrationsSidebar pageTree={filteredPageTree} />;
   }
 
   if (isLearnRoute && learnPageTree) {
-    return <Sidebar pageTree={learnPageTree} showIntegrationSelector={false} />;
+    return (
+      <Sidebar pageTree={learnPageTree} showIntegrationSelector={false} />
+    );
   }
 
   if (isReferenceRoute && referencePageTree) {
@@ -124,5 +191,5 @@ export default function ConditionalSidebar({
     );
   }
 
-  return <Sidebar pageTree={pageTree} />;
+  return <Sidebar pageTree={filteredPageTree} />;
 }

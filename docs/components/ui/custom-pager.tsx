@@ -6,6 +6,7 @@ import { Page } from "fumadocs-core/source";
 import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 import { ChevronRight } from "lucide-react";
 import { ChevronLeft } from "lucide-react";
+import { toUserUrl } from "@/lib/i18n-utils";
 
 interface CustomPagerProps {
   tree: DocsLayoutProps["tree"];
@@ -40,7 +41,7 @@ export function CustomPager({ tree, page }: CustomPagerProps): ReactNode {
         {prev ? (
           <>
             <Link
-              href={prev?.url}
+              href={toUserUrl(prev?.url)}
               className="flex flex-col gap-1 justify-center px-3 lg:px-5 w-full h-[80px] rounded-2xl rounded-r-none border border-r-0 backdrop-blur-lg border-border "
               style={{ backgroundColor: "var(--sidebar)" }}
             >
@@ -100,7 +101,7 @@ export function CustomPager({ tree, page }: CustomPagerProps): ReactNode {
 
         {next ? (
           <Link
-            href={next.url}
+            href={toUserUrl(next.url)}
             className="flex flex-col gap-1 justify-center px-3 lg:px-5 w-full h-[80px] rounded-2xl rounded-l-none border border-l-0 backdrop-blur-lg border-border "
             style={{ backgroundColor: "var(--sidebar)" }}
           >

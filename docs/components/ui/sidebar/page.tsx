@@ -5,6 +5,7 @@ import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { normalizeUrl, normalizeUrlForMatching } from "@/lib/analytics-utils";
+import { toUserUrl } from "@/lib/i18n-utils";
 
 type Node = DocsLayoutProps["tree"]["children"][number] & { url: string };
 
@@ -64,7 +65,7 @@ function isPageActive(pageUrl: string, pathname: string): boolean {
 
 const Page = ({ node, onNavigate, minimal }: PageProps) => {
   const pathname = usePathname();
-  const normalizedUrl = normalizeUrl(node.url);
+  const normalizedUrl = toUserUrl(normalizeUrl(node.url));
   const isActive = isPageActive(node.url, pathname);
 
   return (
@@ -75,7 +76,7 @@ const Page = ({ node, onNavigate, minimal }: PageProps) => {
       )}
     >
       <Link
-        href={normalizedUrl}
+        href={toUserUrl(normalizedUrl)}
         className="text-foreground dark:text-white"
         onClick={onNavigate}
       >

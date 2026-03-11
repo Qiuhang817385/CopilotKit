@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { toUserUrl } from "@/lib/i18n-utils";
 import {
   type HTMLAttributes,
   type ReactNode,
@@ -466,7 +467,7 @@ function SubdocsMenuItem({
   if (isOption(item)) {
     return (
       <Link
-        href={item.url ? item.url : (item.href ?? "")}
+        href={item.url ? toUserUrl(item.url) : (item.href ?? "")}
         target={item.href ? "_blank" : undefined}
         rel={item.href ? "noopener noreferrer" : undefined}
         onClick={() => {

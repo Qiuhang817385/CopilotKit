@@ -1,0 +1,25 @@
+{
+  "title": "概览",
+  "pages": [
+    "---快速开始---",
+    "index",
+    "quickstart",
+    "coding-agents",
+    "---基础---",
+    "prebuilt-components",
+    "custom-look-and-feel",
+    "programmatic-control",
+    "inspector",
+    "---生成式 UI---",
+    "...generative-ui",
+    "---应用控制---",
+    "frontend-tools",
+    "shared-state",
+    "---后端---",
+    "...backend",
+    "---高级功能---",
+    "...premium",
+    "---故障排除---",
+    "...troubleshooting"
+  ]
+}

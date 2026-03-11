@@ -9,6 +9,8 @@ import { DocsLayoutProps } from "fumadocs-ui/layouts/docs";
 import { Logo } from "@/app/logo";
 import SearchDialogButton from "@/components/ui/search-button";
 import MobileSidebar from "@/components/layout/mobile-sidebar";
+import { LanguageSwitcher } from "./language-switcher";
+import { isChinesePath } from "@/lib/i18n-utils";
 // Icons
 import RocketIcon from "@/components/ui/icons/rocket";
 import ConsoleIcon from "@/components/ui/icons/console";
@@ -17,7 +19,7 @@ import GithubIcon from "@/components/ui/icons/github";
 import DiscordIcon from "@/components/ui/icons/discord";
 import ExternalLinkIcon from "@/components/ui/icons/external-link";
 import BurgerMenuIcon from "@/components/ui/icons/burger-menu";
-import { BookOpenIcon, ScrollTextIcon } from "lucide-react";
+import { BookOpenIcon } from "lucide-react";
 
 export interface NavbarLink {
   href: string;
@@ -31,7 +33,7 @@ interface NavbarProps {
   pageTree: DocsLayoutProps["tree"];
 }
 
-export const LEFT_LINKS: NavbarLink[] = [
+const LEFT_LINKS_BASE: NavbarLink[] = [
   {
     icon: <RocketIcon />,
     label: "Documentation",
@@ -55,6 +57,9 @@ export const LEFT_LINKS: NavbarLink[] = [
     showExternalLinkIcon: true,
   },
 ];
+
+/** Same as LEFT_LINKS_BASE; exported for mobile sidebar dropdown. */
+export const LEFT_LINKS = LEFT_LINKS_BASE;
 
 const RIGHT_LINKS: NavbarLink[] = [
   {
@@ -85,24 +90,29 @@ const Navbar = ({ pageTree }: NavbarProps) => {
     setLastDocsPath(sessionStorage.getItem("lastDocsPath"));
   }, []);
 
-  // Determine active route based on current path
-  const firstSegment = pathname === "/" ? "/" : `/${pathname.split("/")[1]}`;
-  const isReferencePage = firstSegment === "/reference";
-  const isLearnPage = firstSegment === "/learn";
-  // Reference pages → /reference, Learn pages → /learn, Everything else (root + integrations) → /
-  const activeRoute = isReferencePage
-    ? "/reference"
-    : isLearnPage
-      ? "/learn"
-      : "/";
+  // Locale-aware: Documentation follows current locale; Reference/Learn have no _cn tree yet, so keep EN paths
+  const isChinese = isChinesePath(pathname);
+  const docBase = isChinese ? "/_cn" : "/";
+  const referenceBase = "/reference";
+  const learnBase = "/learn";
 
-  // Get the appropriate href for Documentation link
+  // Determine active route: use same hrefs as nav links for correct highlight
+  const isReferencePage =
+    pathname.startsWith("/reference") || pathname.startsWith("/_cn/reference");
+  const isLearnPage =
+    pathname.startsWith("/learn") || pathname.startsWith("/_cn/learn");
+  const activeRoute = isReferencePage
+    ? referenceBase
+    : isLearnPage
+      ? learnBase
+      : docBase;
+
+  // Get the appropriate href for Documentation link (preserve locale)
   const getDocumentationHref = () => {
-    // If we're on a reference page, try to restore last docs path
     if (isReferencePage && lastDocsPath) {
       return lastDocsPath;
     }
-    return "/";
+    return docBase;
   };
 
   // Close mobile sidebar when viewport expands beyond mobile breakpoint (md: 768px)
@@ -145,19 +155,21 @@ const Navbar = ({ pageTree }: NavbarProps) => {
           >
             <Logo className="pl-6" />
             <ul className="hidden gap-6 items-center h-full md:flex">
-              {LEFT_LINKS.map((link) => {
-                // Hide only Copilot Cloud at narrow widths
+              {LEFT_LINKS_BASE.map((link) => {
                 const hideAtNarrow = link.label === "Copilot Cloud";
-                // Hide icons for Documentation and API Reference at very narrow widths
                 const hideIconAtNarrow =
                   link.label === "Documentation" ||
                   link.label === "Learn" ||
                   link.label === "API Reference";
-                // Use dynamic href for Documentation link
-                const href =
-                  link.label === "Documentation"
-                    ? getDocumentationHref()
-                    : link.href;
+                // Locale-aware hrefs: preserve Chinese/English when switching sections
+                let href = link.href;
+                if (link.label === "Documentation") {
+                  href = getDocumentationHref();
+                } else if (link.label === "API Reference") {
+                  href = referenceBase;
+                } else if (link.label === "Learn") {
+                  href = learnBase;
+                }
 
                 return (
                   <li
@@ -276,6 +288,8 @@ const Navbar = ({ pageTree }: NavbarProps) => {
                 className="dark:hidden"
               />
             </button>
+
+            <LanguageSwitcher />
 
             <SearchDialogButton />
 
