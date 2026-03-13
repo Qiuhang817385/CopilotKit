@@ -164,8 +164,13 @@ export async function GET(
   }
 }
 
-export function generateStaticParams() {
-  return source.generateParams().map((params) => ({
+export async function generateStaticParams() {
+  let paramsList = source.generateParams();
+  if (process.env.BUILD_CN_ONLY === "1") {
+    const { isChineseSlug } = await import("@/lib/i18n-utils");
+    paramsList = paramsList.filter((p) => isChineseSlug(p.slug));
+  }
+  return paramsList.map((params) => ({
     ...params,
     slug: [...params.slug, "og.png"],
   }));

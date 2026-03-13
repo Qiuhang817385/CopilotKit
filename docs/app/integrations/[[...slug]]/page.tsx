@@ -227,12 +227,16 @@ export default async function Page({
 }
 
 export async function generateStaticParams() {
-  return source
+  let list = source
     .generateParams()
-    .filter((params) => params.slug && params.slug[0] === "integrations")
-    .map((params) => ({
-      slug: params.slug?.slice(1) || [],
-    }));
+    .filter((params) => params.slug && params.slug[0] === "integrations");
+  if (process.env.BUILD_CN_ONLY === "1") {
+    const { isChineseSlug } = await import("@/lib/i18n-utils");
+    list = list.filter((p) => isChineseSlug(p.slug));
+  }
+  return list.map((params) => ({
+    slug: params.slug?.slice(1) || [],
+  }));
 }
 
 export async function generateMetadata({

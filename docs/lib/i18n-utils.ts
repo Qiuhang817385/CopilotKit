@@ -3,6 +3,18 @@
  */
 
 /**
+ * Check if a static param slug (from source.generateParams()) is a Chinese doc.
+ * Used when BUILD_CN_ONLY=1 to only pre-render Chinese pages.
+ */
+export function isChineseSlug(slug: string[] | undefined): boolean {
+  if (!slug || slug.length === 0) return false;
+  if (slug[0] === "(root)_cn") return true;
+  if (slug[0]?.endsWith("_cn")) return true;
+  if (slug.some((s) => s === "_cn" || s.endsWith("_cn"))) return true;
+  return false;
+}
+
+/**
  * Check if current pathname is Chinese version
  */
 export function isChinesePath(pathname: string): boolean {

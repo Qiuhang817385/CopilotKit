@@ -243,7 +243,12 @@ export default async function Page({
 }
 
 export async function generateStaticParams() {
-  return source.generateParams();
+  const params = source.generateParams();
+  if (process.env.BUILD_CN_ONLY === "1") {
+    const { isChineseSlug } = await import("@/lib/i18n-utils");
+    return params.filter((p) => isChineseSlug(p.slug));
+  }
+  return params;
 }
 
 export async function generateMetadata({
