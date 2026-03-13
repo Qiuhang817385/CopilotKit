@@ -85,6 +85,10 @@ const config = {
   reactStrictMode: true,
   // 减少静态生成并发，降低内存使用
   staticPageGenerationTimeout: 120,
+  experimental: {
+    // 使用 Webpack 时降低构建峰值内存（配合 package.json 中 next build --webpack）
+    webpackMemoryOptimizations: true,
+  },
   // 禁用图片优化以减少内存使用
   images: {
     unoptimized: true,
